@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, Clock } from 'lucide-react';
 import { DeliveryData } from '@/hooks/useRiderData';
+import { formatNaira } from '@/lib/pricing';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
+import { formatKm, pickupDistanceKm } from '@/lib/riderLocation';
 
 interface AvailableOrdersListProps {
   availableDeliveries: DeliveryData[];
@@ -15,6 +18,8 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
   availableDeliveries,
   onAcceptOrder
 }) => {
+  const { position } = useRiderLocation();
+
   return (
     <Card>
       <CardHeader className="pb-3 sm:pb-4">
@@ -46,7 +51,7 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
                       </div>
                       <div className="flex items-center mt-1 flex-wrap gap-2">
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs">
-                          {Number(order.actual_distance || 2.5).toFixed(1)} km
+                          {formatKm(pickupDistanceKm(order.pickup_location, position))}
                         </Badge>
                         <div className="flex items-center text-xs sm:text-sm text-gray-600">
                           <Clock className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
@@ -64,10 +69,7 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
                   <div className="flex flex-col items-start sm:items-end justify-between mt-3 sm:mt-0 sm:ml-4">
                     <div className="text-left sm:text-right">
                       <div className="text-base sm:text-lg font-bold">
-                        ₦500.00
-                      </div>
-                      <div className="text-xs sm:text-sm text-green-600">
-                        +₦{Number(order.eco_bonus).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})} eco bonus
+                        {formatNaira(Number(order.rider_earning ?? 0))}
                       </div>
                     </div>
                     <Button 

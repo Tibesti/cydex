@@ -1,6 +1,6 @@
 
 import { 
-  Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield, Calculator
+  Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -18,7 +18,6 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
       return [
         { name: 'Home', href: '/customer', icon: Home },
         { name: 'Orders', href: '/customer/orders', icon: Package },
-        { name: 'Pricing', href: '/customer/pricing', icon: Calculator },
         { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
         // { name: 'Recycling', href: '/customer/recycling', icon: Recycle },
         { name: 'Profile', href: '/customer/profile', icon: User },

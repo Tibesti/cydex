@@ -8,7 +8,6 @@ interface ProfileData {
   name: string;
   email: string;
   phone: string;
-  address: string;
 }
 
 interface ProfileFormProps {
@@ -74,17 +73,7 @@ const ProfileForm = ({
           </p>
         )}
       </div>
-      <div className="space-y-1">
-        <Label htmlFor="address">Address</Label>
-        <Input 
-          id="address" 
-          placeholder="Your Address" 
-          value={profileData.address}
-          onChange={(e) => handleInputChange('address', e.target.value)}
-          disabled={!isEditing} 
-        />
-      </div>
-      
+
       {isEditing && (
         <div className="flex justify-end mt-4">
           <Button variant="secondary" onClick={() => setIsEditing(false)} className="mr-2">

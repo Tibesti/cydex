@@ -217,17 +217,9 @@ const CurrentDeliveriesPage = () => {
                           <span>{delivery.items_count || 0}</span>
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">Fee: </span>
-                          <span>₦{Number(delivery.delivery_fee || 0).toLocaleString()}</span>
+                          <span className="font-medium">Your earning: </span>
+                          <span>₦{Number(delivery.rider_earning ?? 0).toLocaleString()}</span>
                         </div>
-                        {Number(delivery.eco_bonus || 0) > 0 && (
-                          <div className="text-sm">
-                            <span className="font-medium">Eco Bonus: </span>
-                            <span className="text-green-600">
-                              +₦{Number(delivery.eco_bonus).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
                         <div className="flex items-center text-sm bg-green-50 text-green-700 px-2 py-1 rounded w-fit">
                           <Leaf className="h-4 w-4 mr-1 flex-shrink-0" />
                           <span>{Number(delivery.carbon_saved || 0).toFixed(1)} kg CO₂ saved</span>

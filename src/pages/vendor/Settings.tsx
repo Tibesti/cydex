@@ -29,6 +29,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useVendorSettings } from '@/hooks/useVendorSettings';
+import SingleAddressField from '@/components/address/SingleAddressField';
 
 const VendorSettingsPage = () => {
   const { 
@@ -39,8 +40,7 @@ const VendorSettingsPage = () => {
     updateSettings,
     updateProfile,
     fetchVendorStats,
-    fetchRecentActivity,
-    formatAddress 
+    fetchRecentActivity
   } = useVendorSettings();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -48,7 +48,6 @@ const VendorSettingsPage = () => {
     name: '',
     email: '',
     phone: '',
-    address: '',
     description: '',
     business_license: '',
     category: ''
@@ -64,14 +63,13 @@ const VendorSettingsPage = () => {
         name: profile.name || '',
         email: profile.email || '',
         phone: profile.phone || '',
-        address: formatAddress(profile.address) || '',
         description: settings.description || '',
         business_license: settings.business_license || '',
         category: settings.category || ''
       });
       setLocalSettings(settings);
     }
-  }, [profile, settings]); // Remove formatAddress dependency
+  }, [profile, settings]);
 
   // Load additional data
   useEffect(() => {
@@ -93,19 +91,10 @@ const VendorSettingsPage = () => {
     if (!profile || !settings) return;
     
     try {
-      // Update profile data
-      const addressParts = profileData.address.split(',').map(s => s.trim());
-      const addressObj = {
-        street: addressParts[0] || '',
-        city: addressParts[1] || '',
-        state: addressParts[2] || '',
-        country: addressParts[3] || ''
-      };
-
+      // Update profile data (the store address saves on its own via the address picker)
       await updateProfile({
         name: profileData.name,
-        phone: profileData.phone,
-        address: addressObj
+        phone: profileData.phone
       });
 
       // Update settings data
@@ -286,13 +275,12 @@ const VendorSettingsPage = () => {
                       )}
                     </div>
                     
-                    <FormField
-                      id="address"
-                      label="Address"
-                      placeholder="Street, City, State, Country"
-                      value={profileData.address}
-                      onChange={(value) => handleInputChange('address', value)}
-                      disabled={!isEditing}
+                    <SingleAddressField
+                      label="Store address"
+                      addressLabel="Store"
+                      pickerTitle="Store location"
+                      pickerDescription="Search for your store, then drag the map so the pin sits exactly where riders should pick up orders."
+                      emptyText="No store location set. Riders need it to find you."
                     />
                     
                     <FormField

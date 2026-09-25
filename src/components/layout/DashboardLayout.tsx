@@ -8,6 +8,10 @@ import MobileMenu from './MobileMenu';
 import MobileHeader from './MobileHeader';
 import { getNavLinks, getRoleTitle } from './navigationLinks';
 import { UserRole } from '@/types/auth.types';
+import AddressOnboarding from '@/components/address/AddressOnboarding';
+import DeliveryAddressBar from '@/components/customer/address/DeliveryAddressBar';
+import RiderLocationBar from '@/components/rider/location/RiderLocationBar';
+import RiderLocationGate from '@/components/rider/location/RiderLocationGate';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -94,8 +98,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20",
         "pt-16 lg:pt-0"
       )}>
+        {userRole === 'CUSTOMER' && <DeliveryAddressBar />}
+        {userRole === 'RIDER' && <RiderLocationBar />}
         {children}
       </main>
+
+      {/* Customers without a saved address and vendors without a store location are asked to add one */}
+      {(userRole === 'CUSTOMER' || userRole === 'VENDOR') && <AddressOnboarding role={userRole} />}
+      {/* Riders must share their live location while using the app */}
+      {userRole === 'RIDER' && <RiderLocationGate />}
     </div>
   );
 };

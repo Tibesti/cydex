@@ -18,6 +18,7 @@ export interface Order {
   delivery_address: any;
   subtotal: number;
   delivery_fee: number;
+  service_charge?: number | null;
   total_amount: number;
   carbon_credits_earned?: number;
   estimated_delivery_time?: string;

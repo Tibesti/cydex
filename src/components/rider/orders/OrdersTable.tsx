@@ -2,9 +2,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Package, Leaf, Clock, MapPin, AlertCircle, Eye } from 'lucide-react';
+import { Package, Clock, MapPin, AlertCircle, Eye } from 'lucide-react';
 import { DeliveryData } from '@/hooks/useRiderData';
 import { OrderDetailModal } from '@/components/rider/OrderDetailModal';
+import { formatNaira } from '@/lib/pricing';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
+import { formatKm, pickupDistanceKm } from '@/lib/riderLocation';
 
 interface OrdersTableProps {
   orders: DeliveryData[];
@@ -19,6 +22,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   loading = false,
   error = null 
 }) => {
+  const { position } = useRiderLocation();
   const [selectedOrder, setSelectedOrder] = useState<DeliveryData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
@@ -121,9 +125,6 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {order.vendor_name}
                         </p>
-                        {Number(order.eco_bonus) > 0 && (
-                          <Leaf className="h-4 w-4 text-green-500" />
-                        )}
                       </div>
                       <p className="text-sm text-gray-500 truncate">
                         To: {order.customer_name}
@@ -139,7 +140,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                   <div className="flex items-center space-x-1">
                     <MapPin className="h-4 w-4 text-gray-400" />
                     <span className="text-sm text-gray-900">
-                      {Number(order.actual_distance || 1.5).toFixed(1)} km
+                      {formatKm(pickupDistanceKm(order.pickup_location, position))}
                     </span>
                   </div>
                   {order.special_instructions && (
@@ -172,16 +173,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-gray-900">
-                      ₦500.00
+                      {formatNaira(Number(order.rider_earning ?? 0))}
                     </p>
-                    {Number(order.eco_bonus) > 0 && (
-                      <p className="text-xs text-green-600">
-                        +₦{Number(order.eco_bonus).toLocaleString('en-NG', {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2
-                        })} eco bonus
-                      </p>
-                    )}
                     {Number(order.carbon_saved) > 0 && (
                       <p className="text-xs text-green-500">
                         {Number(order.carbon_saved).toFixed(1)} kg CO₂ saved

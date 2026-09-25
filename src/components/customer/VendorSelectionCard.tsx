@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, Clock, Leaf, ChefHat } from 'lucide-react';
+import { Star, MapPin, Leaf, ChefHat } from 'lucide-react';
 import { useVendorRatings } from '@/hooks/useVendorRatings';
 
 interface VendorSelectionCardProps {
@@ -13,6 +13,7 @@ interface VendorSelectionCardProps {
     avatar?: string;
     productCount: number;
     categories: string[];
+    distanceKm: number;
   };
   onSelect: (vendorId: string) => void;
 }
@@ -55,8 +56,8 @@ export const VendorSelectionCard: React.FC<VendorSelectionCardProps> = ({
               <span>{vendor.productCount} products</span>
             </div>
             <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              <span>15-30 min</span>
+              <MapPin className="h-4 w-4" />
+              <span>{vendor.distanceKm.toFixed(1)} km away</span>
             </div>
           </div>
           

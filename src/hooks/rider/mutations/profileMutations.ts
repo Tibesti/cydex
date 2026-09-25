@@ -37,12 +37,6 @@ export const updateProfile = async (userId: string, updates: Partial<RiderProfil
     const profileUpdate: any = {};
     if (updates.name !== undefined) profileUpdate.name = updates.name;
     if (updates.phone !== undefined) profileUpdate.phone = updates.phone;
-    if (updates.address !== undefined) {
-      // Store address as a simple string in the address field
-      profileUpdate.address = typeof updates.address === 'string' 
-        ? { full_address: updates.address }
-        : { full_address: updates.address || '' };
-    }
     
     if (Object.keys(profileUpdate).length > 0) {
       console.log('[ProfileMutations] Updating profiles table:', profileUpdate);

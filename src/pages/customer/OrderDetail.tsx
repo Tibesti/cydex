@@ -176,6 +176,7 @@ const OrderDetailPage = () => {
         total: formatCurrency(item.total_price)
       })) || [],
       subtotal: formatCurrency(order.subtotal),
+      serviceCharge: formatCurrency(order.service_charge ?? 0),
       deliveryFee: formatCurrency(order.delivery_fee),
       total: formatCurrency(order.total_amount)
     };
@@ -273,6 +274,7 @@ const OrderDetailPage = () => {
     })) || [],
     subtotal: formatCurrency(order.subtotal),
     totalAmount: formatCurrency(order.total_amount),
+    serviceCharge: formatCurrency(order.service_charge ?? 0),
     deliveryFee: formatCurrency(order.delivery_fee),
     discount: formatCurrency(0), // We don't have discount tracking yet
     // Normalize payment method label - default to generic 'Card' instead of legacy 'Paystack'

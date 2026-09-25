@@ -1,0 +1,16 @@
+#!/bin/sh
+# After each commit, update any docs the commit made inaccurate (runs in the
+# background so the commit isn't slowed down). See scripts/sync-docs.sh.
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+# Skip for one commit:     SKIP_DOCS_SYNC=1 git commit ...
+# Log of the latest run:   .git/docs-sync/last-run.log
+
+[ -n "$SKIP_DOCS_SYNC" ] && exit 0
+
+root=$(git rev-parse --show-toplevel) || exit 0
+state="$(git rev-parse --absolute-git-dir)/docs-sync"
+mkdir -p "$state"
+
+nohup "$root/scripts/sync-docs.sh" >"$state/last-run.log" 2>&1 </dev/null &
+exit 0

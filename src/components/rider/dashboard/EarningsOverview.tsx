@@ -3,7 +3,6 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp } from 'lucide-react';
 import { RiderEarnings } from '@/hooks/useRiderData';
 
 interface EarningsOverviewProps {
@@ -18,7 +17,6 @@ export const EarningsOverview: React.FC<EarningsOverviewProps> = ({
   dailyGoal = 10
 }) => {
   const totalEarnings = todaysEarnings.reduce((sum, earning) => sum + Number(earning.total_earnings), 0);
-  const totalEcoBonus = todaysEarnings.reduce((sum, earning) => sum + Number(earning.eco_bonus), 0);
   const progressPercentage = Math.min((deliveriesCompleted / dailyGoal) * 100, 100);
 
   return (
@@ -30,10 +28,6 @@ export const EarningsOverview: React.FC<EarningsOverviewProps> = ({
         <CardContent className="pt-1 sm:pt-2">
           <div className="text-xl sm:text-2xl md:text-3xl font-bold">
             ₦{totalEarnings.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-          </div>
-          <div className="flex items-center mt-1 text-xs sm:text-sm text-green-600">
-            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-            <span>+₦{totalEcoBonus.toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})} from eco bonuses</span>
           </div>
         </CardContent>
       </Card>

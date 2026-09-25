@@ -34,10 +34,6 @@ export const EarningsBreakdownCard: React.FC<EarningsBreakdownCardProps> = ({
                   <p className="font-medium text-xs sm:text-sm">₦234,178.25</p>
                 </div>
                 <div className="flex justify-between items-center">
-                  <p className="text-gray-600 text-xs sm:text-sm">Eco Bonuses</p>
-                  <p className="font-medium text-green-600 text-xs sm:text-sm">+₦43,693.35</p>
-                </div>
-                <div className="flex justify-between items-center">
                   <p className="text-gray-600 text-xs sm:text-sm">Tips</p>
                   <p className="font-medium text-xs sm:text-sm">₦64,390.20</p>
                 </div>
@@ -53,10 +49,6 @@ export const EarningsBreakdownCard: React.FC<EarningsBreakdownCardProps> = ({
                 <div className="flex justify-between items-center">
                   <p className="text-gray-600 text-xs sm:text-sm">Delivery Fees</p>
                   <p className="font-medium text-xs sm:text-sm">₦869,588.83</p>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-gray-600 text-xs sm:text-sm">Eco Bonuses</p>
-                  <p className="font-medium text-green-600 text-xs sm:text-sm">+₦137,211.45</p>
                 </div>
                 <div className="flex justify-between items-center">
                   <p className="text-gray-600 text-xs sm:text-sm">Tips</p>

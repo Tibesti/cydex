@@ -42,6 +42,7 @@ interface OrderDetailsContentProps {
     products: OrderProduct[];
     subtotal: string;
     totalAmount: string;
+    serviceCharge: string;
     deliveryFee: string;
     discount: string;
     paymentMethod?: string;
@@ -92,6 +93,7 @@ const OrderDetailsContent = ({
       <OrderSummary 
         subtotal={order.subtotal}
         totalAmount={order.totalAmount}
+        serviceCharge={order.serviceCharge}
         deliveryFee={order.deliveryFee}
         discount={order.discount}
         paymentMethod={order.paymentMethod || "Credit Card"}

@@ -11,11 +11,10 @@ import ProfileDetails from './components/ProfileDetails';
 interface ProfileHeaderProps {
   profile: any;
   editing: boolean;
-  onStatusToggle?: (isOnline: boolean) => void;
   onAvatarUpdate?: (avatarUrl: string) => void;
 }
 
-const ProfileHeader = ({ profile, editing, onStatusToggle, onAvatarUpdate }: ProfileHeaderProps) => {
+const ProfileHeader = ({ profile, editing, onAvatarUpdate }: ProfileHeaderProps) => {
   if (!profile) return null;
 
   return (
@@ -28,10 +27,7 @@ const ProfileHeader = ({ profile, editing, onStatusToggle, onAvatarUpdate }: Pro
 
       <ProfileInfo profile={profile} />
       
-      <ProfileStatus 
-        profile={profile} 
-        onStatusToggle={onStatusToggle} 
-      />
+      <ProfileStatus profile={profile} />
 
       <ProfileRating profile={profile} />
       

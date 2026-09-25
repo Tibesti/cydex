@@ -62,7 +62,6 @@ export interface RiderProfileData {
   name: string;
   email: string;
   phone: string;
-  address: string;
   avatar?: string;
   joinDate: string;
   isOnline: boolean;

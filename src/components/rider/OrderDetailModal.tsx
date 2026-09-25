@@ -15,7 +15,6 @@ import {
   Phone, 
   Mail, 
   Package, 
-  Leaf, 
   User, 
   Store,
   AlertCircle,
@@ -23,6 +22,7 @@ import {
 } from 'lucide-react';
 import { DeliveryData } from '@/hooks/rider/useRiderDeliveries';
 import { supabase } from '@/integrations/supabase/client';
+import { formatNaira } from '@/lib/pricing';
 
 interface OrderDetailModalProps {
   isOpen: boolean;
@@ -41,8 +41,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 }) => {
   if (!order) return null;
 
-  const totalEarnings = 500 + Number(order.eco_bonus); // Flat rate of ₦500 + eco bonus
-  const hasEcoBonus = Number(order.eco_bonus) > 0;
+  const totalEarnings = Number(order.rider_earning ?? 0); // Rider's share of the delivery fee
   const hasCarbonSavings = Number(order.carbon_saved) > 0;
 
   // Prefer richer sources if present
@@ -298,19 +297,13 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm">Delivery Fee:</span>
-                  <span className="text-sm font-medium">₦500.00</span>
+                  <span className="text-sm">Delivery fee:</span>
+                  <span className="text-sm">{formatNaira(Number(order.delivery_fee ?? 0))}</span>
                 </div>
-                
-                {hasEcoBonus && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-green-600">Eco Bonus:</span>
-                    <span className="text-sm font-medium text-green-600">+₦{Number(order.eco_bonus).toLocaleString('en-NG', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-sm">Your earning:</span>
+                  <span className="text-sm font-medium">{formatNaira(Number(order.rider_earning ?? 0))}</span>
+                </div>
                 
                 {hasCarbonSavings && (
                   <div className="flex justify-between">

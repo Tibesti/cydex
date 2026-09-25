@@ -9,6 +9,8 @@ export interface DeliveryData {
   order_id: string;
   status: 'available' | 'accepted' | 'picking_up' | 'picked_up' | 'delivering' | 'delivered' | 'cancelled';
   delivery_fee: number;
+  // Rider's share of the delivery fee (85%), set by the database
+  rider_earning: number | null;
   eco_bonus: number;
   tip_amount: number;
   estimated_pickup_time: string;

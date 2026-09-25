@@ -27,7 +27,6 @@ const RiderProfilePage = () => {
     loading, 
     error, 
     updateProfile,
-    updateRiderStatus,
     addBankDetails,
     refetchProfile
   } = useRiderProfileData();
@@ -69,14 +68,6 @@ const RiderProfilePage = () => {
   const handleUploadId = () => {
     setShowIdVerificationDialog(false);
     toast.success('Document uploaded successfully');
-  };
-
-  const handleStatusToggle = async (isOnline: boolean) => {
-    console.log('[Profile] Toggling status to:', isOnline);
-    const success = await updateRiderStatus(isOnline);
-    if (success) {
-      toast.success(`Status updated to ${isOnline ? 'online' : 'offline'}`);
-    }
   };
 
   const handleAvatarUpdate = async (avatarUrl: string) => {
@@ -131,7 +122,6 @@ const RiderProfilePage = () => {
                 <ProfileHeader 
                   profile={riderProfile} 
                   editing={editing}
-                  onStatusToggle={handleStatusToggle}
                   onAvatarUpdate={handleAvatarUpdate}
                 />
               </CardContent>

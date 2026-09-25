@@ -149,10 +149,7 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
                         <div className="flex items-center gap-4">
                           <div className="text-sm">
                             <span className="font-medium">
-                              ₦{Number(delivery.delivery_fee).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </span>
-                            <span className="text-green-600 ml-2">
-                              +₦{Number(delivery.eco_bonus).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})} eco
+                              ₦{Number(delivery.rider_earning ?? 0).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </span>
                           </div>
                           <div className="flex items-center text-xs bg-green-50 text-green-700 px-2 py-1 rounded">

@@ -19,17 +19,6 @@ export const transformProfileData = (
     bankDetailsData
   });
 
-  // Handle address properly - extract string from object or use as-is
-  let addressValue = '';
-  if (typeof profileData.address === 'string') {
-    addressValue = profileData.address;
-  } else if (profileData.address?.full_address) {
-    addressValue = profileData.address.full_address;
-  } else if (profileData.address) {
-    console.warn('[ProfileTransformer] Unexpected address format:', profileData.address);
-    addressValue = JSON.stringify(profileData.address);
-  }
-
   // Calculate stats from deliveries
   const completedDeliveries = deliveriesData.filter(d => d.status === 'delivered');
   const totalCarbonSaved = deliveriesData.reduce((sum, d) => sum + (d.carbon_saved || 0), 0);
@@ -77,7 +66,6 @@ export const transformProfileData = (
     name: profileData.name || 'Unknown',
     email: profileData.email || 'No email',
     phone: profileData.phone || 'No phone',
-    address: addressValue,
     avatar: profileData.avatar || `https://api.dicebear.com/7.x/personas/svg?seed=${profileData.email}`,
     joinDate,
     isOnline: riderData?.rider_status === 'available',

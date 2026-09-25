@@ -3,7 +3,7 @@ import React from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
 import { useRiderData } from '@/hooks/useRiderData';
 import { EarningsOverview } from '@/components/rider/dashboard/EarningsOverview';
 import { CurrentDeliveryCard } from '@/components/rider/dashboard/CurrentDeliveryCard';
@@ -18,11 +18,11 @@ const RiderDashboard = () => {
     availableDeliveries,
     currentDeliveries,
     todaysEarnings,
-    riderProfile,
     acceptDelivery,
-    updateDeliveryStatus,
-    updateRiderStatus
+    updateDeliveryStatus
   } = useRiderData();
+  // Online = live location coming through (no manual toggle)
+  const { isOnline } = useRiderLocation();
 
   if (loading) {
     return (
@@ -42,15 +42,8 @@ const RiderDashboard = () => {
   }
 
   const deliveriesCompleted = todaysEarnings.length;
-  const isOnline = riderProfile?.rider_status === 'available';
-
   const handleAcceptOrder = async (orderId: string) => {
     await acceptDelivery(orderId);
-  };
-
-  const handleToggleOnlineStatus = async (checked: boolean) => {
-    const newStatus = checked ? 'available' : 'offline';
-    await updateRiderStatus(newStatus);
   };
 
   return (
@@ -67,15 +60,7 @@ const RiderDashboard = () => {
             <Badge className={`text-xs sm:text-sm ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}>
               {isOnline ? 'Available for Deliveries' : 'Offline'}
             </Badge>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Offline</span>
-              <Switch
-                checked={isOnline}
-                onCheckedChange={handleToggleOnlineStatus}
-                className="data-[state=checked]:bg-green-500"
-              />
-              <span className="text-sm text-gray-600">Online</span>
-            </div>
+            <span className="text-xs text-muted-foreground">Based on your live location</span>
           </div>
         </div>
 

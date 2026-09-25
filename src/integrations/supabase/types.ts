@@ -14,6 +14,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          directions: string | null
+          formatted_address: string
+          id: string
+          is_default: boolean
+          label: string
+          latitude: number
+          longitude: number
+          place_id: string | null
+          place_name: string | null
+          profile_id: string
+          state: string | null
+          street: string | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          directions?: string | null
+          formatted_address: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude: number
+          longitude: number
+          place_id?: string | null
+          place_name?: string | null
+          profile_id: string
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          directions?: string | null
+          formatted_address?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude?: number
+          longitude?: number
+          place_id?: string | null
+          place_name?: string | null
+          profile_id?: string
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addresses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string
@@ -432,6 +497,7 @@ export type Database = {
           created_at: string | null
           delivered_at: string | null
           delivering_at: string | null
+          delivery_address_id: string | null
           delivery_fee: number | null
           delivery_location: Json | null
           eco_bonus: number | null
@@ -441,7 +507,9 @@ export type Database = {
           order_id: string | null
           picked_up_at: string | null
           picking_up_at: string | null
+          pickup_address_id: string | null
           pickup_location: Json | null
+          rider_earning: number | null
           rider_id: string | null
           special_instructions: string | null
           status: Database["public"]["Enums"]["delivery_status"] | null
@@ -456,6 +524,7 @@ export type Database = {
           created_at?: string | null
           delivered_at?: string | null
           delivering_at?: string | null
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_location?: Json | null
           eco_bonus?: number | null
@@ -465,7 +534,9 @@ export type Database = {
           order_id?: string | null
           picked_up_at?: string | null
           picking_up_at?: string | null
+          pickup_address_id?: string | null
           pickup_location?: Json | null
+          rider_earning?: number | null
           rider_id?: string | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["delivery_status"] | null
@@ -480,6 +551,7 @@ export type Database = {
           created_at?: string | null
           delivered_at?: string | null
           delivering_at?: string | null
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_location?: Json | null
           eco_bonus?: number | null
@@ -489,7 +561,9 @@ export type Database = {
           order_id?: string | null
           picked_up_at?: string | null
           picking_up_at?: string | null
+          pickup_address_id?: string | null
           pickup_location?: Json | null
+          rider_earning?: number | null
           rider_id?: string | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["delivery_status"] | null
@@ -498,10 +572,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "deliveries_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deliveries_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_pickup_address_id_fkey"
+            columns: ["pickup_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
             referencedColumns: ["id"]
           },
           {
@@ -569,6 +657,7 @@ export type Database = {
           order_id: string
           product_category: string | null
           product_description: string | null
+          product_id: string | null
           product_name: string
           quantity: number
           total_price: number
@@ -582,6 +671,7 @@ export type Database = {
           order_id: string
           product_category?: string | null
           product_description?: string | null
+          product_id?: string | null
           product_name: string
           quantity: number
           total_price: number
@@ -595,6 +685,7 @@ export type Database = {
           order_id?: string
           product_category?: string | null
           product_description?: string | null
+          product_id?: string | null
           product_name?: string
           quantity?: number
           total_price?: number
@@ -606,6 +697,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -664,6 +762,7 @@ export type Database = {
           customer_id: string
           delivered_at: string | null
           delivery_address: Json
+          delivery_address_id: string | null
           delivery_fee: number | null
           delivery_type: string
           distance_fee: number | null
@@ -685,6 +784,7 @@ export type Database = {
           ready_for_pickup_at: string | null
           rider_assigned_at: string | null
           rider_id: string | null
+          service_charge: number | null
           special_instructions: string | null
           status: string
           student_discount: number | null
@@ -709,6 +809,7 @@ export type Database = {
           customer_id: string
           delivered_at?: string | null
           delivery_address: Json
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_type?: string
           distance_fee?: number | null
@@ -730,6 +831,7 @@ export type Database = {
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
+          service_charge?: number | null
           special_instructions?: string | null
           status?: string
           student_discount?: number | null
@@ -754,6 +856,7 @@ export type Database = {
           customer_id?: string
           delivered_at?: string | null
           delivery_address?: Json
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_type?: string
           distance_fee?: number | null
@@ -775,6 +878,7 @@ export type Database = {
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
+          service_charge?: number | null
           special_instructions?: string | null
           status?: string
           student_discount?: number | null
@@ -796,6 +900,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
             referencedColumns: ["id"]
           },
           {
@@ -928,9 +1039,12 @@ export type Database = {
           green_fee: number | null
           id: string
           late_night_fee: number | null
+          rider_share_rate: number | null
+          service_charge_rate: number | null
           student_discount_percent: number | null
           subscription_monthly_rate: number | null
           surge_multiplier: number | null
+          vendor_commission_rate: number | null
           weight_rates: Json | null
         }
         Insert: {
@@ -940,9 +1054,12 @@ export type Database = {
           green_fee?: number | null
           id?: string
           late_night_fee?: number | null
+          rider_share_rate?: number | null
+          service_charge_rate?: number | null
           student_discount_percent?: number | null
           subscription_monthly_rate?: number | null
           surge_multiplier?: number | null
+          vendor_commission_rate?: number | null
           weight_rates?: Json | null
         }
         Update: {
@@ -952,9 +1069,12 @@ export type Database = {
           green_fee?: number | null
           id?: string
           late_night_fee?: number | null
+          rider_share_rate?: number | null
+          service_charge_rate?: number | null
           student_discount_percent?: number | null
           subscription_monthly_rate?: number | null
           surge_multiplier?: number | null
+          vendor_commission_rate?: number | null
           weight_rates?: Json | null
         }
         Relationships: []
@@ -1017,7 +1137,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          address: Json | null
           avatar: string | null
           carbon_credits: number | null
           created_at: string | null
@@ -1037,7 +1156,6 @@ export type Database = {
           verified: boolean | null
         }
         Insert: {
-          address?: Json | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -1057,7 +1175,6 @@ export type Database = {
           verified?: boolean | null
         }
         Update: {
-          address?: Json | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -2278,6 +2395,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      address_snapshot: {
+        Args: { a: Database["public"]["Tables"]["addresses"]["Row"] }
+        Returns: Json
+      }
+      calculate_order_price: {
+        Args: { p_address_id: string; p_subtotal: number; p_vendor_id: string }
+        Returns: Record<string, unknown>
+      }
       calculate_rider_rating: {
         Args: { rider_uuid: string }
         Returns: {
@@ -2288,6 +2413,10 @@ export type Database = {
       calculate_settlement_amounts: {
         Args: { p_order_id: string }
         Returns: Record<string, unknown>
+      }
+      cart_subtotal: {
+        Args: { p_items: Json; p_vendor_id: string }
+        Returns: number
       }
       create_order_notification: {
         Args: {
@@ -2301,6 +2430,11 @@ export type Database = {
         Returns: string
       }
       current_user_role: { Args: never; Returns: string }
+      customer_vendor_radius_m: { Args: never; Returns: number }
+      distance_m: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       generate_order_number: { Args: never; Returns: string }
       generate_verification_code: { Args: never; Returns: string }
       get_vendor_average_rating: {
@@ -2325,10 +2459,101 @@ export type Database = {
         Args: { p_customer_id: string }
         Returns: boolean
       }
+      mark_stale_riders_offline: { Args: never; Returns: number }
+      order_pickup_within_rider_radius: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
+      place_order: {
+        Args: {
+          p_address_id: string
+          p_items: Json
+          p_special_instructions?: string
+          p_vendor_id: string
+        }
+        Returns: {
+          base_rate: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          carbon_credits_earned: number | null
+          created_at: string
+          customer_id: string
+          delivered_at: string | null
+          delivery_address: Json
+          delivery_address_id: string | null
+          delivery_fee: number | null
+          delivery_type: string
+          distance_fee: number | null
+          distance_km: number | null
+          estimated_delivery_time: string | null
+          green_fee: number | null
+          id: string
+          is_late_night: boolean | null
+          is_peak_hour: boolean | null
+          is_student_order: boolean | null
+          late_night_fee: number | null
+          order_number: string
+          payment_details: Json | null
+          payment_gateway: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          picked_up_at: string | null
+          ready_for_pickup_at: string | null
+          rider_assigned_at: string | null
+          rider_id: string | null
+          service_charge: number | null
+          special_instructions: string | null
+          status: string
+          student_discount: number | null
+          subscription_applied: boolean | null
+          subtotal: number
+          surge_fee: number | null
+          time_slot: string | null
+          total_amount: number
+          updated_at: string
+          vendor_accepted_at: string | null
+          vendor_id: string | null
+          verification_code: string | null
+          weight_fee: number | null
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      quote_order: {
+        Args: { p_address_id: string; p_items: Json; p_vendor_id: string }
+        Returns: {
+          base_rate: number
+          delivery_fee: number
+          distance_fee: number
+          distance_km: number
+          service_charge: number
+          status: string
+          subtotal: number
+          total_amount: number
+        }[]
+      }
+      rider_order_radius_m: { Args: never; Returns: number }
       shares_order_with: { Args: { p_profile_id: string }; Returns: boolean }
       update_customer_wallet_on_payment: {
         Args: { p_amount: number; p_customer_id: string }
         Returns: undefined
+      }
+      vendors_near_address: {
+        Args: { p_address_id: string }
+        Returns: {
+          distance_km: number
+          vendor_id: string
+        }[]
+      }
+      within_rider_radius: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: boolean
       }
     }
     Enums: {

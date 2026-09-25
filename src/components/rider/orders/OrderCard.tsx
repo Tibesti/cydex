@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Leaf, Package, AlertCircle, Eye } from 'lucide-react';
+import { MapPin, Clock, Package, AlertCircle, Eye } from 'lucide-react';
 import { DeliveryData } from '@/hooks/useRiderData';
 import { OrderDetailModal } from '@/components/rider/OrderDetailModal';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
+import { formatKm, pickupDistanceKm } from '@/lib/riderLocation';
 
 interface OrderCardProps {
   order: DeliveryData;
@@ -17,9 +19,9 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   onAcceptOrder, 
   loading = false 
 }) => {
+  const { position } = useRiderLocation();
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const totalEarnings = 500 + Number(order.eco_bonus); // Flat rate of ₦500 + eco bonus
-  const hasEcoBonus = Number(order.eco_bonus) > 0;
+  const totalEarnings = Number(order.rider_earning ?? 0); // Rider's share of the delivery fee
   const hasCarbonSavings = Number(order.carbon_saved) > 0;
 
   return (
@@ -36,9 +38,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 <h3 className="font-medium text-sm text-gray-900 truncate">
                   {order.vendor_name}
                 </h3>
-                {hasEcoBonus && (
-                  <Leaf className="h-4 w-4 text-green-500" />
-                )}
               </div>
               <p className="text-sm text-gray-600 truncate">
                 → {order.customer_name}
@@ -57,7 +56,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           <div className="space-y-2">
             <div className="flex items-center text-xs text-gray-600">
               <MapPin className="h-3 w-3 mr-1.5" />
-              <span>{Number(order.actual_distance || 1.5).toFixed(1)} km</span>
+              <span>{formatKm(pickupDistanceKm(order.pickup_location, position))}</span>
             </div>
             <div className="flex items-center text-xs text-gray-600">
               <Clock className="h-3 w-3 mr-1.5" />
@@ -77,14 +76,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 maximumFractionDigits: 2
               })}
             </div>
-            {hasEcoBonus && (
-              <div className="text-xs text-green-600">
-                +₦{Number(order.eco_bonus).toLocaleString('en-NG', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })} eco
-              </div>
-            )}
           </div>
         </div>
 

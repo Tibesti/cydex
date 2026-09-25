@@ -1,731 +1,150 @@
-# Cydex Logistics Pricing Model Implementation Plan
+# Pricing and Order Dispatch
 
-## Overview
-This document outlines the step-by-step implementation of the tiered pricing model for Cydex Logistics, replacing the previous ₦500 flat rate with a dynamic, student-friendly pricing structure.
+How Cydex prices orders, how the money is split, which vendors customers can order from, and which riders see an order, as of September 2026.
 
-## Phase 1: Database Schema Updates
+This doc replaces the two earlier plans, `PRICING_IMPLEMENTATION_PLAN.md` and the previous version of this file. The earlier tiered-pricing model is summarised under [Earlier ideas](#earlier-ideas-not-current-decisions).
 
-### Step 1.1: Create Pricing Configuration Table
-```sql
-CREATE TABLE IF NOT EXISTS public.pricing_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  base_rate DECIMAL(10,2) DEFAULT 200.00,
-  distance_rate_per_km DECIMAL(10,2) DEFAULT 75.00,
-  weight_rates JSONB DEFAULT '{"0.5-5": 100, "5-10": 300}',
-  late_night_fee DECIMAL(10,2) DEFAULT 100.00,
-  surge_multiplier DECIMAL(3,2) DEFAULT 1.20,
-  student_discount_percent DECIMAL(3,2) DEFAULT 0.10,
-  green_fee DECIMAL(10,2) DEFAULT 20.00,
-  subscription_monthly_rate DECIMAL(10,2) DEFAULT 1000.00,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+## Current decisions
+
+| Decision | Value |
+|---|---|
+| Delivery fee | **The higher of ₦600 or ₦200 × km.** ₦600 is a minimum fare, not added on top. Straight-line distance from the vendor's store to the customer's delivery address. |
+| Service Charge (customer) | **15% of the items total.** Shown to customers as an amount only, never the percentage. |
+| Vendor commission | **10% of the items total**, and nothing else is taken from vendors |
+| Rider pay | **85% of the delivery fee.** Cydex keeps 15%. There's no eco bonus. |
+| Rounding | **None:** exact figures, to the kobo |
+| Item prices | **From the database** (`products`), never from the app |
+| Customer radius | Customers only see, and can only order from, vendors **within 5 km** of their delivery address |
+| Rider radius | Riders only see, and can only accept, orders whose pickup is **within 5 km** of their live location |
+| Rider online status | **Automatic.** Online while the rider's live location is coming through, offline once it stops |
+
+## What the customer pays
+
+```
+delivery fee   = the higher of ₦600 or ₦200 × distance (km)
+service charge = 15% × items total
+total          = items total + service charge + delivery fee
 ```
 
-### Step 1.2: Create Student Subscriptions Table
-```sql
-CREATE TABLE IF NOT EXISTS public.student_subscriptions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  student_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  subscription_type VARCHAR(50) DEFAULT 'monthly',
-  status VARCHAR(20) DEFAULT 'active',
-  start_date DATE DEFAULT CURRENT_DATE,
-  end_date DATE,
-  payment_reference VARCHAR(255),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-### Step 1.3: Update Orders Table
-```sql
--- Add pricing-related columns to existing orders table
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS base_rate DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS distance_fee DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS weight_fee DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS late_night_fee DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS surge_fee DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS student_discount DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS green_fee DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS total_amount DECIMAL(10,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS distance_km DECIMAL(5,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS weight_kg DECIMAL(5,2);
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS is_late_night BOOLEAN DEFAULT FALSE;
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS is_peak_hour BOOLEAN DEFAULT FALSE;
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS is_student_order BOOLEAN DEFAULT FALSE;
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS subscription_applied BOOLEAN DEFAULT FALSE;
-```
-
-## Phase 2: Backend Services Implementation
-
-### Step 2.1: Create Pricing Service
-**File: `src/services/pricingService.ts`**
-
-```typescript
-interface PricingConfig {
-  base_rate: number;
-  distance_rate_per_km: number;
-  weight_rates: { [key: string]: number };
-  late_night_fee: number;
-  surge_multiplier: number;
-  student_discount_percent: number;
-  green_fee: number;
-  subscription_monthly_rate: number;
-}
-
-interface PricingRequest {
-  distance_km: number;
-  weight_kg: number;
-  is_late_night: boolean;
-  is_peak_hour: boolean;
-  is_student: boolean;
-  include_green_fee: boolean;
-  subscription_applied: boolean;
-}
-
-export class PricingService {
-  private config: PricingConfig;
-
-  async loadConfig(): Promise<void> {
-    const { data, error } = await supabase
-      .from('pricing_config')
-      .select('*')
-      .single();
-    
-    if (error) throw error;
-    this.config = data;
-  }
-
-  calculatePrice(request: PricingRequest): number {
-    let total = this.config.base_rate;
-
-    // Distance fee
-    if (request.distance_km > 2) {
-      total += (request.distance_km - 2) * this.config.distance_rate_per_km;
-    }
-
-    // Weight fee
-    if (request.weight_kg > 0.5) {
-      if (request.weight_kg <= 5) {
-        total += this.config.weight_rates['0.5-5'];
-      } else if (request.weight_kg <= 10) {
-        total += this.config.weight_rates['5-10'];
-      }
-    }
-
-    // Late night fee
-    if (request.is_late_night) {
-      total += this.config.late_night_fee;
-    }
-
-    // Surge pricing
-    if (request.is_peak_hour) {
-      total *= this.config.surge_multiplier;
-    }
-
-    // Student discount
-    if (request.is_student && !request.subscription_applied) {
-      total *= (1 - this.config.student_discount_percent);
-    }
-
-    // Green fee
-    if (request.include_green_fee) {
-      total += this.config.green_fee;
-    }
-
-    return Math.round(total * 100) / 100; // Round to 2 decimal places
-  }
-}
-```
-
-### Step 2.2: Create Student Verification Service
-**File: `src/services/studentVerificationService.ts`**
-
-```typescript
-export class StudentVerificationService {
-  async verifyStudentEmail(email: string): Promise<boolean> {
-    return email.endsWith('@ui.edu.ng');
-  }
-
-  async checkActiveSubscription(studentId: string): Promise<boolean> {
-    const { data, error } = await supabase
-      .from('student_subscriptions')
-      .select('*')
-      .eq('student_id', studentId)
-      .eq('status', 'active')
-      .gte('end_date', new Date().toISOString().split('T')[0])
-      .single();
-
-    return !error && !!data;
-  }
-}
-```
-
-### Step 2.3: Create Distance Calculation Service
-**File: `src/services/distanceService.ts`**
-
-```typescript
-export class DistanceService {
-  async calculateDistance(
-    pickupAddress: string,
-    deliveryAddress: string
-  ): Promise<number> {
-    // Integration with Google Maps Distance Matrix API
-    const response = await fetch('/api/calculate-distance', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pickupAddress, deliveryAddress })
-    });
-
-    const data = await response.json();
-    return data.distance_km;
-  }
-
-  isLateNight(): boolean {
-    const hour = new Date().getHours();
-    return hour >= 20 || hour < 6;
-  }
-
-  isPeakHour(): boolean {
-    const hour = new Date().getHours();
-    return hour >= 12 && hour <= 14; // 12 PM - 2 PM
-  }
-}
-```
-
-## Phase 3: Frontend Components Implementation
-
-### Step 3.1: Create Pricing Calculator Component
-**File: `src/components/pricing/PricingCalculator.tsx`**
-
-```typescript
-import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface PricingCalculatorProps {
-  onPriceCalculated: (price: number, breakdown: any) => void;
-}
-
-export const PricingCalculator: React.FC<PricingCalculatorProps> = ({
-  onPriceCalculated
-}) => {
-  const [formData, setFormData] = useState({
-    pickupAddress: '',
-    deliveryAddress: '',
-    weightKg: 0.5,
-    isLateNight: false,
-    includeGreenFee: false,
-    isStudent: false
-  });
-
-  const [price, setPrice] = useState<number | null>(null);
-  const [breakdown, setBreakdown] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  const calculatePrice = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/calculate-price', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      const data = await response.json();
-      setPrice(data.total_price);
-      setBreakdown(data.breakdown);
-      onPriceCalculated(data.total_price, data.breakdown);
-    } catch (error) {
-      console.error('Error calculating price:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Delivery Price Calculator</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="text-sm font-medium">Pickup Address</label>
-          <Input
-            value={formData.pickupAddress}
-            onChange={(e) => setFormData({...formData, pickupAddress: e.target.value})}
-            placeholder="Enter pickup address"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Delivery Address</label>
-          <Input
-            value={formData.deliveryAddress}
-            onChange={(e) => setFormData({...formData, deliveryAddress: e.target.value})}
-            placeholder="Enter delivery address"
-          />
-        </div>
-
-        <div>
-          <label className="text-sm font-medium">Weight (kg)</label>
-          <Input
-            type="number"
-            step="0.1"
-            min="0.1"
-            max="10"
-            value={formData.weightKg}
-            onChange={(e) => setFormData({...formData, weightKg: parseFloat(e.target.value)})}
-          />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.isLateNight}
-            onCheckedChange={(checked) => setFormData({...formData, isLateNight: checked})}
-          />
-          <label className="text-sm">Late Night Delivery (8 PM - 6 AM)</label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.includeGreenFee}
-            onCheckedChange={(checked) => setFormData({...formData, includeGreenFee: checked})}
-          />
-          <label className="text-sm">Include Green Fee (₦20)</label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Switch
-            checked={formData.isStudent}
-            onCheckedChange={(checked) => setFormData({...formData, isStudent: checked})}
-          />
-          <label className="text-sm">UI Student (@ui.edu.ng)</label>
-        </div>
-
-        <Button 
-          onClick={calculatePrice} 
-          disabled={loading || !formData.pickupAddress || !formData.deliveryAddress}
-          className="w-full"
-        >
-          {loading ? 'Calculating...' : 'Calculate Price'}
-        </Button>
-
-        {price && (
-          <div className="mt-4 p-4 bg-green-50 rounded-lg">
-            <h3 className="font-semibold text-lg">Total: ₦{price}</h3>
-            {breakdown && (
-              <div className="text-sm text-gray-600 mt-2">
-                <div>Base Rate: ₦{breakdown.base_rate}</div>
-                {breakdown.distance_fee > 0 && <div>Distance: ₦{breakdown.distance_fee}</div>}
-                {breakdown.weight_fee > 0 && <div>Weight: ₦{breakdown.weight_fee}</div>}
-                {breakdown.late_night_fee > 0 && <div>Late Night: ₦{breakdown.late_night_fee}</div>}
-                {breakdown.surge_fee > 0 && <div>Peak Hour: ₦{breakdown.surge_fee}</div>}
-                {breakdown.student_discount > 0 && <div>Student Discount: -₦{breakdown.student_discount}</div>}
-                {breakdown.green_fee > 0 && <div>Green Fee: ₦{breakdown.green_fee}</div>}
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-```
-
-### Step 3.2: Create Subscription Management Component
-**File: `src/components/pricing/SubscriptionForm.tsx`**
-
-```typescript
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-
-export const SubscriptionForm: React.FC = () => {
-  const { user } = useAuth();
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-
-  const handleSubscribe = async () => {
-    if (!email.endsWith('@ui.edu.ng')) {
-      setMessage('Only UI students with @ui.edu.ng email can subscribe');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, userId: user?.id })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setMessage('Subscription successful! Check your email for payment link.');
-      } else {
-        setMessage(data.error || 'Subscription failed');
-      }
-    } catch (error) {
-      setMessage('An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Student Monthly Subscription</CardTitle>
-        <p className="text-sm text-gray-600">
-          ₦1,000/month for unlimited standard deliveries
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
-          <label className="text-sm font-medium">UI Email Address</label>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="yourname@ui.edu.ng"
-          />
-        </div>
-
-        <Button 
-          onClick={handleSubscribe} 
-          disabled={loading || !email}
-          className="w-full"
-        >
-          {loading ? 'Processing...' : 'Subscribe Now'}
-        </Button>
-
-        {message && (
-          <div className={`p-3 rounded text-sm ${
-            message.includes('successful') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {message}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-```
-
-## Phase 4: API Routes Implementation
-
-### Step 4.1: Create Price Calculation API
-**File: `src/pages/api/calculate-price.ts`**
-
-```typescript
-import { NextApiRequest, NextApiResponse } from 'next';
-import { PricingService } from '@/services/pricingService';
-import { DistanceService } from '@/services/distanceService';
-import { StudentVerificationService } from '@/services/studentVerificationService';
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    const {
-      pickupAddress,
-      deliveryAddress,
-      weightKg,
-      isLateNight,
-      includeGreenFee,
-      isStudent,
-      userId
-    } = req.body;
-
-    const pricingService = new PricingService();
-    const distanceService = new DistanceService();
-    const studentService = new StudentVerificationService();
-
-    await pricingService.loadConfig();
-
-    // Calculate distance
-    const distanceKm = await distanceService.calculateDistance(
-      pickupAddress,
-      deliveryAddress
-    );
-
-    // Check if user has active subscription
-    const hasSubscription = userId ? 
-      await studentService.checkActiveSubscription(userId) : false;
-
-    // Determine if it's late night or peak hour
-    const isLateNightDelivery = isLateNight || distanceService.isLateNight();
-    const isPeakHour = distanceService.isPeakHour();
-
-    const price = pricingService.calculatePrice({
-      distance_km: distanceKm,
-      weight_kg: weightKg,
-      is_late_night: isLateNightDelivery,
-      is_peak_hour: isPeakHour,
-      is_student: isStudent,
-      include_green_fee: includeGreenFee,
-      subscription_applied: hasSubscription
-    });
-
-    // Generate breakdown for transparency
-    const breakdown = {
-      base_rate: 200,
-      distance_fee: distanceKm > 2 ? (distanceKm - 2) * 75 : 0,
-      weight_fee: weightKg > 0.5 ? (weightKg <= 5 ? 100 : 300) : 0,
-      late_night_fee: isLateNightDelivery ? 100 : 0,
-      surge_fee: isPeakHour ? price * 0.2 : 0,
-      student_discount: isStudent && !hasSubscription ? price * 0.1 : 0,
-      green_fee: includeGreenFee ? 20 : 0
-    };
-
-    res.status(200).json({
-      total_price: price,
-      breakdown,
-      distance_km: distanceKm,
-      has_subscription: hasSubscription
-    });
-  } catch (error) {
-    console.error('Price calculation error:', error);
-    res.status(500).json({ error: 'Failed to calculate price' });
-  }
-}
-```
-
-### Step 4.2: Create Distance Calculation API
-**File: `src/pages/api/calculate-distance.ts`**
-
-```typescript
-import { NextApiRequest, NextApiResponse } from 'next';
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    const { pickupAddress, deliveryAddress } = req.body;
-
-    // Google Maps Distance Matrix API call
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(pickupAddress)}&destinations=${encodeURIComponent(deliveryAddress)}&key=${process.env.GOOGLE_MAPS_API_KEY}`
-    );
-
-    const data = await response.json();
-    
-    if (data.status === 'OK' && data.rows[0].elements[0].status === 'OK') {
-      const distanceKm = data.rows[0].elements[0].distance.value / 1000;
-      res.status(200).json({ distance_km: distanceKm });
-    } else {
-      res.status(400).json({ error: 'Could not calculate distance' });
-    }
-  } catch (error) {
-    console.error('Distance calculation error:', error);
-    res.status(500).json({ error: 'Failed to calculate distance' });
-  }
-}
-```
-
-### Step 4.3: Create Subscription AP
-**File: `src/pages/api/subscribe.ts`**
-
-```typescript
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabase';
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    const { email, userId } = req.body;
-
-    if (!email.endsWith('@ui.edu.ng')) {
-      return res.status(400).json({ error: 'Only UI students can subscribe' });
-    }
-
-    // Create subscription record
-    const { data: subscription, error: subError } = await supabase
-      .from('student_subscriptions')
-      .insert({
-        student_id: userId,
-        subscription_type: 'monthly',
-        status: 'pending',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      })
-      .select()
-      .single();
-
-    if (subError) {
-      return res.status(500).json({ error: 'Failed to create subscription' });
-    }
-
-    // Initialize Paystack payment
-    const paystackResponse = await fetch('https://api.paystack.co/transaction/initialize', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email,
-        amount: 100000, // ₦1,000 in kobo
-        callback_url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/subscription-callback`,
-        metadata: {
-          subscription_id: subscription.id,
-          user_id: userId
-        }
-      })
-    });
-
-    const paystackData = await paystackResponse.json();
-
-    if (paystackData.status) {
-      res.status(200).json({
-        success: true,
-        authorization_url: paystackData.data.authorization_url
-      });
-    } else {
-      res.status(400).json({ error: 'Payment initialization failed' });
-    }
-  } catch (error) {
-    console.error('Subscription error:', error);
-    res.status(500).json({ error: 'Failed to process subscription' });
-  }
-}
-```
-
-## Phase 5: Integration with Existing Order Flow
-
-### Step 5.1: Update Order Creation Process
-**File: `src/pages/customer/NewOrder.tsx`**
-
-```typescript
-// Add pricing calculator to the order flow
-import { PricingCalculator } from '@/components/pricing/PricingCalculator';
-
-// In the component:
-const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
-const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
-
-const handlePriceCalculated = (price: number, breakdown: any) => {
-  setCalculatedPrice(price);
-  setPriceBreakdown(breakdown);
-};
-
-// Add pricing calculator to the UI
-{selectedVendor && (
-  <div className="mb-6">
-    <PricingCalculator onPriceCalculated={handlePriceCalculated} />
-  </div>
-)}
-```
-
-### Step 5.2: Update Checkout Process
-**File: `src/pages/customer/OrderConfirmation.tsx`**
-
-```typescript
-// Include pricing breakdown in order confirmation
-const orderData = {
-  // ... existing order data
-  base_rate: priceBreakdown?.base_rate,
-  distance_fee: priceBreakdown?.distance_fee,
-  weight_fee: priceBreakdown?.weight_fee,
-  late_night_fee: priceBreakdown?.late_night_fee,
-  surge_fee: priceBreakdown?.surge_fee,
-  student_discount: priceBreakdown?.student_discount,
-  green_fee: priceBreakdown?.green_fee,
-  total_amount: calculatedPrice,
-  distance_km: priceBreakdown?.distance_km,
-  weight_kg: selectedItems.reduce((sum, item) => sum + (item.weight || 0), 0),
-  is_late_night: isLateNight(),
-  is_peak_hour: isPeakHour(),
-  is_student_order: user?.email?.endsWith('@ui.edu.ng') || false,
-  subscription_applied: hasActiveSubscription
-};
-```
-
-## Phase 6: Testing and Validation
-
-### Step 6.1: Unit Tests
-- Test pricing calculations with various scenarios
-- Test student verification logic
-- Test subscription management
-- Test distance calculation accuracy
-
-### Step 6.2: Integration Tests
-- Test complete order flow with pricing
-- Test Paystack payment integration
-- Test Google Maps API integration
-- Test database operations
-
-### Step 6.3: User Acceptance Testing
-- Test with UI students
-- Validate pricing transparency
-- Test subscription benefits
-- Verify discount applications
-
-## Phase 7: Deployment and Monitoring
-
-### Step 7.1: Environment Configuration
-```bash
-# Add to .env.local
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-PAYSTACK_SECRET_KEY=your_paystack_secret_key
-PAYSTACK_PUBLIC_KEY=your_paystack_public_key
-NEXT_PUBLIC_BASE_URL=https://cydex-omega.vercel.app
-```
-
-### Step 7.2: Database Migration
-```bash
-# Run the SQL scripts from Phase 1
-supabase db push
-```
-
-### Step 7.3: Vercel Deployment
-```bash
-# Deploy to production
-vercel --prod
-```
-
-### Step 7.4: Monitoring Setup
-- Set up Vercel Analytics
-- Monitor API response times
-- Track pricing calculation accuracy
-- Monitor subscription uptake
-
-## Timeline
-
-- **Week 1**: Database schema and backend services
-- **Week 2**: Frontend components and API routes
-- **Week 3**: Integration with existing order flow
-- **Week 4**: Testing and deployment
-- **Week 5**: Monitoring and optimization
-
-## Success Metrics
-
-- 90%+ pricing calculation accuracy
-- <2 second API response times
-- 95%+ student discount application success
-- 10%+ subscription adoption rate
-- 50%+ reduction in customer support queries about pricing
-
-This implementation plan provides a comprehensive roadmap for integrating the new pricing model into the existing Cydex Logistics platform while maintaining the current functionality and user experience. 
+- **Distance** is straight-line, from the vendor's store address to the customer's chosen delivery address, to the nearest 10 m (2 decimal places in km).
+- **Anything up to 3 km costs the ₦600 minimum.** Beyond 3 km it's ₦200 per km.
+- **Every amount is exact**, to the kobo.
+
+| Items | Distance | ₦200 × km | Delivery fee | Service Charge | Total |
+|---|---|---|---|---|---|
+| ₦3,000 | 2.50 km | ₦500 | **₦600.00** (minimum) | ₦450.00 | **₦4,050.00** |
+| ₦1,234 | 3.00 km | ₦600 | **₦600.00** | ₦185.10 | **₦2,019.10** |
+| ₦5,000 | 4.80 km | ₦960 | **₦960.00** | ₦750.00 | **₦6,710.00** |
+
+### Where customers see it
+Each of these shows **Items, Service Charge, Delivery (x km), Total** using [`PriceBreakdown.tsx`](../src/components/customer/PriceBreakdown.tsx):
+- **Cart:** priced for the default address ([`ShoppingCartSidebar.tsx`](../src/components/customer/ShoppingCartSidebar.tsx)).
+- **Checkout, "Deliver to" step:** priced for whichever saved address is selected. **Deliver here** is disabled if the vendor is over 5 km away or has no store location ([`ConfirmDeliveryAddressDialog.tsx`](../src/components/customer/address/ConfirmDeliveryAddressDialog.tsx)).
+- **Order detail:** the stored amounts ([`OrderSummary.tsx`](../src/components/customer/OrderSummary.tsx)).
+
+There's no separate Pricing page in the customer app.
+
+### How orders are priced
+Everything is calculated in the database. The app only sends **product IDs and quantities**. Migrations:
+- [`20260925220000_pricing_and_availability.sql`](../supabase/migrations/20260925220000_pricing_and_availability.sql)
+- [`20260925230000_server_prices_and_split.sql`](../supabase/migrations/20260925230000_server_prices_and_split.sql)
+
+- **Settings** live in `pricing_config`. Change them there, with no code change; there's no admin screen yet.
+
+  | Column | Value | Meaning |
+  |---|---|---|
+  | `base_rate` | 600 | Minimum delivery fee |
+  | `distance_rate_per_km` | 200 | Price per km |
+  | `service_charge_rate` | 0.15 | Customer Service Charge |
+  | `vendor_commission_rate` | 0.10 | Cydex's cut of the items total |
+  | `rider_share_rate` | 0.85 | Rider's cut of the delivery fee |
+- **`quote_order(vendor, address, items)`:** the price shown before paying ([`useOrderQuote.ts`](../src/hooks/useOrderQuote.ts)). It prices items from `products`, and returns a status:
+  - `ok`
+  - `out_of_range` (over 5 km)
+  - `no_store` (the vendor has no store location)
+  - `no_address`
+- **`place_order(vendor, address, items)`:** the only way to create an order ([`NewOrder.tsx`](../src/pages/customer/NewOrder.tsx), `createOrderWithAddress`). In one step it:
+  - checks every product belongs to the vendor, is active, and has a quantity of at least 1
+  - prices the items from `products`
+  - copies the delivery address, with the customer's phone
+  - creates the order and its `order_items` (each linked to its `product_id`)
+- **`price_new_order` trigger:** then fills in the delivery fee, Service Charge and total. It **rejects the order** if the address isn't the customer's, the vendor has no store location, or the vendor is more than 5 km away.
+- **Customers can't write to `orders` or `order_items` directly**; their access rules for that were removed. After an order is placed, only admins can change its prices or delivery address (`protect_order_prices`).
+- **Squad** charges the order's `total_amount`, as stored by the database.
+
+## How the money is split
+
+Settled when the order is delivered (`calculate_settlement_amounts`, `process_order_settlement`).
+
+| Who | Gets | ₦3,000 items, ₦960 delivery (4.8 km) |
+|---|---|---|
+| Vendor | Items total minus 10% commission | ₦3,000 − ₦300 = **₦2,700** |
+| Rider | 85% of the delivery fee | 85% × ₦960 = **₦816** |
+| Cydex | Service Charge + vendor commission + 15% of the delivery fee | ₦450 + ₦300 + ₦144 = **₦894** |
+| **Customer paid** | | **₦4,410** |
+
+- **When the customer pays,** the full amount is held in `payment_holds` until delivery.
+- **Records are gross, fee, then net:**
+  - Vendor transactions show the items total, Cydex's commission as the fee, and the vendor's net amount.
+  - Rider transactions show the full delivery fee, Cydex's 15% as the fee, and the rider's 85%.
+- **Riders see their own share.** Each delivery stores `rider_earning` (85% of the fee), and the rider screens show that instead of the full fee.
+- **The old 5% "eco bonus" has been removed.** It was an extra 5% of the delivery fee that Cydex paid riders on every delivery, whatever vehicle they used. `deliveries.eco_bonus` and `rider_earnings.eco_bonus` stay at 0 for now.
+- **A new bonus is planned** for deliveries where the vendor and customer confirm the rider used an eco-friendly vehicle. See [APP_TODO.md → Eco-friendly deliveries](APP_TODO.md#eco-friendly-deliveries).
+
+## Customer radius (5 km)
+
+- **Customers only see vendors within 5 km** of their default delivery address, the one shown in the "Deliver to" bar. The list is sorted nearest-first and each card shows the distance ([`VendorSelectionPage.tsx`](../src/components/customer/VendorSelectionPage.tsx)).
+- **Switching address** in the "Deliver to" bar reloads the list for the new address.
+- **Customers with no saved address** are asked to add one before any vendors are shown.
+- **Vendors with no store location** never appear.
+- **How it's enforced:**
+  - `vendors_near_address(address)` returns only vendor IDs and distances, never the vendors' coordinates.
+  - `price_new_order` blocks orders over 5 km, so a customer can't get around the list.
+  - The radius is set in `customer_vendor_radius_m()` (5000 m).
+
+## Rider radius (5 km)
+
+- **A rider only sees, and can only accept, orders whose pickup** (the vendor's store) **is within 5 km of their live location.**
+- Orders already assigned to a rider stay visible to that rider wherever they go.
+- **A rider sees no available orders if** they have no live location yet.
+- **Positions:** the rider's comes from `rider_profiles.current_location`; the pickup's from `deliveries.pickup_location`.
+- **Enforced in the database's access rules,** migration [`20260925180000_rider_order_radius.sql`](../supabase/migrations/20260925180000_rider_order_radius.sql). The radius is set in `rider_order_radius_m()` (5000 m).
+- **5 km is temporary.** Limits by vehicle are planned: 1.5 km walking, 7 km bicycle, 20 km for any other vehicle. See [APP_TODO.md → Riders](APP_TODO.md#riders).
+- **Order lists** show the real distance to pickup, the rider's earning, and sort nearest-first.
+
+## Rider online status
+
+The manual online/offline toggle is gone. The dashboard and profile show a read-only badge.
+
+- **Online:** each time the rider app saves the live location, it sets `rider_profiles.rider_status = 'available'`.
+- **Heartbeat:** while the app is open, it re-saves the location every 60 seconds even if the rider hasn't moved.
+- **Offline:**
+  - A scheduled database job, `mark-stale-riders-offline` (pg_cron, every minute), sets `rider_status = 'offline'` once the saved location is **more than 2 minutes old**.
+  - The app also sets offline straight away when location is blocked or the rider leaves the rider screens.
+- **Riders must allow location to use the app** (see [ADDRESS_HANDLING.md → Riders](ADDRESS_HANDLING.md#riders)).
+
+## Things to know
+
+- **Straight-line distance is shorter than the road route**, so riders on winding routes earn a little less per real km.
+- **A rider could fake their location** with GPS-spoofing tools or by writing to `current_location` directly. A web app can't fully prevent that.
+- **The 5 km rules measure different legs.** The rider rule is rider to pickup; the customer rule is pickup to drop-off. So a single delivery can be up to about 10 km of riding.
+- **Dead code still shows the old flat ₦500:**
+  - The delivery scheduler dialog (`DeliveryScheduler.tsx`) is never opened.
+  - `PricingCalculator.tsx`, `pricingService.ts` and `SubscriptionForm.tsx` aren't used anywhere.
+  - `DELIVERY_FEE` in `src/constants/delivery.ts` is only used by mock and sample data.
+
+## Earlier ideas (not current decisions)
+
+The earlier plans proposed a tiered model. None of it is live or decided. The matching columns exist in `pricing_config` and `orders` but aren't used:
+
+| Idea | Earlier proposal | Columns |
+|---|---|---|
+| Base + distance | ₦200 for the first 2 km, then ₦75/km | Superseded by the higher of ₦600 or ₦200/km |
+| Weight | +₦100 for 0.5–5 kg, +₦300 for 5–10 kg | `weight_rates`, `orders.weight_fee`, `weight_kg` |
+| Late night (8 PM–6 AM) | +₦100 | `late_night_fee`, `orders.is_late_night` |
+| Peak hours (12–2 PM) | ×1.2 | `surge_multiplier`, `orders.surge_fee`, `is_peak_hour` |
+| UI student discount | 10% off for `@ui.edu.ng` emails | `student_discount_percent`, `orders.student_discount`, `is_student_order` |
+| Student subscription | ₦1,000/month for unlimited deliveries | `subscription_monthly_rate`, `student_subscriptions` table |
+| Green fee | Optional ₦20 | `green_fee` |
+
+The earlier plans also described Next.js API routes and Paystack. This app uses Vite, which has no API routes, and pays through Squad.

@@ -1,8 +1,12 @@
 import React from 'react';
 import { X, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { PriceBreakdown } from './PriceBreakdown';
+import { quoteProblem } from '@/lib/pricing';
+import { useAddresses } from '@/hooks/useAddresses';
+import { toCartLines, useOrderQuote } from '@/hooks/useOrderQuote';
+import { addressHeadline } from '@/lib/address';
 
 interface CartItem {
   id: string;
@@ -32,6 +36,12 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
   cartTotal,
   proceedToCheckout
 }) => {
+  // Priced for the default address; the customer can pick another at checkout
+  const { defaultAddress } = useAddresses();
+  const { quote, isLoading: quoteLoading } = useOrderQuote(cartItems[0]?.vendor_id, defaultAddress?.id, toCartLines(cartItems));
+  const deliverable = quote?.status === 'ok';
+  const problem = defaultAddress ? quoteProblem(quote?.status) : quoteProblem('no_address');
+
   if (!isOpen) return null;
 
   return (
@@ -103,22 +113,21 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
             </ScrollArea>
             
             <div className="p-4 border-t">
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal</span>
-                  <span>₦{cartTotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Delivery Fee</span>
-                  <span>₦500.00</span>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex justify-between font-semibold">
-                  <span>Total</span>
-                  <span>₦{(cartTotal + 500).toLocaleString()}</span>
-                </div>
+              <div className="mb-4 space-y-2">
+                <PriceBreakdown
+                  subtotal={quote?.subtotal ?? cartTotal}
+                  serviceCharge={quote?.service_charge ?? null}
+                  deliveryFee={deliverable ? quote.delivery_fee : null}
+                  distanceKm={deliverable ? quote.distance_km : null}
+                  total={deliverable ? quote.total_amount : null}
+                  loading={quoteLoading}
+                />
+                {problem && <p className="text-xs text-destructive">{problem}</p>}
+                {defaultAddress && (
+                  <p className="text-xs text-muted-foreground">
+                    Delivering to {addressHeadline(defaultAddress)}. You can change it at checkout.
+                  </p>
+                )}
               </div>
               
               <Button 
