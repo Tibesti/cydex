@@ -70,7 +70,7 @@ Everything is calculated in the database. The app only sends **product IDs and q
   - creates the order and its `order_items` (each linked to its `product_id`)
 - **`price_new_order` trigger:** then fills in the delivery fee, Service Charge and total. It **rejects the order** if the address isn't the customer's, the vendor has no store location, or the vendor is more than 5 km away.
 - **Customers can't write to `orders` or `order_items` directly**; their access rules for that were removed. After an order is placed, only admins can change its prices or delivery address (`protect_order_prices`).
-- **Squad** charges the order's `total_amount`, as stored by the database.
+- **Squad** charges the order's `total_amount`, as stored by the database. The checkout is started, and the payment verified, by Edge Functions on the server (see [ORDER_FLOW.md → Payment confirmation](ORDER_FLOW.md#payment-confirmation)).
 
 ## How the money is split
 
@@ -83,7 +83,8 @@ Settled when the order is delivered (`calculate_settlement_amounts`, `process_or
 | Cydex | Service Charge + vendor commission + 15% of the delivery fee | ₦450 + ₦300 + ₦144 = **₦894** |
 | **Customer paid** | | **₦4,410** |
 
-- **When the customer pays,** the full amount is held in `payment_holds` until delivery.
+- **When the customer pays,** the full amount is held in `payment_holds` until delivery. Nothing is credited to the vendor or rider before the order is `delivered`; a cancelled or rejected paid order is refunded in full to the customer's wallet (see [ORDER_FLOW.md → Refunds](ORDER_FLOW.md#refunds)).
+- **What vendors and riders see:** vendors see the items total, Cydex's commission and what they're credited, never the Service Charge or delivery fee. Riders see the delivery fee, Cydex's 15% and what they're credited, never item prices (see [ORDER_FLOW.md → When vendors and riders are paid](ORDER_FLOW.md#when-vendors-and-riders-are-paid)).
 - **Records are gross, fee, then net:**
   - Vendor transactions show the items total, Cydex's commission as the fee, and the vendor's net amount.
   - Rider transactions show the full delivery fee, Cydex's 15% as the fee, and the rider's 85%.

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useHasPhone } from '@/hooks/useHasPhone';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, Clock, MapPin, AlertCircle, Eye } from 'lucide-react';
@@ -22,6 +23,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
   loading = false,
   error = null 
 }) => {
+  // Riders need a phone number on their profile to accept deliveries
+  const hasPhone = useHasPhone();
   const { position } = useRiderLocation();
   const [selectedOrder, setSelectedOrder] = useState<DeliveryData | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -196,6 +199,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     </Button>
                     <Button
                       onClick={() => onAcceptOrder(order.id)}
+                      disabled={!hasPhone}
+                      title={hasPhone ? undefined : 'Add a phone number to your profile first'}
                       className="bg-primary hover:bg-primary/90 text-black font-medium text-xs"
                       size="sm"
                       aria-label={`Accept delivery order from ${order.vendor_name}`}

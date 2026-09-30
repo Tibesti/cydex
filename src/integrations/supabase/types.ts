@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       addresses: {
@@ -601,6 +626,56 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          data: Json
+          id: string
+          last_error: string | null
+          profile_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template: string
+          to_email: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          last_error?: string | null
+          profile_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template: string
+          to_email: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          last_error?: string | null
+          profile_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template?: string
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -644,6 +719,41 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_handover_codes: {
+        Row: {
+          code: string
+          created_at: string
+          failed_attempts: number
+          kind: string
+          order_id: string
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          failed_attempts?: number
+          kind: string
+          order_id: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          failed_attempts?: number
+          kind?: string
+          order_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_handover_codes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -781,6 +891,7 @@ export type Database = {
           payment_reference: string | null
           payment_status: string
           picked_up_at: string | null
+          pickup_started_at: string | null
           ready_for_pickup_at: string | null
           rider_assigned_at: string | null
           rider_id: string | null
@@ -828,6 +939,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           picked_up_at?: string | null
+          pickup_started_at?: string | null
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
@@ -875,6 +987,7 @@ export type Database = {
           payment_reference?: string | null
           payment_status?: string
           picked_up_at?: string | null
+          pickup_started_at?: string | null
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
@@ -2418,6 +2531,19 @@ export type Database = {
         Args: { p_items: Json; p_vendor_id: string }
         Returns: number
       }
+      check_handover_code: {
+        Args: { p_code: string; p_kind: string; p_order_id: string }
+        Returns: boolean
+      }
+      confirm_order_payment: {
+        Args: {
+          p_amount: number
+          p_details?: Json
+          p_order_number: string
+          p_reference: string
+        }
+        Returns: string
+      }
       create_order_notification: {
         Args: {
           p_message: string
@@ -2429,11 +2555,26 @@ export type Database = {
         }
         Returns: string
       }
+      create_wallet_for: {
+        Args: { p_profile_id: string; p_role: string }
+        Returns: undefined
+      }
       current_user_role: { Args: never; Returns: string }
+      customer_cancel_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: undefined
+      }
       customer_vendor_radius_m: { Args: never; Returns: number }
       distance_m: {
         Args: { lat1: number; lat2: number; lng1: number; lng2: number }
         Returns: number
+      }
+      ensure_my_wallet: {
+        Args: never
+        Returns: {
+          id: string
+          virtual_account_id: string
+        }[]
       }
       generate_order_number: { Args: never; Returns: string }
       generate_verification_code: { Args: never; Returns: string }
@@ -2460,10 +2601,79 @@ export type Database = {
         Returns: boolean
       }
       mark_stale_riders_offline: { Args: never; Returns: number }
+      new_handover_code: { Args: never; Returns: string }
+      notify_user: {
+        Args: {
+          p_message: string
+          p_order?: Database["public"]["Tables"]["orders"]["Row"]
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      order_for_action: {
+        Args: { p_as: string; p_order_id: string }
+        Returns: {
+          base_rate: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          carbon_credits_earned: number | null
+          created_at: string
+          customer_id: string
+          delivered_at: string | null
+          delivery_address: Json
+          delivery_address_id: string | null
+          delivery_fee: number | null
+          delivery_type: string
+          distance_fee: number | null
+          distance_km: number | null
+          estimated_delivery_time: string | null
+          green_fee: number | null
+          id: string
+          is_late_night: boolean | null
+          is_peak_hour: boolean | null
+          is_student_order: boolean | null
+          late_night_fee: number | null
+          order_number: string
+          payment_details: Json | null
+          payment_gateway: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          picked_up_at: string | null
+          pickup_started_at: string | null
+          ready_for_pickup_at: string | null
+          rider_assigned_at: string | null
+          rider_id: string | null
+          service_charge: number | null
+          special_instructions: string | null
+          status: string
+          student_discount: number | null
+          subscription_applied: boolean | null
+          subtotal: number
+          surge_fee: number | null
+          time_slot: string | null
+          total_amount: number
+          updated_at: string
+          vendor_accepted_at: string | null
+          vendor_id: string | null
+          verification_code: string | null
+          weight_fee: number | null
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       order_pickup_within_rider_radius: {
         Args: { p_order_id: string }
         Returns: boolean
       }
+      payout_fee_rate: { Args: never; Returns: number }
       place_order: {
         Args: {
           p_address_id: string
@@ -2499,6 +2709,7 @@ export type Database = {
           payment_reference: string | null
           payment_status: string
           picked_up_at: string | null
+          pickup_started_at: string | null
           ready_for_pickup_at: string | null
           rider_assigned_at: string | null
           rider_id: string | null
@@ -2525,6 +2736,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      queue_email: {
+        Args: {
+          p_data: Json
+          p_subject: string
+          p_template: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       quote_order: {
         Args: { p_address_id: string; p_items: Json; p_vendor_id: string }
         Returns: {
@@ -2538,10 +2758,42 @@ export type Database = {
           total_amount: number
         }[]
       }
+      refund_order: { Args: { p_order_id: string }; Returns: undefined }
+      request_payout: {
+        Args: { p_amount: number; p_bank_account_id: string }
+        Returns: string
+      }
+      rider_accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      rider_confirm_delivery: {
+        Args: { p_code: string; p_order_id: string }
+        Returns: boolean
+      }
       rider_order_radius_m: { Args: never; Returns: number }
+      rider_start_pickup: { Args: { p_order_id: string }; Returns: undefined }
+      settle_payout: {
+        Args: {
+          p_id: string
+          p_metadata?: Json
+          p_reason?: string
+          p_reference?: string
+          p_role: string
+          p_status: string
+        }
+        Returns: string
+      }
       shares_order_with: { Args: { p_profile_id: string }; Returns: boolean }
       update_customer_wallet_on_payment: {
         Args: { p_amount: number; p_customer_id: string }
+        Returns: undefined
+      }
+      vendor_accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      vendor_confirm_pickup: {
+        Args: { p_code: string; p_order_id: string }
+        Returns: boolean
+      }
+      vendor_mark_ready: { Args: { p_order_id: string }; Returns: undefined }
+      vendor_reject_order: {
+        Args: { p_order_id: string; p_reason?: string }
         Returns: undefined
       }
       vendors_near_address: {
@@ -2692,6 +2944,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       delivery_status: [

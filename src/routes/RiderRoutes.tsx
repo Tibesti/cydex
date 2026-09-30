@@ -1,6 +1,7 @@
 
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
+import Notifications from '../pages/rider/Notifications';
 import RiderDashboard from '../pages/rider/RiderDashboard';
 import AvailableOrders from '../pages/rider/AvailableOrders';
 import CurrentDeliveries from '../pages/rider/CurrentDeliveries';
@@ -61,6 +62,14 @@ const RiderRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['RIDER']}>
             <RiderOrderDetail />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/notifications" 
+        element={
+          <ProtectedRoute allowedRoles={['RIDER']}>
+            <Notifications />
           </ProtectedRoute>
         } 
       />

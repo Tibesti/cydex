@@ -113,7 +113,6 @@ export const ConfirmDeliveryAddressDialog: React.FC<ConfirmDeliveryAddressDialog
                 subtotal={quote?.subtotal ?? cartSubtotal}
                 serviceCharge={quote?.service_charge ?? null}
                 deliveryFee={deliverable ? quote.delivery_fee : null}
-                distanceKm={deliverable ? quote.distance_km : null}
                 total={deliverable ? quote.total_amount : null}
                 loading={quoteLoading}
               />

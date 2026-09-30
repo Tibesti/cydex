@@ -1,33 +1,33 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Package, Clock, CheckCircle, AlertCircle, User, MapPin, Phone, Mail } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ChevronLeft, Package, Clock, AlertCircle, User, MapPin, Phone } from 'lucide-react';
 import { useVendorOrders } from '@/hooks/useVendorOrders';
 import { VendorOrderAcceptance } from './VendorOrderAcceptance';
-import { toast } from 'sonner';
+import VendorPhoneNotice from './VendorPhoneNotice';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import HandoverCodeDialog from '@/components/orders/HandoverCodeDialog';
+import { VendorEarningsBreakdown } from '@/components/orders/EarningsBreakdown';
+import { orderActions } from '@/services/orderActions';
+import { vendorCanReject } from '@/lib/orderStatus';
 
 const OrderDetailReal = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { orders, loading, updateOrderStatus } = useVendorOrders();
+  const { orders, loading, hasPhone, acceptOrder, markReady, rejectOrder, refresh } = useVendorOrders();
   const [actionLoading, setActionLoading] = useState(false);
-  
-  // Debug: Log the full order data when it changes
-  useEffect(() => {
-    if (orderId && orders.length > 0) {
-      const currentOrder = orders.find(o => o.id === orderId);
-      console.log('Current Order Data:', JSON.stringify(currentOrder, null, 2));
-      if (currentOrder?.customer) {
-        console.log('Customer Data:', JSON.stringify(currentOrder.customer, null, 2));
-      } else {
-        console.log('No customer data found in order');
-      }
-    }
-  }, [orderId, orders]);
-  
+  const [showReject, setShowReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showHandover, setShowHandover] = useState(false);
+
   const order = orders.find(o => o.id === orderId);
 
   const formatCurrency = (amount: number) => {
@@ -48,52 +48,21 @@ const OrderDetailReal = () => {
     });
   };
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      processing: { color: 'bg-blue-100 text-blue-800', icon: Package },
-      delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      cancelled: { color: 'bg-red-100 text-red-800', icon: AlertCircle }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
-
-    return (
-      <Badge className={config.color}>
-        <Icon className="w-3 h-3 mr-1" />
-        {status}
-      </Badge>
-    );
-  };
-
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (!order) return;
-    
+  const run = async (action: () => Promise<boolean>) => {
     setActionLoading(true);
-    const success = await updateOrderStatus(order.id, newStatus);
-    if (success) {
-      // Navigation will happen automatically when order status changes
-      if (newStatus === 'cancelled') {
-        // Optionally navigate back to orders list after rejection
-        setTimeout(() => {
-          navigate('/vendor/orders');
-        }, 1500);
-      }
-    }
+    await action();
     setActionLoading(false);
   };
 
-  const handleAcceptOrder = async (orderId: string) => {
-    await handleStatusUpdate('accepted');
-  };
-
-  const handleRejectOrder = async (orderId: string, reason: string) => {
-    await handleStatusUpdate('cancelled');
-  };
-
-  const handleMarkReady = async () => {
-    await handleStatusUpdate('ready_for_pickup');
+  const handleReject = async () => {
+    if (!order) return;
+    setActionLoading(true);
+    const ok = await rejectOrder(order.id, rejectReason.trim() || undefined);
+    setActionLoading(false);
+    if (ok) {
+      setShowReject(false);
+      setRejectReason('');
+    }
   };
 
   if (loading) {
@@ -153,12 +122,19 @@ const OrderDetailReal = () => {
       </Button>
 
       {/* Show acceptance interface for pending orders */}
+      {order.status === 'pending' && !hasPhone && (
+        <div className="mb-4">
+          <VendorPhoneNotice />
+        </div>
+      )}
+
       {order.status === 'pending' && (
         <div className="mb-6">
           <VendorOrderAcceptance
+            canAccept={hasPhone}
             order={order}
-            onAccept={handleAcceptOrder}
-            onReject={handleRejectOrder}
+            onAccept={(id) => run(() => acceptOrder(id))}
+            onReject={() => setShowReject(true)}
             loading={actionLoading}
           />
         </div>
@@ -169,20 +145,24 @@ const OrderDetailReal = () => {
           <h1 className="text-2xl font-bold">Order #{order.order_number}</h1>
           <p className="text-muted-foreground">Placed on {formatDate(order.created_at)}</p>
         </div>
-        <div className="text-right">
-          {getStatusBadge(order.status)}
-          <div className="mt-2">
-            {(order.status === 'processing' || order.status === 'accepted') && (
-              <Button onClick={handleMarkReady} disabled={actionLoading}>
-                Mark Ready for Pickup
-              </Button>
-            )}
-            {order.status === 'processing' && !order.rider_id && (
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                Searching for Rider...
-              </Badge>
-            )}
-          </div>
+        <div className="flex flex-col items-end gap-2 text-right">
+          <OrderStatusBadge status={order.status} />
+          {order.status === 'accepted' && (
+            <Button onClick={() => run(() => markReady(order.id))} disabled={actionLoading}>
+              Mark Ready for Pickup
+            </Button>
+          )}
+          {order.status === 'ready_for_pickup' && (
+            <Badge variant="outline">Waiting for a rider to accept…</Badge>
+          )}
+          {(order.status === 'rider_assigned' || order.status === 'picking_up') && (
+            <Button onClick={() => setShowHandover(true)}>Hand to rider</Button>
+          )}
+          {order.status !== 'pending' && vendorCanReject(order) && (
+            <Button variant="outline" className="text-destructive" onClick={() => setShowReject(true)} disabled={actionLoading}>
+              Reject order
+            </Button>
+          )}
         </div>
       </div>
 
@@ -211,21 +191,8 @@ const OrderDetailReal = () => {
                   </div>
                 ))}
                 
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>{formatCurrency(order.subtotal)}</span>
-                  </div>
-                  {order.delivery_fee && (
-                    <div className="flex justify-between">
-                      <span>Delivery Fee:</span>
-                      <span>{formatCurrency(order.delivery_fee)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
-                    <span>Total:</span>
-                    <span>{formatCurrency(order.total_amount)}</span>
-                  </div>
+                <div className="border-t pt-4">
+                  <VendorEarningsBreakdown order={order} />
                 </div>
               </div>
             </CardContent>
@@ -333,24 +300,17 @@ const OrderDetailReal = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-muted-foreground" />
-                    <p className="text-sm">{order.rider.email}</p>
-                  </div>
-                  
                   {order.rider.phone && (
                     <div className="flex items-center gap-3">
                       <Phone className="h-5 w-5 text-muted-foreground" />
-                      <p className="text-sm">{order.rider.phone}</p>
+                      <a href={`tel:${order.rider.phone}`} className="text-sm underline-offset-2 hover:underline">{order.rider.phone}</a>
                     </div>
                   )}
 
-                  {order.verification_code && (
-                    <div className="mt-4 p-3 bg-green-50 rounded-lg">
-                      <p className="font-medium text-green-900">Verification Code</p>
-                      <p className="text-lg font-mono text-green-700">{order.verification_code}</p>
-                      <p className="text-sm text-green-600">Share this code with the rider for order pickup</p>
-                    </div>
+                  {(order.status === 'rider_assigned' || order.status === 'picking_up') && (
+                    <p className="text-sm text-muted-foreground">
+                      When the rider arrives, tap <span className="font-medium text-foreground">Hand to rider</span> and enter the pickup code they give you.
+                    </p>
                   )}
                 </div>
               </CardContent>
@@ -381,22 +341,22 @@ const OrderDetailReal = () => {
                   </div>
                 )}
                 
-                {order.rider_assigned_at && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <div>
-                      <p className="font-medium">Rider Assigned</p>
-                      <p className="text-sm text-muted-foreground">{formatDate(order.rider_assigned_at)}</p>
-                    </div>
-                  </div>
-                )}
-
                 {order.ready_for_pickup_at && (
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <div>
                       <p className="font-medium">Ready for Pickup</p>
                       <p className="text-sm text-muted-foreground">{formatDate(order.ready_for_pickup_at)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {order.rider_assigned_at && (
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div>
+                      <p className="font-medium">Rider Assigned</p>
+                      <p className="text-sm text-muted-foreground">{formatDate(order.rider_assigned_at)}</p>
                     </div>
                   </div>
                 )}
@@ -425,7 +385,7 @@ const OrderDetailReal = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                     <div>
-                      <p className="font-medium">Cancelled</p>
+                      <p className="font-medium">{order.status === 'rejected' ? 'Rejected' : 'Cancelled'}</p>
                       <p className="text-sm text-muted-foreground">{formatDate(order.cancelled_at)}</p>
                       {order.cancel_reason && (
                         <p className="text-sm text-red-600">Reason: {order.cancel_reason}</p>
@@ -438,6 +398,43 @@ const OrderDetailReal = () => {
           </Card>
         </div>
       </div>
+
+      <AlertDialog open={showReject} onOpenChange={(open) => !actionLoading && setShowReject(open)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject order #{order.order_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The customer will be notified and refunded to their Cydex wallet. You can only reject an order before a rider accepts it.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            placeholder="Reason (shown to the customer), e.g. Out of stock"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            maxLength={200}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Keep order</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleReject(); }}
+              disabled={actionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Reject order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <HandoverCodeDialog
+        open={showHandover}
+        onOpenChange={setShowHandover}
+        title="Hand order to rider"
+        description="Ask the rider for their 4-digit pickup code."
+        confirmLabel="Confirm pickup"
+        onSubmit={(code) => orderActions.confirmPickup(order.id, code)}
+        onConfirmed={() => refresh()}
+      />
     </div>
   );
 };

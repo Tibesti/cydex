@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Truck, Box, Clock, ChevronRight } from 'lucide-react';
@@ -18,41 +19,18 @@ const CustomerDashboard = () => {
 
   // Filter active and past orders
   const activeOrders = orders.filter(order => 
-    !['delivered', 'cancelled', 'refunded'].includes(order.status)
+    !['delivered', 'cancelled', 'rejected'].includes(order.status)
   );
 
   const pastOrders = orders.filter(order =>
-    ['delivered', 'cancelled', 'refunded'].includes(order.status)
+    ['delivered', 'cancelled', 'rejected'].includes(order.status)
   );
 
   const handleOrderClick = (orderId: string) => {
     navigate(`/customer/orders/${orderId}`);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge className="bg-yellow-500 text-xs">Pending</Badge>;
-      case 'processing':
-        return <Badge className="bg-blue-500 text-xs">Processing</Badge>;
-      case 'confirmed':
-        return <Badge className="bg-green-500 text-xs">Confirmed</Badge>;
-      case 'preparing':
-        return <Badge className="bg-purple-500 text-xs">Preparing</Badge>;
-      case 'ready':
-        return <Badge className="bg-indigo-500 text-xs">Ready</Badge>;
-      case 'out_for_delivery':
-        return <Badge className="bg-amber-500 text-xs">In Transit</Badge>;
-      case 'delivered':
-        return <Badge className="bg-green-500 text-xs">Delivered</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-500 text-xs">Cancelled</Badge>;
-      case 'refunded':
-        return <Badge className="bg-muted text-xs">Refunded</Badge>;
-      default:
-        return <Badge className="text-xs">Unknown</Badge>;
-    }
-  };
+  const getStatusBadge = (status: string) => <OrderStatusBadge status={status} className="text-xs" />;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {

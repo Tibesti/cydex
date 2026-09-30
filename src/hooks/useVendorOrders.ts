@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
-import { settlementService } from '@/services/settlementService';
+import { orderActions } from '@/services/orderActions';
+import { useHasPhone } from '@/hooks/useHasPhone';
+import { errorMessage } from '@/lib/address';
 
 // Type for database order items (as they come from the database)
 interface DBOrderItem {
@@ -66,13 +68,14 @@ export interface VendorOrder {
   delivered_at?: string;
   cancelled_at?: string;
   cancel_reason?: string;
-  verification_code?: string;
   vendor_accepted_at?: string;
   rider_assigned_at?: string;
   picked_up_at?: string;
   ready_for_pickup_at?: string;
   time_slot?: string;
   special_instructions?: string;
+  service_charge?: number;
+  rider?: { id: string; name: string; phone?: string | null } | null;
 }
 
 export const useVendorOrders = () => {
@@ -80,6 +83,8 @@ export const useVendorOrders = () => {
   const [orders, setOrders] = useState<VendorOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Vendors need a phone number on their profile to accept orders
+  const hasPhone = useHasPhone();
 
   const loadOrders = useCallback(async () => {
     if (!user?.id) {
@@ -96,7 +101,8 @@ export const useVendorOrders = () => {
         .from('orders')
         .select('*')
         .eq('vendor_id', user.id)
-        .eq('payment_status', 'paid')
+        // Unpaid orders are hidden until Squad confirms payment; refunded ones stay for the record
+        .in('payment_status', ['paid', 'refunded'])
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
@@ -186,6 +192,14 @@ export const useVendorOrders = () => {
         }
       }
 
+      // Riders on these orders
+      const riderIds = [...new Set(orders.map(order => order.rider_id).filter(Boolean) as string[])];
+      const ridersMap = new Map<string, { id: string; name: string; phone: string | null }>();
+      if (riderIds.length > 0) {
+        const { data: riders } = await supabase.from('profiles').select('id, name, phone').in('id', riderIds);
+        riders?.forEach(r => ridersMap.set(r.id, { id: r.id, name: r.name || 'Rider', phone: r.phone }));
+      }
+
       // Process and combine all data
       const processedOrders = orders.map(order => {
         // Get or create customer data
@@ -223,6 +237,7 @@ export const useVendorOrders = () => {
         return {
           ...order,
           customer,
+          rider: order.rider_id ? ridersMap.get(order.rider_id) ?? null : null,
           order_items: items
         };
       });
@@ -245,79 +260,51 @@ export const useVendorOrders = () => {
   // Refresh function
   const refresh = useCallback(() => loadOrders(), [loadOrders]);
 
-  // Update order status
-  const updateOrderStatus = useCallback(async (orderId: string, status: string): Promise<boolean> => {
-    if (!user?.id) {
-      toast.error('You must be logged in to update orders');
-      return false;
-    }
-
-    try {
-      const updateData: any = { 
-        status,
-        updated_at: new Date().toISOString()
-      };
-
-      // Add timestamp fields based on status
-      if (status === 'accepted' || status === 'processing') {
-        updateData.vendor_accepted_at = new Date().toISOString();
-      } else if (status === 'cancelled') {
-        updateData.cancelled_at = new Date().toISOString();
-        updateData.cancel_reason = 'Order rejected by vendor';
-        
-        // Process refund to customer wallet when vendor rejects order
-        try {
-          await settlementService.processRefund(
-            orderId,
-            'Order rejected by vendor',
-            true // Bypass time check for vendor rejections
-          );
-          toast.success('Order rejected and refund processed. Amount credited to customer wallet.');
-        } catch (refundError) {
-          console.error('Error processing refund:', refundError);
-          // Still update order status even if refund fails
-          toast.warning('Order rejected, but refund processing encountered an issue. Please contact support.');
-        }
-      } else if (status === 'ready_for_pickup') {
-        updateData.ready_for_pickup_at = new Date().toISOString();
-      }
-
-      // Only update order status if not cancelled (refund already updates it)
-      if (status !== 'cancelled') {
-        const { error } = await supabase
-          .from('orders')
-          .update(updateData)
-          .eq('id', orderId)
-          .eq('vendor_id', user.id); // Ensure vendor can only update their own orders
-        
-        if (error) {
-          console.error('Error updating order status:', error);
-          toast.error('Failed to update order status');
-          return false;
-        }
-      }
-
-      if (status !== 'cancelled') {
-        toast.success(`Order status updated successfully`);
-      }
-      
-      // Refresh orders to get updated data
-      await loadOrders();
-      
-      return true;
-    } catch (error) {
-      console.error('Error in updateOrderStatus:', error);
-      toast.error('Failed to update order status');
-      return false;
-    }
+  // Live updates when an order changes (payment confirmed, rider assigned, ...)
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`vendor-orders-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `vendor_id=eq.${user.id}` }, () => {
+        loadOrders();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id, loadOrders]);
+
+  const runAction = useCallback(async (action: () => Promise<unknown>, success: string): Promise<boolean> => {
+    try {
+      await action();
+      toast.success(success);
+      await loadOrders();
+      return true;
+    } catch (e) {
+      toast.error(errorMessage(e, 'Could not update the order'));
+      return false;
+    }
+  }, [loadOrders]);
+
+  const acceptOrder = useCallback(
+    (orderId: string) => runAction(() => orderActions.accept(orderId), 'Order accepted'), [runAction]);
+  const markReady = useCallback(
+    (orderId: string) => runAction(() => orderActions.markReady(orderId), 'Order marked ready. Nearby riders have been notified.'),
+    [runAction]);
+  const rejectOrder = useCallback(
+    (orderId: string, reason?: string) =>
+      runAction(() => orderActions.reject(orderId, reason), 'Order rejected. If it was paid, the customer has been refunded to their wallet.'),
+    [runAction]);
 
   return {
     orders,
     loading,
     error,
     refresh,
-    updateOrderStatus
+    hasPhone,
+    acceptOrder,
+    markReady,
+    rejectOrder
   };
 };
 

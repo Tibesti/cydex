@@ -4,6 +4,8 @@ Open work for the Cydex app, grouped by who it's for, as of September 2026. With
 
 Tick an item (`[x]`) when it ships, or remove it and note it in the relevant doc.
 
+Everything needed to go live (keys, Squad live mode, emails, hosting, launch test) is in [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
+
 ## General
 
 - [ ] **Use Cydex's own Google Maps API key.** The current key (`VITE_GOOGLE_MAPS_API_KEY`) belongs to the Faramove project, so Cydex's map usage is billed there.
@@ -17,20 +19,29 @@ Tick an item (`[x]`) when it ships, or remove it and note it in the relevant doc
   - **Riders:** verify their **NIN**, **address** and **vehicle**. More checks will be added later. The verified vehicle type is also the starting point for eco-friendly rewards (see [Eco-friendly deliveries](#eco-friendly-deliveries)).
   - **Vendors:** decide what they need to submit and who reviews it.
   - **Today:** riders have `is_verified` and `verification_status` fields plus a document upload. Vendors only have a `verified` flag. Nothing defines who reviews them.
-- [ ] **Move Squad secret-key calls to server-side code.** Payments, virtual accounts and payouts currently use the Squad secret key in the browser, where anyone can read it. Move those calls to Supabase Edge Functions, and rotate the live key that is written in `src/config/squad.ts`.
+- [ ] **Push the order-flow and wallet changes live.** Run from the repo, logged in to the Supabase CLI:
+  1. `npx supabase db push --linked` (migrations `20260930000000_order_flow.sql` and `20260930100000_wallets_server_side.sql`), then `npx supabase gen types typescript --linked > src/integrations/supabase/types.ts`
+  2. `npx supabase functions deploy squad-checkout squad-webhook squad-payout send-emails`
+  3. `npx supabase secrets set SQUAD_SECRET_KEY=<sandbox secret key> SQUAD_API_URL=https://sandbox-api-d.squadco.com SQUAD_MERCHANT_ID=<merchant id> APP_URL=<site URL>`. Use the live key and `https://api-d.squadco.com` in production.
+
+  Until this is done, checkout and withdrawals don't work.
+- [ ] **Set the Squad webhook URL.** In the Squad dashboard, set the webhook to `https://hsnguuozyigpzstwqkrk.supabase.co/functions/v1/squad-webhook`. Without it, a payment is only confirmed if the customer returns to the confirmation page after paying.
+- [ ] **Set up sending emails.** Welcome, payment-confirmed and refund emails are queued in `email_outbox` but nothing sends them yet.
+  - Create a [Resend](https://resend.com) account (or choose another provider, which means changing `supabase/functions/send-emails`), and verify Cydex's sending domain.
+  - `npx supabase secrets set RESEND_API_KEY=... EMAIL_FROM="Cydex <hello@your-domain>" EMAIL_CRON_SECRET=<long random string>`
+  - Schedule `send-emails` every minute with pg_cron + pg_net, sending the `x-cron-secret` header.
+- [ ] **Move virtual account creation server-side.** Payments and withdrawals now use the Squad secret key only on the server, but creating virtual accounts (`walletSetupService`, `squadVirtualAccountService`) still uses it in the browser. Move that to an Edge Function, then remove `VITE_SQUAD_SECRET_KEY` / `VITE_SQUAD_PROD_SECRET_KEY` and rotate the live key that is written in `src/config/squad.ts`.
 
 ## Customers
 
-- [ ] **Push notifications:** order accepted, rider assigned, rider arriving, without keeping a browser tab open.
+- [ ] **Push notifications:** order updates on the phone without keeping a browser tab open. In-app notifications already exist (see [ORDER_FLOW.md → Notifications](ORDER_FLOW.md#notifications)); this is about delivering them when the app is closed.
 - [ ] **Installable app:** a progressive web app (PWA) that sits on the phone's home screen, not a browser bookmark.
-- [ ] **Receipt code:** the customer gets a code and gives it to the rider on arrival, confirming the delivery happened. See the rider's **Delivery code** below; it's the same feature from the other side.
 - [ ] **Wallet top-up:** a way to add money to the wallet beyond card and bank transfer.
 - [ ] **Schedule pickup:** choose a later time for the order to be collected and delivered, instead of right away. An unused scheduler dialog already exists (`DeliveryScheduler.tsx`), but it still has a free-text address box and the old ₦500 fee.
 
 ## Vendors
 
-- [ ] **Handover code:** the rider confirms collection with a code from the vendor, instead of pressing a button, so it's clear the parcel actually reached the rider.
-- [ ] **Push notifications:** alerts for new incoming orders without watching an open browser tab.
+- [ ] **Push notifications:** alerts for new incoming orders when the app is closed (in-app notifications already exist).
 - [ ] **In-app subscriptions:** vendors pay a monthly subscription fee to access services for their business.
 - [ ] **Off-app order entry:** bring WhatsApp and phone orders into the same records as app orders.
 - [ ] **Direct rider access:** assign off-app orders to Cydex riders. Available only to subscribed vendors.
@@ -39,12 +50,6 @@ Tick an item (`[x]`) when it ships, or remove it and note it in the relevant doc
 
 - [ ] **Automatic assignment:** offer each order to one specific rider with a time limit to accept, instead of leaving it in a shared pool.
 - [ ] **Automatic reassignment:** a rejected or timed-out order goes straight to the next nearby rider.
-- [ ] **Delivery code:** the rider enters the code the customer gives them to complete a delivery. **Partly built, but not working:**
-  - A 4-digit code is generated when a rider is assigned and sent to the customer.
-  - The rider's order screen shows that code to the rider.
-  - The dashboard's code check compares against a placeholder, `"1234"`.
-
-  It needs checking in the database, and the code hidden from riders.
 - [ ] **Repayment visibility:** show the weekly hire-purchase deduction and the weeks left until the rider owns their bicycle, in Earnings.
 - [ ] **Scheduled pickups:** see and accept scheduled pickups in advance, with a reminder before the pickup time. Goes with the customer **Schedule pickup** above.
 - [ ] **Order distance limits by vehicle:** how far an order a rider can take depends on their vehicle.
@@ -76,7 +81,7 @@ Riders who deliver on eco-friendly vehicles (for example a bicycle, on foot, or 
   - **Vendor:** answers when handing the order to the rider.
   - **Customer:** answers at drop-off or in the rating step.
   - **Both answers are compulsory.** The handover or delivery can't be completed without them, otherwise eco rewards would go to riders who didn't earn them.
-  - Fits with the vendor **Handover code** and customer **Receipt code** above, which happen at the same moments.
+  - Fits with the pickup and delivery handover codes (see [ORDER_FLOW.md → Handover codes](ORDER_FLOW.md#handover-codes)), which happen at the same moments.
   - A rider's eco status for a delivery only counts when it matches the vehicle verified at onboarding.
 - [ ] **Eco-vehicle bonus for riders:** extra pay for deliveries confirmed as eco-friendly. The amount is still to be decided.
   - This replaces the old flat 5% "eco bonus", which every rider got whatever their vehicle and which was removed in September 2026.
@@ -93,3 +98,9 @@ These were on the original list and are now live, so they've been left out above
 - **Pin-drop addresses** for customers, and store locations for vendors (see [ADDRESS_HANDLING.md](ADDRESS_HANDLING.md)).
 - **Rider availability** worked out from their live location, with no manual online/offline toggle.
 - **Distance-linked rider pay:** riders get 85% of the delivery fee, which is the higher of ₦600 or ₦200 per km.
+- **Order flow** (see [ORDER_FLOW.md](ORDER_FLOW.md)):
+  - handover codes: the rider's pickup code for the vendor, and the customer's delivery code for the rider
+  - in-app notifications for every order step, with unread badges
+  - refunds to the wallet on cancellation or rejection
+  - payment confirmation on the server
+- **Wallet balances are only changed by the database.** Users can read their wallet but not write it. Withdrawals go through `request_payout` (checks and deducts the balance) and the `squad-payout` Edge Function (sends the transfer, and puts the money back if it fails).

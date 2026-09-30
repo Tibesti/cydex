@@ -1,1 +1,9 @@
 project_id = "hsnguuozyigpzstwqkrk"
+
+# Squad calls this directly; it checks the Squad signature instead of a Supabase login
+[functions.squad-webhook]
+verify_jwt = false
+
+# Called by pg_cron with the x-cron-secret header
+[functions.send-emails]
+verify_jwt = false

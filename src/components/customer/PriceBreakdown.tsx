@@ -5,14 +5,13 @@ interface PriceBreakdownProps {
   subtotal: number;
   serviceCharge: number | null;
   deliveryFee: number | null;
-  distanceKm?: number | null;
   total: number | null;
   loading?: boolean;
 }
 
 // Items + Service Charge + Delivery = Total. The service charge is shown as an
 // amount only (never as a percentage).
-export const PriceBreakdown = ({ subtotal, serviceCharge, deliveryFee, distanceKm, total, loading }: PriceBreakdownProps) => {
+export const PriceBreakdown = ({ subtotal, serviceCharge, deliveryFee, total, loading }: PriceBreakdownProps) => {
   const amount = (value: number | null) =>
     loading ? <span className="inline-block h-4 w-16 animate-pulse rounded bg-muted" /> : value === null ? '—' : formatNaira(value);
 
@@ -27,9 +26,7 @@ export const PriceBreakdown = ({ subtotal, serviceCharge, deliveryFee, distanceK
         <span>{amount(serviceCharge)}</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-muted-foreground">
-          Delivery{distanceKm !== null && distanceKm !== undefined ? ` (${distanceKm.toFixed(2)} km)` : ''}
-        </span>
+        <span className="text-muted-foreground">Delivery</span>
         <span>{amount(deliveryFee)}</span>
       </div>
       <Separator className="my-1" />

@@ -118,7 +118,6 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
                   subtotal={quote?.subtotal ?? cartTotal}
                   serviceCharge={quote?.service_charge ?? null}
                   deliveryFee={deliverable ? quote.delivery_fee : null}
-                  distanceKm={deliverable ? quote.distance_km : null}
                   total={deliverable ? quote.total_amount : null}
                   loading={quoteLoading}
                 />

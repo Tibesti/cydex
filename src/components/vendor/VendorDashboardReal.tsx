@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { useVendorStats } from '@/hooks/useVendorStats';
 import { useVendorOrders } from '@/hooks/useVendorOrders';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { useNavigate } from 'react-router-dom';
-import ProductsManagement from './ProductsManagement';
+import TopSellingProducts from './TopSellingProducts';
 
 const VendorDashboardReal = () => {
   const { stats, loading: statsLoading } = useVendorStats();
@@ -53,24 +54,7 @@ const VendorDashboardReal = () => {
 
   const recentOrders = orders.slice(0, 5);
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
-      processing: { color: 'bg-blue-100 text-blue-800', icon: Package },
-      delivered: { color: 'bg-green-100 text-green-800', icon: CheckCircle },
-      cancelled: { color: 'bg-red-100 text-red-800', icon: AlertCircle }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
-    const Icon = config.icon;
-
-    return (
-      <Badge className={`${config.color} text-xs`}>
-        <Icon className="w-3 h-3 mr-1" />
-        {status}
-      </Badge>
-    );
-  };
+  const getStatusBadge = (status: string) => <OrderStatusBadge status={status} className="text-xs" />;
 
   if (statsLoading || ordersLoading) {
     return (
@@ -172,9 +156,6 @@ const VendorDashboardReal = () => {
         </Card>
       </div>
 
-      {/* Products Management Section */}
-      <ProductsManagement />
-
       {/* Recent Orders */}
       <Card className="overflow-hidden">
         <CardHeader className="py-3 px-3">
@@ -214,7 +195,7 @@ const VendorDashboardReal = () => {
                   </div>
                   <div className="text-right mt-2 sm:mt-0">
                     <div className="text-xs font-semibold">
-                      {formatCurrency(order.total_amount)}
+                      {formatCurrency(order.subtotal)}
                     </div>
                     <div className="text-[10px] text-gray-500">
                       {order.order_items?.length || 0} items
@@ -226,6 +207,9 @@ const VendorDashboardReal = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Best sellers (full product management is on the Products page) */}
+      <TopSellingProducts />
     </div>
   );
 };

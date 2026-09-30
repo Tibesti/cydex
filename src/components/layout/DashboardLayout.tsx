@@ -12,6 +12,7 @@ import AddressOnboarding from '@/components/address/AddressOnboarding';
 import DeliveryAddressBar from '@/components/customer/address/DeliveryAddressBar';
 import RiderLocationBar from '@/components/rider/location/RiderLocationBar';
 import RiderLocationGate from '@/components/rider/location/RiderLocationGate';
+import { useNotificationsRealtime } from '@/hooks/useNotifications';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -23,6 +24,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useNotificationsRealtime();
 
   // Memoize navigation links to prevent recreation on every render
   const navLinks = useMemo(() => getNavLinks(userRole), [userRole]);

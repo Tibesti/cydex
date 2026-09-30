@@ -6,6 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { User } from '@/types/auth.types';
 import LogoutConfirmationDialog from '@/components/auth/LogoutConfirmationDialog';
+import UnreadBadge from '@/components/notifications/UnreadBadge';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface SidebarLink {
   name: string;
@@ -31,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   userRole
 }) => {
   const location = useLocation();
+  const { unreadCount } = useNotifications();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const hoverTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -138,6 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <ul className="space-y-1">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.href;
+                const isNotifications = link.href.endsWith('/notifications');
                 
                 return (
                   <li key={link.href}>
@@ -151,8 +155,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                         !(isSidebarOpen || isHovering) && "justify-center"
                       )}
                     >
-                      <link.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
-                      {(isSidebarOpen || isHovering) && <span className="ml-3">{link.name}</span>}
+                      <span className="relative">
+                        <link.icon className={cn("h-5 w-5", isActive ? "text-primary" : "text-muted-foreground")} />
+                        {isNotifications && !(isSidebarOpen || isHovering) && (
+                          <UnreadBadge count={unreadCount} className="absolute -right-2.5 -top-2 h-4 min-w-4 text-[10px]" />
+                        )}
+                      </span>
+                      {(isSidebarOpen || isHovering) && <span className="ml-3 flex-1">{link.name}</span>}
+                      {isNotifications && (isSidebarOpen || isHovering) && <UnreadBadge count={unreadCount} />}
                     </Link>
                   </li>
                 );

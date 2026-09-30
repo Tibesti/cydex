@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import RiderPhoneNotice from '@/components/rider/RiderPhoneNotice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -120,6 +121,7 @@ const AvailableOrdersPage = () => {
   return (
     <DashboardLayout userRole="RIDER">
       <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+        <RiderPhoneNotice />
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>

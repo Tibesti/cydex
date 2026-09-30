@@ -7,6 +7,7 @@ import DeliveryAgentCard from './DeliveryAgentCard';
 import OrderItemsList from './OrderItemsList';
 import OrderSummary from './OrderSummary';
 import OrderActions from './OrderActions';
+import HandoverCodeCard from '@/components/orders/HandoverCodeCard';
 
 // Define interfaces
 interface TrackingStep {
@@ -26,6 +27,7 @@ interface OrderProduct {
 
 interface OrderDetailsContentProps {
   order: {
+    id: string;
     trackingSteps: TrackingStep[];
     eta: string;
     status: string;
@@ -36,7 +38,6 @@ interface OrderDetailsContentProps {
     rider?: {
       name: string;
       phone: string;
-      rating: number;
       photo: string | null;
     };
     products: OrderProduct[];
@@ -62,50 +63,57 @@ const OrderDetailsContent = ({
   onReorder
 }: OrderDetailsContentProps) => {
   return (
-    <CardContent className="space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6">
-      {/* Order Timeline */}
-      <OrderTrackingTimeline 
-        steps={order.trackingSteps} 
-        eta={order.eta} 
-        status={order.status}
-        verificationCode={order.verificationCode}
-        orderNumber={order.orderNumber}
-        riderName={order.riderName}
-      />
+    <CardContent className="p-3 sm:p-4 md:p-6">
+      {/* Two columns on large screens (details left, tracking right);
+          one column below that, with tracking first */}
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:gap-6 lg:grid-cols-3">
+        {/* Order tracking */}
+        <aside className="order-first lg:order-last lg:col-span-1">
+          <div className="lg:sticky lg:top-4">
+            <OrderTrackingTimeline 
+              steps={order.trackingSteps} 
+              eta={order.eta} 
+              status={order.status}
+            />
+          </div>
+        </aside>
 
-      {/* Order Info */}
-      <OrderInfoCards 
-        deliveryAddress={order.deliveryAddress}
-        orderDate={order.orderDate}
-        updatedAt={order.updatedAt}
-        items={order.items}
-      />
+        {/* Order details */}
+        <div className="min-w-0 space-y-3 sm:space-y-4 md:space-y-6 lg:col-span-2">
+          {/* The code to give the rider on arrival (exists once the vendor accepts) */}
+          <HandoverCodeCard orderId={order.id} kind="delivery" />
 
-      {/* Rider Info (if in transit) */}
-      {order.status === 'out_for_delivery' && order.rider && (
-        <DeliveryAgentCard rider={order.rider} />
-      )}
+          {/* The rider, once one has the order */}
+          {['rider_assigned', 'picking_up', 'out_for_delivery'].includes(order.status) && order.rider && (
+            <DeliveryAgentCard rider={order.rider} status={order.status} />
+          )}
 
-      {/* Order Items */}
-      <OrderItemsList products={order.products} />
+          <OrderInfoCards 
+            deliveryAddress={order.deliveryAddress}
+            orderDate={order.orderDate}
+            updatedAt={order.updatedAt}
+            items={order.items}
+          />
 
-      {/* Order Summary */}
-      <OrderSummary 
-        subtotal={order.subtotal}
-        totalAmount={order.totalAmount}
-        serviceCharge={order.serviceCharge}
-        deliveryFee={order.deliveryFee}
-        discount={order.discount}
-        paymentMethod={order.paymentMethod || "Credit Card"}
-      />
+          <OrderItemsList products={order.products} />
 
-      {/* Action Buttons */}
-      <OrderActions 
-        status={order.status}
-        onCancelOrder={onCancelOrder}
-        onDownloadReceipt={onDownloadReceipt}
-        onReorder={onReorder}
-      />
+          <OrderSummary 
+            subtotal={order.subtotal}
+            totalAmount={order.totalAmount}
+            serviceCharge={order.serviceCharge}
+            deliveryFee={order.deliveryFee}
+            discount={order.discount}
+            paymentMethod={order.paymentMethod || "Credit Card"}
+          />
+
+          <OrderActions 
+            status={order.status}
+            onCancelOrder={onCancelOrder}
+            onDownloadReceipt={onDownloadReceipt}
+            onReorder={onReorder}
+          />
+        </div>
+      </div>
     </CardContent>
   );
 };

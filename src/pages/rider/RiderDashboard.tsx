@@ -2,6 +2,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import RiderPhoneNotice from '@/components/rider/RiderPhoneNotice';
 import { Badge } from '@/components/ui/badge';
 import { useRiderLocation } from '@/hooks/useRiderLocation';
 import { useRiderData } from '@/hooks/useRiderData';
@@ -19,7 +20,7 @@ const RiderDashboard = () => {
     currentDeliveries,
     todaysEarnings,
     acceptDelivery,
-    updateDeliveryStatus
+    refetch
   } = useRiderData();
   // Online = live location coming through (no manual toggle)
   const { isOnline } = useRiderLocation();
@@ -49,6 +50,7 @@ const RiderDashboard = () => {
   return (
     <DashboardLayout userRole="RIDER">
       <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+        <RiderPhoneNotice />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Welcome, {user?.name}</h1>
@@ -71,7 +73,7 @@ const RiderDashboard = () => {
 
         <CurrentDeliveryCard 
           currentDeliveries={currentDeliveries}
-          onUpdateStatus={updateDeliveryStatus}
+          onChanged={() => refetch.currentDeliveries()}
         />
 
         <AvailableOrdersList 

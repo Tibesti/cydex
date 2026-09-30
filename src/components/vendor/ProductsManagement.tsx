@@ -37,7 +37,7 @@ const ProductsManagement = () => {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       active: { color: 'bg-green-100 text-green-800', icon: Eye },
-      inactive: { color: 'bg-gray-100 text-gray-800', icon: EyeOff },
+      inactive: { color: 'bg-muted text-foreground', icon: EyeOff },
       out_of_stock: { color: 'bg-red-100 text-red-800', icon: Package }
     };
 
@@ -74,7 +74,7 @@ const ProductsManagement = () => {
         <CardContent className="p-3">
           <div className="animate-pulse space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-muted rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -169,7 +169,7 @@ const ProductsManagement = () => {
           </Button>
         </div>
         <div className="relative w-full">
-          <Search className="h-3 w-3 absolute left-2.5 top-2.5 text-gray-400" />
+          <Search className="h-3 w-3 absolute left-2.5 top-2.5 text-muted-foreground" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
@@ -180,8 +180,8 @@ const ProductsManagement = () => {
       </CardHeader>
       <CardContent className="p-0">
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-6 px-3 text-gray-500">
-            <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+          <div className="text-center py-6 px-3 text-muted-foreground">
+            <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium mb-1">No products found</p>
             <p className="text-xs">
               {searchTerm ? 'Try adjusting your search' : 'Add your first product to get started'}
@@ -192,14 +192,14 @@ const ProductsManagement = () => {
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="flex items-start justify-between p-3 hover:bg-gray-50"
+                className="flex items-start justify-between p-3 hover:bg-muted/60"
               >
                 <div className="flex-1 min-w-0 pr-2">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-medium text-sm">{product.name}</h3>
                     {getStatusBadge(product.status)}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-muted-foreground">
                     <p className="line-clamp-1">{product.description}</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className="whitespace-nowrap">Category: {product.category || 'N/A'}</span>

@@ -1,51 +1,59 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Truck } from 'lucide-react';
+import { Phone, Truck } from 'lucide-react';
+import { isValidPhone } from '@/lib/phone';
 
 interface Rider {
   name: string;
   phone: string;
-  rating: number;
   photo: string | null;
 }
 
 interface DeliveryAgentCardProps {
   rider: Rider;
+  /** The order's status, for the "what your rider is doing" line */
+  status: string;
 }
 
-const DeliveryAgentCard = ({ rider }: DeliveryAgentCardProps) => {
+const RIDER_STATUS: Record<string, string> = {
+  rider_assigned: 'Accepted your order and will head to the vendor shortly',
+  picking_up: 'On the way to the vendor to collect your order',
+  out_for_delivery: 'On the way to you with your order',
+};
+
+// The customer's rider: who they are, what they're doing, and how to call them
+const DeliveryAgentCard = ({ rider, status }: DeliveryAgentCardProps) => {
+  const phone = isValidPhone(rider.phone) ? rider.phone.trim() : null;
   return (
-    <div className="border rounded-lg p-3 sm:p-4">
-      <h3 className="font-medium mb-3 text-sm sm:text-base">Delivery Agent</h3>
+    <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4 dark:border-green-500/30 dark:bg-green-500/10">
+      <h3 className="mb-3 text-sm font-medium sm:text-base">Your rider</h3>
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 sm:h-12 sm:w-12 bg-muted rounded-full flex items-center justify-center flex-shrink-0">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-background sm:h-12 sm:w-12">
           {rider.photo ? (
-            <img src={rider.photo} alt={rider.name} className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover" />
+            <img src={rider.photo} alt={rider.name} className="h-10 w-10 rounded-full object-cover sm:h-12 sm:w-12" />
           ) : (
-            <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+            <Truck className="h-5 w-5 text-muted-foreground sm:h-6 sm:w-6" />
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm sm:text-base truncate">{rider.name}</p>
-          <div className="flex flex-col xs:flex-row xs:items-center gap-1 xs:gap-3 text-xs sm:text-sm text-gray-500">
-            <span className="flex items-center">
-              <svg className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              {rider.rating}
-            </span>
-            <span className="truncate">{rider.phone}</span>
-          </div>
+        <div className="min-w-0 flex-1">
+          <p className="break-words text-sm font-semibold sm:text-base">{rider.name}</p>
+          {RIDER_STATUS[status] && (
+            <p className="text-xs text-green-700 dark:text-green-300 sm:text-sm">{RIDER_STATUS[status]}</p>
+          )}
+          {phone ? (
+            <a href={`tel:${phone}`} className="text-sm font-medium hover:underline">{phone}</a>
+          ) : (
+            <p className="text-xs text-muted-foreground sm:text-sm">Phone number not available</p>
+          )}
         </div>
-        <div className="flex-shrink-0">
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="h-8 sm:h-9 px-2 sm:px-3 text-xs sm:text-sm"
-          >
-            Contact
+        {phone && (
+          <Button asChild variant="outline" size="sm" className="h-8 flex-shrink-0 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm">
+            <a href={`tel:${phone}`}>
+              <Phone className="mr-1 h-4 w-4" />
+              Call
+            </a>
           </Button>
-        </div>
+        )}
       </div>
     </div>
   );

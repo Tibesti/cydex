@@ -3,6 +3,8 @@ import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { orderActions } from '@/services/orderActions';
+import { errorMessage } from '@/lib/address';
 
 export interface DeliveryData {
   id: string;
@@ -21,6 +23,7 @@ export interface DeliveryData {
   delivery_location: any;
   special_instructions: string;
   vendor_name?: string;
+  vendor_phone?: string;
   customer_name?: string;
   customer_email?: string;
   customer_phone?: string;
@@ -29,9 +32,12 @@ export interface DeliveryData {
   order_items?: any[];
   order?: {
     customer_profile?: { name: string; email: string; phone: string };
-    vendor_profile?: { name: string };
+    vendor_profile?: { name: string; phone?: string | null };
     order_items?: any[];
     subtotal?: number;
+    order_number?: string;
+    status?: string;
+    payment_status?: string;
     delivery_address?: any;
     special_instructions?: string;
   };
@@ -86,12 +92,10 @@ export const useRiderDeliveries = () => {
               delivery_address,
               special_instructions,
               customer_profile:profiles!customer_id(name, email, phone),
-              vendor_profile:profiles!vendor_id(name),
+              vendor_profile:profiles!vendor_id(name, phone),
               order_items(
                 product_name,
                 quantity,
-                unit_price,
-                total_price,
                 product_description
               )
             )
@@ -99,7 +103,8 @@ export const useRiderDeliveries = () => {
           .eq('status', 'available')
           .is('rider_id', null)
           .eq('orders.payment_status', 'paid')
-          .in('orders.status', ['accepted', 'processing', 'ready_for_pickup'])
+          // Riders only see orders once the vendor marks them ready
+          .eq('orders.status', 'ready_for_pickup')
           .order('created_at', { ascending: true })
           .limit(50); // Pagination limit for performance
 
@@ -115,6 +120,7 @@ export const useRiderDeliveries = () => {
         return {
           ...delivery,
           vendor_name: delivery.orders?.vendor_profile?.name || 'Unknown Vendor',
+          vendor_phone: delivery.orders?.vendor_profile?.phone || '',
           customer_name: delivery.orders?.customer_profile?.name || delivery.orders?.customer_profile?.email || 'Customer',
           customer_email: delivery.orders?.customer_profile?.email || '',
           customer_phone: delivery.orders?.customer_profile?.phone || '',
@@ -166,8 +172,11 @@ export const useRiderDeliveries = () => {
               customer_id,
               vendor_id,
               subtotal,
+              order_number,
+              status,
+              payment_status,
               customer_profile:profiles!customer_id(name),
-              vendor_profile:profiles!vendor_id(name),
+              vendor_profile:profiles!vendor_id(name, phone),
               order_items(count)
             )
           `)
@@ -184,6 +193,7 @@ export const useRiderDeliveries = () => {
       const formattedDeliveries = data?.map(delivery => ({
         ...delivery,
         vendor_name: delivery.orders?.vendor_profile?.name || 'Unknown Vendor',
+        vendor_phone: delivery.orders?.vendor_profile?.phone || '',
         customer_name: delivery.orders?.customer_profile?.name || 'Customer',
         items_count: delivery.orders?.order_items?.length || 0,
         // Ensure order.customer_profile satisfies the DeliveryData type (name, email, phone)
@@ -219,183 +229,47 @@ export const useRiderDeliveries = () => {
       return { success: false, orderId: null };
     }
 
-    // Check if rider already has an active delivery
-    try {
-      const { data: activeDeliveries, error: checkError } = await supabase
-        .from('deliveries')
-        .select('id')
-        .eq('rider_id', user.id)
-        .in('status', ['accepted', 'picking_up', 'picked_up', 'delivering'])
-        .limit(1);
-
-      if (checkError) throw checkError;
-
-      if (activeDeliveries && activeDeliveries.length > 0) {
-        toast.error('You already have an active delivery. Complete it before accepting another.');
-        return { success: false, orderId: null };
-      }
-    } catch (error) {
-      console.error('[RiderDeliveries] Error checking active deliveries:', error);
-      toast.error('Failed to check active deliveries');
-      return { success: false, orderId: null };
-    }
-
-    try {
-      console.log('[RiderDeliveries] Accepting delivery:', deliveryId);
-      
-      let orderId: string | null = null;
-
-      const operation = async () => {
-        // First get the delivery to find the order ID
-        const { data: deliveryData, error: deliveryFetchError } = await supabase
-          .from('deliveries')
-          .select('order_id')
-          .eq('id', deliveryId)
-          .single();
-
-        if (deliveryFetchError) throw deliveryFetchError;
-        orderId = deliveryData.order_id;
-
-        // Update the delivery
-        const { error: updateError } = await supabase
-          .from('deliveries')
-          .update({
-            rider_id: user.id,
-            status: 'accepted',
-            accepted_at: new Date().toISOString()
-          })
-          .eq('id', deliveryId)
-          .eq('status', 'available')
-          .is('rider_id', null);
-
-        if (updateError) throw updateError;
-
-        // Update the order to assign rider and change status to indicate rider is assigned
-        const { error: orderError } = await supabase
-          .from('orders')
-          .update({ 
-            rider_id: user.id,
-            status: 'rider_assigned',
-            rider_assigned_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-
-        if (orderError) throw orderError;
-      };
-
-      await retryWithBackoff(operation);
-
-      toast.success('Delivery accepted successfully!');
-      console.log('[RiderDeliveries] Delivery accepted successfully');
-      
-      // Refresh data
-      await Promise.all([
-        fetchAvailableDeliveries(),
-        fetchCurrentDeliveries()
-      ]);
-
-      return { success: true, orderId };
-    } catch (error: any) {
-      console.error('[RiderDeliveries] Error accepting delivery:', error);
-      
-      if (error.message?.includes('already accepted')) {
-        toast.error('This delivery has already been accepted by another rider');
-      } else if (error.message?.includes('not found')) {
-        toast.error('Delivery not found or no longer available');
-      } else {
-        toast.error('Failed to accept delivery. Please try again.');
-      }
-      
-      // Refresh available deliveries to remove stale data
+    // The database checks the order is still ready, within range, and that the
+    // rider has no other active delivery (rider_accept_order)
+    const orderId = availableDeliveries.find(d => d.id === deliveryId)?.order_id
+      ?? (await supabase.from('deliveries').select('order_id').eq('id', deliveryId).maybeSingle()).data?.order_id
+      ?? null;
+    if (!orderId) {
+      toast.error('This order is no longer available');
       await fetchAvailableDeliveries();
       return { success: false, orderId: null };
     }
-  }, [user?.id, fetchAvailableDeliveries, fetchCurrentDeliveries]);
-
-  const updateDeliveryStatus = useCallback(async (orderId: string, status: DeliveryData['status']) => {
-    if (!orderId || !status) {
-      toast.error('Invalid order ID or status');
-      return false;
-    }
 
     try {
-      console.log('[RiderDeliveries] Updating order status:', orderId, status);
-      
-      const operation = async () => {
-        // Map delivery statuses to order statuses
-        const orderStatusMap: Record<string, string> = {
-          'picked_up': 'out_for_delivery',
-          'delivering': 'out_for_delivery', 
-          'delivered': 'delivered'
-        };
+      await orderActions.riderAccept(orderId);
+      toast.success('Delivery accepted! Head to the vendor when you’re ready.');
+      await Promise.all([fetchAvailableDeliveries(), fetchCurrentDeliveries()]);
+      return { success: true, orderId };
+    } catch (error) {
+      toast.error(errorMessage(error, 'Could not accept this delivery'));
+      await fetchAvailableDeliveries();
+      return { success: false, orderId: null };
+    }
+  }, [user?.id, availableDeliveries, fetchAvailableDeliveries, fetchCurrentDeliveries]);
 
-        const orderStatus = orderStatusMap[status] || status;
-        
-        // Update the order first
-        const { error: orderError } = await supabase
-          .from('orders')
-          .update({ 
-            status: orderStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-
-        if (orderError) throw orderError;
-
-        // Find and update the delivery record
-        const { data: delivery, error: deliveryFetchError } = await supabase
-          .from('deliveries')
-          .select('id')
-          .eq('order_id', orderId)
-          .eq('rider_id', user?.id)
-          .maybeSingle();
-
-        if (deliveryFetchError) throw deliveryFetchError;
-        
-        if (!delivery) {
-          console.log('[RiderDeliveries] No delivery record found for order:', orderId);
-          return; // Just update the order status, no delivery record to update
-        }
-
-        const updateData: any = { 
-          status,
-          updated_at: new Date().toISOString()
-        };
-        
-        // Add appropriate timestamps
-        if (status === 'picking_up') {
-          updateData.picking_up_at = new Date().toISOString();
-        } else if (status === 'picked_up') {
-          updateData.picked_up_at = new Date().toISOString();
-        } else if (status === 'delivering') {
-          updateData.delivering_at = new Date().toISOString();
-        } else if (status === 'delivered') {
-          updateData.delivered_at = new Date().toISOString();
-        }
-
-        const { error: deliveryError } = await supabase
-          .from('deliveries')
-          .update(updateData)
-          .eq('id', delivery.id)
-          .eq('rider_id', user?.id);
-
-        if (deliveryError) throw deliveryError;
-      };
-
-      await retryWithBackoff(operation);
-
-      toast.success(`Order status updated to ${status.replace('_', ' ')}`);
-      console.log('[RiderDeliveries] Status updated successfully');
-      
-      // Refresh current deliveries
-      await fetchCurrentDeliveries();
-      return true;
-    } catch (error: any) {
-      console.error('[RiderDeliveries] Error updating delivery status:', error);
-      toast.error('Failed to update delivery status. Please try again.');
+  // The only status a rider sets directly is "heading to the vendor". Pickup is
+  // confirmed by the vendor (with the rider's code) and delivery by the rider
+  // entering the customer's code (see RiderDeliveryActions).
+  const updateDeliveryStatus = useCallback(async (orderId: string, status: DeliveryData['status']) => {
+    if (status !== 'picking_up') {
+      toast.error('Use the delivery code to complete this step');
       return false;
     }
-  }, [user?.id, fetchCurrentDeliveries]);
+    try {
+      await orderActions.startPickup(orderId);
+      toast.success('The customer has been told you’re on the way to the vendor');
+      await fetchCurrentDeliveries();
+      return true;
+    } catch (error) {
+      toast.error(errorMessage(error, 'Could not update the order'));
+      return false;
+    }
+  }, [fetchCurrentDeliveries]);
 
   return {
     availableDeliveries,

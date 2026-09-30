@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useHasPhone } from '@/hooks/useHasPhone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,8 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
   availableDeliveries,
   onAcceptOrder
 }) => {
+  // Riders need a phone number on their profile to accept deliveries
+  const hasPhone = useHasPhone();
   const { position } = useRiderLocation();
 
   return (
@@ -75,6 +78,8 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
                     <Button 
                       className="mt-2 bg-primary hover:bg-primary-hover text-black text-xs sm:text-sm h-7 sm:h-8"
                       onClick={() => onAcceptOrder(order.id)}
+                      disabled={!hasPhone}
+                      title={hasPhone ? undefined : 'Add a phone number to your profile first'}
                     >
                       Accept Order
                     </Button>

@@ -39,7 +39,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) 
       <CardContent className="p-1.5 xs:p-2 sm:p-3 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-1">
           <h3 className="font-medium line-clamp-1 text-xs sm:text-sm flex-1 mr-1 leading-tight">{product.name}</h3>
-          <span className="font-bold text-xs sm:text-sm text-primary whitespace-nowrap">₦{(product.price + 20).toLocaleString()}</span>
+          <span className="font-bold text-xs sm:text-sm text-primary whitespace-nowrap">₦{product.price.toLocaleString()}</span>
         </div>
         
         <p className="text-xs text-gray-500 mb-1 hidden xs:block">{product.stock_quantity} in stock</p>

@@ -16,12 +16,6 @@ interface WalletRecord {
   virtual_account_id: string | null;
 }
 
-const ROLE_CONFIG: Record<WalletRole, { walletTable: string; ownerColumn: string }> = {
-  customer: { walletTable: 'customer_wallet', ownerColumn: 'customer_id' },
-  vendor: { walletTable: 'vendor_wallet', ownerColumn: 'vendor_id' },
-  rider: { walletTable: 'rider_wallet', ownerColumn: 'rider_id' },
-};
-
 const DEFAULT_BANK = {
   name: 'Guaranty Trust Bank',
   code: '058',
@@ -80,38 +74,14 @@ class WalletSetupService {
     }
   }
 
-  private async ensureWalletRecord(userId: string, role: WalletRole): Promise<WalletRecord> {
-    const config = ROLE_CONFIG[role];
-
-    const { data, error } = await supabase
-      .from(config.walletTable)
-      .select('id, virtual_account_id')
-      .eq(config.ownerColumn, userId)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(`Failed to fetch ${role} wallet: ${error.message}`);
+  // Wallets are created by the database (at signup, or here if missing);
+  // users can read their wallet but never write it.
+  private async ensureWalletRecord(_userId: string, _role: WalletRole): Promise<WalletRecord> {
+    const { data, error } = await supabase.rpc('ensure_my_wallet');
+    if (error || !data?.[0]) {
+      throw new Error(error?.message || 'Wallet not found');
     }
-
-    if (data) {
-      return data as WalletRecord;
-    }
-
-    const insertResult = await supabase
-      .from(config.walletTable)
-      .insert({
-        [config.ownerColumn]: userId,
-      })
-      .select('id, virtual_account_id')
-      .single();
-
-    if (insertResult.error || !insertResult.data) {
-      throw new Error(
-        insertResult.error?.message || `Failed to create ${role} wallet`
-      );
-    }
-
-    return insertResult.data as WalletRecord;
+    return data[0] as WalletRecord;
   }
 
   private async ensureVirtualAccount(
@@ -193,22 +163,15 @@ class WalletSetupService {
     return data;
   }
 
+  // The database links a new virtual account to its owner's wallet
+  // (link_wallet_to_virtual_account trigger), so nothing to do here.
   private async linkWalletToVirtualAccount(
-    role: WalletRole,
-    userId: string,
-    walletId: string,
-    virtualAccountId: string
+    _role: WalletRole,
+    _userId: string,
+    _walletId: string,
+    _virtualAccountId: string
   ) {
-    const config = ROLE_CONFIG[role];
-
-    await supabase
-      .from(config.walletTable)
-      .update({
-        virtual_account_id: virtualAccountId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', walletId)
-      .eq(config.ownerColumn, userId);
+    return;
   }
 
   private async createSquadVirtualAccount(user: WalletSetupUser, role: WalletRole) {

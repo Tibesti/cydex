@@ -65,7 +65,8 @@ export const transformProfileData = (
     id: profileData.id,
     name: profileData.name || 'Unknown',
     email: profileData.email || 'No email',
-    phone: profileData.phone || 'No phone',
+    // Empty when missing (the edit form saves this value back, so no placeholder text)
+    phone: profileData.phone || '',
     avatar: profileData.avatar || `https://api.dicebear.com/7.x/personas/svg?seed=${profileData.email}`,
     joinDate,
     isOnline: riderData?.rider_status === 'available',

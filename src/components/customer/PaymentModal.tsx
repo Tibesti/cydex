@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
-import { squadPaymentService } from '@/services/squadPaymentService';
+import { invokeFunction } from '@/lib/edgeFunctions';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -55,57 +55,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    // The squad-checkout Edge Function starts the payment server-side, for the
+    // total stored on the order (the Squad secret key never reaches the browser)
     const initializeSquadPayment = async () => {
       setIsLoading(true);
-    try {
-        // Create payment config
-        const config = squadPaymentService.createPaymentConfig(
-        amount,
-        customerEmail,
-        orderNumber,
-        customerId || user?.id,
-        {
-          ...metadata,
-          source: 'web_checkout',
-          ui_version: '1.0.0',
-        }
-      );
-      
-        // Initialize payment with Squad API
-        const result = await squadPaymentService.initializePayment({
-          amount: config.amount, // Already in kobo
-          email: config.email,
-          transaction_ref: config.reference,
-          currency: 'NGN',
-          callback_url: `${window.location.origin}/customer/order-confirmation?order=${orderNumber}`,
-          customer_name: customerDetails.name,
-          payment_channels: ['card', 'bank', 'ussd', 'transfer'],
-          metadata: {
-            order_number: orderNumber,
-            customer_id: customerId || user?.id,
-            ...config.metadata,
-          },
+      try {
+        const { checkout_url } = await invokeFunction<{ checkout_url: string }>('squad-checkout', {
+          action: 'initiate', order_number: orderNumber,
         });
-
-        if (result.success && result.checkout_url) {
-          setCheckoutUrl(result.checkout_url);
-        } else {
-          toast.error(result.error || 'Failed to initialize payment');
-          onError(new Error(result.error || 'Payment initialization failed'));
-          onClose();
-        }
-    } catch (error) {
-      console.error('Error initializing payment:', error);
-      toast.error('Failed to initialize payment. Please try again.');
-      onError(error instanceof Error ? error : new Error('Payment initialization failed'));
-      onClose();
+        setCheckoutUrl(checkout_url);
+      } catch (error) {
+        console.error('Error initializing payment:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to initialize payment. Please try again.');
+        onError(error instanceof Error ? error : new Error('Payment initialization failed'));
+        onClose();
       } finally {
         setIsLoading(false);
       }
     };
 
     initializeSquadPayment();
-  }, [isOpen, amount, customerEmail, orderNumber, customerId, user?.id, metadata, onError, onClose, customerDetails.name]);
+  }, [isOpen, orderNumber, onError, onClose]);
 
   const handlePayment = () => {
     if (!checkoutUrl) {

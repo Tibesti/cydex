@@ -17,6 +17,7 @@ import { errorMessage } from '@/lib/address';
 import { toCartLines } from '@/hooks/useOrderQuote';
 import { supabase as typedSupabase } from '@/integrations/supabase/client';
 import { PaymentModal } from '@/components/customer/PaymentModal';
+import type { Json } from '@/integrations/supabase/types';
 import { useCartContext } from '@/contexts/CartContext';
 import { VendorRatingModal } from '@/components/customer/VendorRatingModal';
 import { VendorSelectionPage } from '@/components/customer/VendorSelectionPage';
@@ -55,6 +56,8 @@ const NewOrder = () => {
     order_number: string; 
     total_amount: number;
     payment_reference?: string;
+    // Snapshot of the chosen address, including the customer's phone (place_order)
+    delivery_address?: Json | null;
   } | null>(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [ratingOrderData, setRatingOrderData] = useState<{
@@ -239,19 +242,8 @@ const NewOrder = () => {
     if (!currentOrder) return;
 
     try {
-      // Update order with payment reference and status - keep as pending until vendor accepts
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          payment_status: 'paid', 
-          status: 'pending', // Keep as pending until vendor accepts
-          payment_reference: reference,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentOrder.id);
-
-      if (error) throw error;
-
+      // Payment is confirmed server-side (squad-checkout / squad-webhook Edge
+      // Functions), which also marks the order paid.
       // Get vendor info for rating modal
       const vendorItem = cartItems.find(item => item.vendor_id);
       if (vendorItem) {
@@ -427,6 +419,14 @@ const NewOrder = () => {
           orderNumber={currentOrder?.order_number || ''}
           customerEmail={user?.email || ''}
           customerId={user?.id}
+          customerDetails={(() => {
+            const address = (currentOrder.delivery_address ?? {}) as Record<string, string | undefined>;
+            return {
+              name: user?.name,
+              phone: address.phone || undefined,
+              address: address.formatted_address || address.address || undefined,
+            };
+          })()}
           metadata={{
             order_id: currentOrder?.id,
             user_id: user?.id,

@@ -1,6 +1,8 @@
 
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
+import Notifications from '../pages/vendor/Notifications';
+import Products from '../pages/vendor/Products';
 import VendorDashboard from '../pages/vendor/VendorDashboard';
 import VendorOrders from '../pages/vendor/Orders';
 import VendorOrderDetail from '../pages/vendor/OrderDetail';
@@ -77,10 +79,27 @@ const VendorRoutes = () => {
       />
 
       <Route 
+        path="/products" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <Products />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
         path="/add-product" 
         element={
           <ProtectedRoute allowedRoles={['VENDOR']}>
             <AddProduct />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/notifications" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <Notifications />
           </ProtectedRoute>
         } 
       />

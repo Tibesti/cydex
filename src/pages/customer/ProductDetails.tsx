@@ -88,7 +88,7 @@ const ProductDetails = () => {
     addToCart({
       id: product.id,
       name: product.name,
-      price: product.price + 20, // Add ₦20 platform fee
+      price: product.price,
       vendor_id: product.vendor_id,
       vendor_name: product.vendor?.name || 'Unknown Vendor'
     }, quantity);
@@ -209,7 +209,7 @@ const ProductDetails = () => {
               <CardContent className="space-y-4 sm:space-y-6 pt-0">
                 <div className="flex flex-col gap-3 sm:gap-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                    <span className="text-2xl sm:text-3xl md:text-4xl font-bold">₦{(product.price + 20).toLocaleString()}</span>
+                    <span className="text-2xl sm:text-3xl md:text-4xl font-bold">₦{product.price.toLocaleString()}</span>
                     <Badge variant="outline" className="flex items-center gap-1 w-fit text-xs sm:text-sm">
                       <Package className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span>{product.stock_quantity} in stock</span>
