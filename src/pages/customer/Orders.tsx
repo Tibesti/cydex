@@ -184,7 +184,11 @@ const OrdersPage = () => {
 
         {/* Tabs - Compact */}
         <Tabs defaultValue="active" className="space-y-3 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-8 sm:h-10">
+          <TabsList className="grid w-full grid-cols-4 h-8 sm:h-10">
+            <TabsTrigger value="all" className="text-xs sm:text-sm px-1 sm:px-3">
+              All
+              <span className="ml-1">({orders.length})</span>
+            </TabsTrigger>
             <TabsTrigger value="active" className="text-xs sm:text-sm px-1 sm:px-3">
               <span className="hidden xs:inline">Active Orders</span>
               <span className="xs:hidden">Active</span>
@@ -200,6 +204,24 @@ const OrdersPage = () => {
               <span className="ml-1">({cancelledOrders.length})</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="all" className="space-y-3 sm:space-y-4">
+            {orders.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
+                  <Package className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2">No orders yet</h3>
+                  <Button onClick={() => navigate('/customer/new-order')} size="sm" className="w-full xs:w-auto">
+                    Place Your First Order
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              orders.map(order => (
+                <OrderCard key={order.id} order={order} showRatingButton={order.status === 'delivered'} />
+              ))
+            )}
+          </TabsContent>
 
           <TabsContent value="active" className="space-y-3 sm:space-y-4">
             {activeOrders.length === 0 ? (

@@ -261,9 +261,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No items available</p>
+                <div className="rounded-lg bg-muted p-3 text-sm">
+                  A package from the vendor{order.special_instructions ? `: ${order.special_instructions}` : '.'}
                 </div>
               )}
             </div>

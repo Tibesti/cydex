@@ -1,7 +1,10 @@
 import React, { createContext, useContext } from 'react';
 import { useCart, CartItem } from '@/hooks/useCart';
+import CartVendorConflictDialog from '@/components/customer/CartVendorConflictDialog';
 
 interface CartContextType {
+  vendorConflict: { item: Omit<CartItem, 'quantity'>; quantity: number } | null;
+  resolveVendorConflict: (startNewCart: boolean) => void;
   cartItems: CartItem[];
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
@@ -20,6 +23,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <CartContext.Provider value={cart}>
       {children}
+      <CartVendorConflictDialog
+        conflict={cart.vendorConflict}
+        cartVendorName={cart.cartItems[0]?.vendor_name}
+        onResolve={cart.resolveVendorConflict}
+      />
     </CartContext.Provider>
   );
 };

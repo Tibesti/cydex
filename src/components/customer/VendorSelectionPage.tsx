@@ -1,131 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Filter } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Search, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { VendorSelectionCard } from './VendorSelectionCard';
 import LoadingDisplay from '@/components/ui/LoadingDisplay';
-import { useAddresses } from '@/hooks/useAddresses';
 import { addressHeadline } from '@/lib/address';
 import { AddressPickerDialog } from '@/components/address/AddressPickerDialog';
-
-interface Vendor {
-  id: string;
-  name: string;
-  email: string;
-  avatar?: string;
-  productCount: number;
-  categories: string[];
-  distanceKm: number;
-}
+import { useVendorCards } from '@/hooks/useVendorCards';
+import VendorCard from './vendors/VendorCard';
 
 interface VendorSelectionPageProps {
   onVendorSelect: (vendorId: string, vendorName: string) => void;
 }
 
+// All vendors within 5 km of the customer's delivery address (the "Deliver to" bar)
 export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
   onVendorSelect
 }) => {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [allCategories, setAllCategories] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // Vendors are listed for the customer's delivery address (the "Deliver to" bar)
-  const { defaultAddress, hasLoaded: addressesLoaded } = useAddresses();
-
-  useEffect(() => {
-    if (!addressesLoaded) return;
-    if (!defaultAddress) {
-      setVendors([]);
-      setAllCategories([]);
-      setLoading(false);
-      return;
-    }
-    fetchVendors(defaultAddress.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addressesLoaded, defaultAddress?.id]);
-
-  const fetchVendors = async (addressId: string) => {
-    try {
-      setLoading(true);
-
-      // Only vendors whose store is within 5 km of the delivery address
-      const { data: nearby, error: nearbyError } = await supabase.rpc('vendors_near_address', {
-        p_address_id: addressId,
-      });
-      if (nearbyError) throw nearbyError;
-      const distances = new Map((nearby ?? []).map((v) => [v.vendor_id, Number(v.distance_km)]));
-      if (distances.size === 0) {
-        setVendors([]);
-        setAllCategories([]);
-        return;
-      }
-
-      const { data: vendorData, error } = await supabase
-        .from('profiles')
-        .select('id, name, email, avatar')
-        .eq('role', 'vendor')
-        .eq('status', 'active')
-        .in('id', Array.from(distances.keys()));
-
-      if (error) throw error;
-
-      if (!vendorData || vendorData.length === 0) {
-        console.log('No active vendors found');
-        setVendors([]);
-        return;
-      }
-
-      // Then fetch products for each vendor
-      const vendorsWithProducts = await Promise.all(
-        vendorData.map(async (vendor) => {
-          const { data: products } = await supabase
-            .from('products')
-            .select('id, name, category, status, stock_quantity')
-            .eq('vendor_id', vendor.id)
-            .eq('status', 'active')
-            .gt('stock_quantity', 0);
-
-          const activeProducts = products || [];
-          const categories = Array.from(
-            new Set(activeProducts.map(p => p.category).filter(Boolean))
-          );
-
-          return {
-            id: vendor.id,
-            name: vendor.name,
-            email: vendor.email,
-            avatar: vendor.avatar,
-            productCount: activeProducts.length,
-            categories: categories as string[],
-            distanceKm: distances.get(vendor.id) ?? 0
-          };
-        })
-      );
-
-      // Vendors with products, nearest first
-      const processedVendors = vendorsWithProducts
-        .filter(vendor => vendor.productCount > 0)
-        .sort((a, b) => a.distanceKm - b.distanceKm);
-      
-      console.log('Processed vendors:', processedVendors);
-      setVendors(processedVendors);
-      
-      // Extract all unique categories
-      const uniqueCategories = Array.from(
-        new Set(processedVendors.flatMap(v => v.categories))
-      );
-      setAllCategories(uniqueCategories);
-      
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { vendors, defaultAddress, loading } = useVendorCards();
+  const allCategories = useMemo(
+    () => Array.from(new Set(vendors.flatMap((v) => v.categories))).sort(),
+    [vendors]
+  );
 
   const filteredVendors = vendors.filter(vendor => {
     const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -139,7 +38,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
     return matchesSearch && matchesCategory;
   });
 
-  if (loading || !addressesLoaded) {
+  if (loading) {
     return <LoadingDisplay message="Loading vendors..." />;
   }
 
@@ -232,10 +131,10 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
       {filteredVendors.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredVendors.map(vendor => (
-            <VendorSelectionCard
-              key={vendor.id}
+            <VendorCard
+              key={vendor.vendor_id}
               vendor={vendor}
-              onSelect={(vendorId) => onVendorSelect(vendorId, vendor.name)}
+              onSelect={(v) => onVendorSelect(v.vendor_id, v.name)}
             />
           ))}
         </div>

@@ -21,7 +21,7 @@ const COPY: Record<Kind, { title: string; hint: string; used: string }> = {
 // The giving side of a handover. The database only returns a code to the
 // person meant to give it (the rider sees the pickup code, the customer the
 // delivery code), and only once the vendor has accepted the order.
-const HandoverCodeCard = ({ orderId, kind, className }: { orderId: string; kind: Kind; className?: string }) => {
+const HandoverCodeCard = ({ orderId, kind, className, hint }: { orderId: string; kind: Kind; className?: string; hint?: string }) => {
   const { data: code } = useQuery({
     queryKey: ['handover-code', orderId, kind],
     queryFn: async () => {
@@ -51,7 +51,7 @@ const HandoverCodeCard = ({ orderId, kind, className }: { orderId: string; kind:
       ) : (
         <>
           <p className="mt-2 font-mono text-3xl font-bold tracking-[0.4em]">{code.code}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{copy.hint}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{hint ?? copy.hint}</p>
         </>
       )}
     </div>

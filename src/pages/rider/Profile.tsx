@@ -1,5 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { isValidPhone } from '@/lib/phone';
+import type { PersonalDraft } from '@/components/rider/profile/tabs/PersonalInfoTab';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,19 +34,41 @@ const RiderProfilePage = () => {
     refetchProfile
   } = useRiderProfileData();
 
-  const handleSaveProfile = async (updatedData?: any) => {
-    console.log('[Profile] Saving profile with data:', updatedData || riderProfile);
-    
+  // The Personal tab's current values, so the header "Save Changes" saves what
+  // the rider typed (not the profile as it was loaded)
+  const queryClient = useQueryClient();
+  const personalDraft = useRef<PersonalDraft | null>(null);
+  const handleDraftChange = useCallback((draft: PersonalDraft) => {
+    personalDraft.current = draft;
+  }, []);
+
+  const handleSaveProfile = async (updatedData?: Partial<PersonalDraft>) => {
     if (!riderProfile) {
       toast.error('No profile data to save');
       return;
     }
-    
-    const dataToSave = updatedData || riderProfile;
-    const success = await updateProfile(dataToSave);
+
+    const draft = updatedData ?? personalDraft.current;
+    if (!draft) {
+      setEditing(false);
+      return;
+    }
+    const name = draft.name?.trim() ?? '';
+    const phone = draft.phone?.trim() ?? '';
+    if (!name) {
+      toast.error('Enter your name');
+      return;
+    }
+    if (!isValidPhone(phone)) {
+      toast.error('Enter a valid phone number, e.g. 08012345678');
+      return;
+    }
+
+    const success = await updateProfile({ name, phone, preferences: draft.preferences });
     if (success) {
       setEditing(false);
-      toast.success('Profile saved successfully');
+      // Clears the "add your phone number" notice
+      queryClient.invalidateQueries({ queryKey: ['has-phone'] });
     }
   };
 
@@ -147,6 +172,7 @@ const RiderProfilePage = () => {
               achievements={achievements}
               onAddBankDetails={addBankDetails}
               onSaveProfile={handleSaveProfile}
+              onPersonalDraftChange={handleDraftChange}
             />
           </div>
         </div>

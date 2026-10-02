@@ -21,6 +21,9 @@ export const orderActions = {
   confirmPickup: (orderId: string, code: string) =>
     run(supabase.rpc('vendor_confirm_pickup', { p_order_id: orderId, p_code: code })),
 
+  /** The vendor's own rider request, before a rider accepts; refunds to their wallet */
+  cancelRiderRequest: (orderId: string) => run(supabase.rpc('cancel_rider_request', { p_order_id: orderId })),
+
   // Customer
   cancel: (orderId: string, reason?: string) =>
     run(supabase.rpc('customer_cancel_order', { p_order_id: orderId, p_reason: reason })),

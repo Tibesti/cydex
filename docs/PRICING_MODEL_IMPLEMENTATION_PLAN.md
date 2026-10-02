@@ -92,6 +92,10 @@ Settled when the order is delivered (`calculate_settlement_amounts`, `process_or
 - **The old 5% "eco bonus" has been removed.** It was an extra 5% of the delivery fee that Cydex paid riders on every delivery, whatever vehicle they used. `deliveries.eco_bonus` and `rider_earnings.eco_bonus` stay at 0 for now.
 - **A new bonus is planned** for deliveries where the vendor and customer confirm the rider used an eco-friendly vehicle. See [APP_TODO.md → Eco-friendly deliveries](APP_TODO.md#eco-friendly-deliveries).
 
+## Rider requests (vendors)
+
+When a vendor requests a rider for their own customer's order, they pay **the delivery fee plus a 10% commission on it**. Settings: `pricing_config.rider_request_commission_rate`, 0.10. The rider still gets 85% of the delivery fee, so on a ₦1,000 fee the vendor pays ₦1,100, the rider gets ₦850 and Cydex keeps ₦250. See [ORDER_FLOW.md → Request a rider](ORDER_FLOW.md#request-a-rider).
+
 ## Customer radius (5 km)
 
 - **Customers only see vendors within 5 km** of their default delivery address, the one shown in the "Deliver to" bar. The list is sorted nearest-first and each card shows the distance ([`VendorSelectionPage.tsx`](../src/components/customer/VendorSelectionPage.tsx)).

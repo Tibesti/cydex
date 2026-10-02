@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ShoppingCartSidebar } from '@/components/customer/ShoppingCartSidebar';
 import { DeliveryScheduler } from '@/components/customer/DeliveryScheduler';
 import { useProducts } from '@/hooks/useProducts';
+import { isAvailable } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 import { ConfirmDeliveryAddressDialog } from '@/components/customer/address/ConfirmDeliveryAddressDialog';
 import type { Address } from '@/hooks/useAddresses';
@@ -27,6 +28,7 @@ import { DesktopCategoriesSidebar } from '@/components/customer/order/DesktopCat
 import { ProductsGrid } from '@/components/customer/order/ProductsGrid';
 import { PaginationSection } from '@/components/customer/order/PaginationSection';
 import { OrderHeader } from '@/components/customer/order/OrderHeader';
+import VendorStorefrontHeader from '@/components/customer/vendors/VendorStorefrontHeader';
 
 const NewOrder = () => {
   const { user } = useAuth();
@@ -108,6 +110,9 @@ const NewOrder = () => {
     }
   }, [searchParams, cartItems, selectedVendor, isCartOpen, setIsCartOpen]);
   
+  // The order goes to the vendor whose items are in the cart
+  const cartVendorId = cartItems[0]?.vendor_id ?? null;
+
   const itemsPerPage = 12;
 
   // Filter products to only show those from selected vendor with valid vendor info
@@ -140,6 +145,8 @@ const NewOrder = () => {
 
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
+    // Available products first
+    if (isAvailable(a) !== isAvailable(b)) return isAvailable(a) ? -1 : 1;
     if (sortBy === 'price-low') return a.price - b.price;
     if (sortBy === 'price-high') return b.price - a.price;
     if (sortBy === 'recommended') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -152,10 +159,11 @@ const NewOrder = () => {
   const currentProducts = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
 
+  // Browsing another vendor keeps the cart; adding their items asks first
+  // (one vendor per order, see CartVendorConflictDialog)
   const handleVendorSelect = (vendorId: string, vendorName: string) => {
     setSelectedVendor(vendorId);
     setSelectedVendorName(vendorName);
-    clearCart(); // Clear cart when switching vendors
   };
 
   const handleBackToVendors = () => {
@@ -163,7 +171,6 @@ const NewOrder = () => {
     setSelectedVendorName(null);
     setSelectedCategory(null);
     setSearchQuery('');
-    clearCart(); // Clear cart when going back to vendor selection
   };
 
   const handleCheckout = async () => {
@@ -178,7 +185,7 @@ const NewOrder = () => {
         return;
       }
 
-      if (!selectedVendor) {
+      if (!cartVendorId) {
         toast.error('Please select a vendor first');
         return;
       }
@@ -211,7 +218,7 @@ const NewOrder = () => {
   };
 
   const createOrderWithAddress = async (address: Address) => {
-    if (!user?.id || !selectedVendor) return;
+    if (!user?.id || !cartVendorId) return;
 
     setIsCreatingOrder(true);
     try {
@@ -219,7 +226,7 @@ const NewOrder = () => {
       // prices (place_order), then the delivery fee and Service Charge
       // (price_new_order). It rejects vendors more than 5 km away.
       const { data: order, error: orderError } = await typedSupabase.rpc('place_order', {
-        p_vendor_id: selectedVendor,
+        p_vendor_id: cartVendorId,
         p_address_id: address.id,
         p_items: toCartLines(cartItems),
       });
@@ -312,37 +319,15 @@ const NewOrder = () => {
     <DashboardLayout userRole="CUSTOMER">
       <div className="px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto space-y-2 sm:space-y-4">
         
-        {/* Vendor Header with Back Button */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackToVendors}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Vendors
-            </Button>
-            <div className="border-l h-6 border-border"></div>
-            <div>
-              <h1 className="text-xl font-bold">{selectedVendorName}</h1>
-              <p className="text-sm text-muted-foreground">Browse menu and add items to cart</p>
-            </div>
-          </div>
-          
-          {/* Cart Button for Desktop and Mobile */}
-          <div className="block">
-            <Button
-              variant="default"
-              onClick={() => setIsCartOpen(true)}
-              className="flex items-center gap-2"
-            >
-              Cart ({cartItems.length})
-            </Button>
-          </div>
-        </div>
-        
+        {/* Vendor details: banner, logo, name, verified, rating, address */}
+        <VendorStorefrontHeader
+          vendorId={selectedVendor}
+          fallbackName={selectedVendorName}
+          cartCount={cartItems.length}
+          onBack={handleBackToVendors}
+          onOpenCart={() => setIsCartOpen(true)}
+        />
+
         {/* Compact Search Bar */}
         <div className="relative">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
@@ -458,7 +443,7 @@ const NewOrder = () => {
         onOpenChange={setIsAddressConfirmOpen}
         onConfirm={createOrderWithAddress}
         confirming={isCreatingOrder}
-        vendorId={selectedVendor}
+        vendorId={cartVendorId}
         items={toCartLines(cartItems)}
         cartSubtotal={calculateTotal()}
       />

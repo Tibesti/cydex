@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { rejectOversizedFile } from '@/lib/uploads';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,12 +36,12 @@ const DocumentDialog = ({ open, onOpenChange, onUpload }: DocumentDialogProps) =
           
           <div className="space-y-2">
             <Label className="text-sm">Upload National ID (Front)</Label>
-            <Input type="file" accept="image/*" className="text-sm h-8 sm:h-9" />
+            <Input type="file" accept="image/*" className="text-sm h-8 sm:h-9" onChange={rejectOversizedFile} />
           </div>
           
           <div className="space-y-2">
             <Label className="text-sm">Upload National ID (Back)</Label>
-            <Input type="file" accept="image/*" className="text-sm h-8 sm:h-9" />
+            <Input type="file" accept="image/*" className="text-sm h-8 sm:h-9" onChange={rejectOversizedFile} />
           </div>
           
           <div className="space-y-2">

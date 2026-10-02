@@ -124,6 +124,11 @@ const RiderOrderDetail = () => {
               <CardTitle>Items to collect</CardTitle>
             </CardHeader>
             <CardContent>
+              {!order.order_items?.length && (
+                <p className="rounded-lg bg-muted p-3 text-sm">
+                  A package from the vendor{order.special_instructions ? `: ${order.special_instructions}` : '.'}
+                </p>
+              )}
               <ul className="space-y-2">
                 {order.order_items?.map((item, index) => (
                   <li key={item.id || index} className="flex items-start justify-between gap-3 rounded-lg bg-muted p-3">

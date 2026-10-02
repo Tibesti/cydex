@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import StoreImagesUpload from '@/components/vendor/settings/StoreImagesUpload';
+import { VerifiedBadge } from '@/components/customer/vendors/VendorBadges';
+import VendorRatings from '@/components/vendor/settings/VendorRatings';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -207,8 +210,9 @@ const VendorSettingsPage = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="account" className="w-full">
-              <TabsList className="mb-3 sm:mb-4 w-full grid grid-cols-3 sm:w-auto sm:flex">
+              <TabsList className="mb-3 sm:mb-4 w-full grid grid-cols-4 sm:w-auto sm:flex">
                 <TabsTrigger value="account" className="text-xs sm:text-sm">Account</TabsTrigger>
+                <TabsTrigger value="ratings" className="text-xs sm:text-sm">Ratings</TabsTrigger>
                 <TabsTrigger value="security" className="text-xs sm:text-sm">Security</TabsTrigger>
                 <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
               </TabsList>
@@ -216,19 +220,10 @@ const VendorSettingsPage = () => {
               <TabsContent value="account" className="mt-3 sm:mt-4">
                 <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
                   <div className="lg:w-1/3 flex flex-col items-center">
-                    <Avatar className="h-24 w-24 sm:h-32 sm:w-32">
-                      <AvatarImage src={profile.avatar || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${profile.name}`} />
-                      <AvatarFallback className="text-lg sm:text-xl">
-                        {profile.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <Button variant="ghost" size="sm" className="mt-2 text-xs sm:text-sm" disabled>
-                      <Camera className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                      Change Logo
-                    </Button>
-                    {profile.verified && (
-                      <Badge className="mt-2 bg-green-100 text-green-800">Verified</Badge>
-                    )}
+                    <StoreImagesUpload />
+                    <div className="mt-2">
+                      <VerifiedBadge verified={!!profile.verified} />
+                    </div>
                   </div>
 
                   <div className="lg:w-2/3 space-y-3 sm:space-y-4">
@@ -369,6 +364,10 @@ const VendorSettingsPage = () => {
                     </Button>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="ratings" className="mt-3 sm:mt-4">
+                <VendorRatings />
               </TabsContent>
 
               <TabsContent value="security" className="mt-3 sm:mt-4">

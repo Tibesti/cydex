@@ -8,7 +8,9 @@ import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { errorMessage } from '@/lib/address';
 import { toast } from 'sonner';
-import { useNotifications, type AppNotification } from '@/hooks/useNotifications';
+import { useNotifications, useNotificationsPage, type AppNotification } from '@/hooks/useNotifications';
+import SimplePagination from '@/components/ui/simple-pagination';
+import { useState } from 'react';
 
 type Role = 'customer' | 'vendor' | 'rider';
 
@@ -40,7 +42,9 @@ const orderLink = (role: Role, n: AppNotification): string | null => {
 
 const NotificationsPage = ({ role }: { role: Role }) => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, isLoading, markAllRead, markRead } = useNotifications();
+  const [page, setPage] = useState(1);
+  const { unreadCount, markAllRead, markRead } = useNotifications();
+  const { notifications, pageCount, isLoading } = useNotificationsPage(page);
 
   const open = (n: AppNotification) => {
     if (!n.is_read) markRead.mutate(n.id);
@@ -108,6 +112,15 @@ const NotificationsPage = ({ role }: { role: Role }) => {
           })}
         </ul>
       )}
+
+      <SimplePagination
+        page={page}
+        pageCount={pageCount}
+        onPageChange={(next) => {
+          setPage(next);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+      />
     </div>
   );
 };

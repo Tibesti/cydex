@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { rejectOversizedFile } from '@/lib/uploads';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,7 +91,7 @@ const VehicleDialog = ({ open, onOpenChange, vehicle, onUpdate }: VehicleDialogP
               
               <div className="space-y-2">
                 <Label htmlFor="vehicle-docs" className="text-sm">Upload Vehicle Documentation</Label>
-                <Input id="vehicle-docs" type="file" className="text-sm h-8 sm:h-9" />
+                <Input id="vehicle-docs" type="file" className="text-sm h-8 sm:h-9" onChange={rejectOversizedFile} />
                 <p className="text-xs text-gray-500">Upload registration documents if applicable</p>
               </div>
             </>

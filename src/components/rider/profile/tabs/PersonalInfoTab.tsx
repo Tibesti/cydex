@@ -1,29 +1,32 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import PersonalInfoForm from './forms/PersonalInfoForm';
-import DeliveryPreferencesForm from './forms/DeliveryPreferencesForm';
 import NotificationPreferencesForm from './forms/NotificationPreferencesForm';
+
+export interface PersonalDraft {
+  name: string;
+  phone: string;
+  preferences: { notifications: { app: boolean; email: boolean; sms: boolean; marketing: boolean } };
+}
 
 interface PersonalInfoTabProps {
   editing: boolean;
   profile: any;
   onSaveProfile?: (updatedData?: any) => Promise<void>;
+  onDraftChange?: (draft: PersonalDraft) => void;
 }
 
-const PersonalInfoTab = ({ editing, profile, onSaveProfile }: PersonalInfoTabProps) => {
+const PersonalInfoTab = ({ editing, profile, onSaveProfile, onDraftChange }: PersonalInfoTabProps) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
   });
 
+  // Riders don't set delivery preferences (distance, zones, days): the order
+  // radius is set by Cydex. Only notification preferences remain.
   const [preferences, setPreferences] = useState({
-    deliveryPreferences: {
-      maxDistance: 15,
-      preferredZones: [],
-      availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-    },
     notifications: {
       app: true,
       email: true,
@@ -32,33 +35,24 @@ const PersonalInfoTab = ({ editing, profile, onSaveProfile }: PersonalInfoTabPro
     }
   });
 
-  const initializedRef = useRef(false);
-
-  // Initialize form data when profile is available
+  // Load the saved values whenever the rider isn't editing (initially and after
+  // a save). While editing, keep what they've typed even if the profile reloads.
   useEffect(() => {
-    if (profile?.id && !initializedRef.current) {
-      console.log('[PersonalInfoTab] Initializing form with profile:', profile);
-      
-      setFormData({
-        name: profile.name || '',
-        email: profile.email || '',
-        phone: profile.phone || '',
-      });
-      
-      if (profile.preferences) {
-        setPreferences(profile.preferences);
-      }
-      
-      initializedRef.current = true;
+    if (!profile?.id || editing) return;
+    setFormData({
+      name: profile.name || '',
+      email: profile.email || '',
+      phone: profile.phone || '',
+    });
+    if (profile.preferences?.notifications) {
+      setPreferences({ notifications: profile.preferences.notifications });
     }
-  }, [profile]);
+  }, [profile, editing]);
 
-  // Reset initialization flag when profile ID changes
+  // Let the page's header "Save Changes" button save these values too
   useEffect(() => {
-    if (profile?.id) {
-      initializedRef.current = false;
-    }
-  }, [profile?.id]);
+    onDraftChange?.({ name: formData.name, phone: formData.phone, preferences });
+  }, [formData.name, formData.phone, preferences, onDraftChange]);
 
   const handleInputChange = (field: string, value: string) => {
     console.log('[PersonalInfoTab] Input change:', field, value);
@@ -84,23 +78,10 @@ const PersonalInfoTab = ({ editing, profile, onSaveProfile }: PersonalInfoTabPro
       };
       
       await onSaveProfile(updateData);
-      toast.success('Profile updated successfully');
     } catch (error) {
       console.error('[PersonalInfoTab] Save error:', error);
       toast.error('Failed to save profile');
     }
-  };
-
-  const handleDistanceChange = (value: number[]) => {
-    const newDistance = value[0];
-    console.log('[PersonalInfoTab] Distance change:', newDistance);
-    setPreferences(prev => ({
-      ...prev,
-      deliveryPreferences: { 
-        ...prev.deliveryPreferences, 
-        maxDistance: newDistance 
-      }
-    }));
   };
 
   const handleNotificationChange = (field: string, checked: boolean) => {
@@ -120,13 +101,6 @@ const PersonalInfoTab = ({ editing, profile, onSaveProfile }: PersonalInfoTabPro
         formData={formData}
         editing={editing}
         onInputChange={handleInputChange}
-        onSave={handleSave}
-      />
-
-      <DeliveryPreferencesForm
-        preferences={preferences.deliveryPreferences}
-        editing={editing}
-        onDistanceChange={handleDistanceChange}
         onSave={handleSave}
       />
 

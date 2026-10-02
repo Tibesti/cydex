@@ -14,33 +14,28 @@ export interface AppNotification {
   created_at: string;
 }
 
-const LIMIT = 100;
+export const NOTIFICATIONS_PAGE_SIZE = 15;
 const queryKeyFor = (userId?: string) => ['notifications', userId];
 
-// The signed-in user's notifications (created by the database on order events;
-// see docs/ORDER_FLOW.md), newest first, plus mark-as-read actions.
+// Unread count (for the badges) and mark-as-read actions
 export const useNotifications = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const queryKey = queryKeyFor(user?.id);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeyFor(user?.id) });
 
-  const { data: notifications = [], isLoading } = useQuery({
-    queryKey,
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: [...queryKeyFor(user?.id), 'unread'],
     enabled: !!user?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from('notifications')
-        .select('id, type, title, message, is_read, metadata, created_at')
+        .select('id', { count: 'exact', head: true })
         .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-        .limit(LIMIT);
+        .eq('is_read', false);
       if (error) throw error;
-      return data as AppNotification[];
+      return count ?? 0;
     },
   });
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
-  const refresh = () => queryClient.invalidateQueries({ queryKey });
 
   const markAllRead = useMutation({
     mutationFn: async () => {
@@ -62,7 +57,36 @@ export const useNotifications = () => {
     onSuccess: refresh,
   });
 
-  return { notifications, unreadCount, isLoading, markAllRead, markRead };
+  return { unreadCount, markAllRead, markRead };
+};
+
+// One page of the signed-in user's notifications, newest first
+export const useNotificationsPage = (page: number) => {
+  const { user } = useAuth();
+  const from = (page - 1) * NOTIFICATIONS_PAGE_SIZE;
+
+  const { data, isLoading } = useQuery({
+    queryKey: [...queryKeyFor(user?.id), 'page', page],
+    enabled: !!user?.id,
+    placeholderData: (previous) => previous,
+    queryFn: async () => {
+      const { data, count, error } = await supabase
+        .from('notifications')
+        .select('id, type, title, message, is_read, metadata, created_at', { count: 'exact' })
+        .eq('user_id', user!.id)
+        .order('created_at', { ascending: false })
+        .range(from, from + NOTIFICATIONS_PAGE_SIZE - 1);
+      if (error) throw error;
+      return { notifications: data as AppNotification[], total: count ?? 0 };
+    },
+  });
+
+  return {
+    notifications: data?.notifications ?? [],
+    total: data?.total ?? 0,
+    pageCount: Math.max(1, Math.ceil((data?.total ?? 0) / NOTIFICATIONS_PAGE_SIZE)),
+    isLoading,
+  };
 };
 
 // Keeps the list live and pops a toast for each new notification.

@@ -101,6 +101,8 @@ export const useVendorOrders = () => {
         .from('orders')
         .select('*')
         .eq('vendor_id', user.id)
+        // Customer orders only; the vendor's own rider requests have their own page
+        .eq('order_type', 'customer')
         // Unpaid orders are hidden until Squad confirms payment; refunded ones stay for the record
         .in('payment_status', ['paid', 'refunded'])
         .order('created_at', { ascending: false });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import PersonalInfoTab from './tabs/PersonalInfoTab';
+import PersonalInfoTab, { type PersonalDraft } from './tabs/PersonalInfoTab';
 import BankingTab from './tabs/BankingTab';
 import ReviewsTab from './tabs/ReviewsTab';
 import AchievementsTab from './tabs/AchievementsTab';
@@ -14,6 +14,8 @@ interface ProfileTabsProps {
   achievements: any[];
   onAddBankDetails?: (bankDetails: any) => Promise<boolean>;
   onSaveProfile?: (updatedData?: any) => Promise<void>;
+  /** Receives the Personal tab's current (unsaved) values, for the header Save button */
+  onPersonalDraftChange?: (draft: PersonalDraft) => void;
 }
 
 const ProfileTabs = ({ 
@@ -22,7 +24,8 @@ const ProfileTabs = ({
   recentReviews, 
   achievements, 
   onAddBankDetails,
-  onSaveProfile 
+  onSaveProfile,
+  onPersonalDraftChange
 }: ProfileTabsProps) => {
   return (
     <Tabs defaultValue="personal" className="w-full">
@@ -43,6 +46,7 @@ const ProfileTabs = ({
           editing={editing} 
           profile={profile} 
           onSaveProfile={onSaveProfile}
+          onDraftChange={onPersonalDraftChange}
         />
       </TabsContent>
       

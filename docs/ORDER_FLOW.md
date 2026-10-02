@@ -64,6 +64,64 @@ What the rider sees:
 
 Each function checks that the order belongs to the caller. If a step isn't allowed, it fails with a plain message such as "Orders can only be cancelled before the vendor accepts them", which the app shows as-is.
 
+## Products and stock
+
+Stock is optional for each product (migration [`20261001000000_product_stock.sql`](../supabase/migrations/20261001000000_product_stock.sql)).
+
+| | **Track stock** ticked | **Track stock** not ticked |
+|---|---|---|
+| Stock number | Required | None |
+| Available to customers | While stock is above 0. At 0 it shows **Out of stock** automatically. | When the vendor's **Available** switch is on |
+| Vendor controls | Edit the product to restock | The **Available** switch on the Products page, or on the edit page |
+
+- **Stock goes down when an order is paid for**, not when it's placed, so unpaid orders don't hold stock.
+- **Stock goes back up** if a paid order is cancelled by the customer or rejected by the vendor.
+- **Customers can't order more than is in stock.** Checkout fails with "Only 3 of Jollof left. Reduce the quantity in your cart."
+- **Unavailable products still show to customers**, greyed out and labelled "Out of stock" or "Unavailable", with Add to cart disabled. Available products are listed first.
+- **Two customers can both check out the last item** if neither has paid yet. Whoever pays second takes the stock to 0 (it never goes negative), and the vendor can reject that order to refund it.
+
+## Ratings
+
+Migration [`20261001100000_storefront_and_ratings.sql`](../supabase/migrations/20261001100000_storefront_and_ratings.sql).
+
+- **Vendors:** customers rate a vendor from the vendor's page with **Rate vendor**, or from the Orders page.
+  - The button appears when the customer has a **delivered** order from that vendor that they haven't rated. That rule is enforced in the database.
+  - It's one rating per order.
+  - Vendors see their ratings and reviews in Settings → Ratings, and the average shows on their cards and store page.
+- **Riders:** customers rate the rider of a **delivered** order, one rating per order. The rider's average is kept in `rider_profiles.rating`.
+  - **Pop-up at login:** once per session, the customer is asked to rate the rider of their **most recent delivered order**. It doesn't show if they've already rated that rider, or if they closed the pop-up for that order before (stored in `rider_rating_prompt_dismissals`). When a newer order is delivered, that order is the one asked about.
+  - **On the order page:** delivered orders show **Rate your rider** until the rider has been rated.
+  - Riders can read their own ratings. Vendors can't see them.
+
+## Customer home and vendor pages
+
+- **Home** shows three sections for the customer's delivery address (within 5 km): **Vendors nearby** (closest 4), **Popular vendors** (most paid orders in the last 30 days, top 4), and **Other vendors** (everyone else). It also has a **See all vendors** button to the full list.
+- **Vendor cards and the vendor's page** show the store banner and square logo, store name, Verified or Unverified, rating, distance, and the store address (as text; coordinates are never sent).
+- **Logo and banner:** vendors upload them in Settings → Account, into the public `store-images` storage bucket in their own folder. The logo is also their profile photo.
+- **One vendor per order:** adding an item from a different vendor than the one in the cart opens a dialog with **Keep current cart** or **Start new cart**. Browsing other vendors doesn't empty the cart, and checkout always uses the cart's vendor.
+
+## Request a rider
+
+For orders a vendor's customer placed with them directly (by phone, WhatsApp or in person), the vendor can ask Cydex for a rider: sidebar → **Request Rider**. Migration [`20261001200000_rider_requests.sql`](../supabase/migrations/20261001200000_rider_requests.sql).
+
+1. **The vendor enters the customer's details:** name, phone, delivery location (pin-drop map), optional directions, and what's being delivered. They can pick a **saved customer** or tick "Save this customer" (table `vendor_customers`).
+2. **Price:** the same delivery fee as customer orders (the higher of ₦600 or ₦200 × km from the store, up to 5 km), **plus a 10% commission on it**. The rate is `pricing_config.rider_request_commission_rate`.
+3. **Payment:** the vendor's **wallet** pays first.
+   - If it covers the whole amount, the request goes live immediately.
+   - Otherwise the rest is paid **by card** (the squad-checkout function charges only that part), and the request goes live when Squad confirms.
+4. **Live = `ready_for_pickup`.** Nearby riders are notified, and a rider accepts it like any order. They see "A package from the vendor" with the vendor's description instead of an item list, and the customer's phone and directions.
+5. **Delivery code:** the **vendor** sees the delivery code and sends it to their customer. The rider enters it on arrival to complete the delivery. Pickup works as normal, with the rider's pickup code entered by the vendor.
+6. **Money:** on delivery, the rider gets the usual 85% of the delivery fee. Cydex keeps the other 15% plus the commission. Nothing is credited to the vendor.
+
+| Example (₦1,000 delivery fee) | |
+|---|---|
+| Vendor pays | ₦1,100 |
+| Rider gets | ₦850 |
+| Cydex keeps | ₦150 + ₦100 = ₦250 |
+
+- **Cancelling:** the vendor can cancel until a rider accepts. Everything they paid goes back to their wallet. A card payment that lands after cancelling is refunded too, without returning the wallet part twice.
+- **Where they appear:** requests are an order type (`orders.order_type = 'rider_request'`, no customer account). They're kept out of the vendor's Orders list and stats and only appear under Request Rider. Customers never see them.
+
 ## Handover codes
 
 Two 4-digit codes are created when the vendor accepts an order (table `order_handover_codes`).

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { checkUploadSize } from '@/lib/uploads';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Upload } from 'lucide-react';
@@ -19,11 +20,7 @@ const ProfileAvatar = ({ profile, editing, onAvatarUpdate }: ProfileAvatarProps)
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('File size must be less than 5MB');
-      return;
-    }
+    if (!checkUploadSize(file)) return;
 
     // Check file type
     if (!file.type.startsWith('image/')) {

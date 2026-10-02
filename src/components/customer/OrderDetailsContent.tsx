@@ -8,6 +8,8 @@ import OrderItemsList from './OrderItemsList';
 import OrderSummary from './OrderSummary';
 import OrderActions from './OrderActions';
 import HandoverCodeCard from '@/components/orders/HandoverCodeCard';
+import RateRiderButton from './ratings/RateRiderButton';
+import type { RiderToRate } from './ratings/RateRiderDialog';
 
 // Define interfaces
 interface TrackingStep {
@@ -54,13 +56,16 @@ interface OrderDetailsContentProps {
   onCancelOrder: () => void;
   onDownloadReceipt: () => void;
   onReorder: () => void;
+  /** Set for delivered orders with a rider */
+  riderToRate?: RiderToRate | null;
 }
 
 const OrderDetailsContent = ({ 
   order, 
   onCancelOrder,
   onDownloadReceipt,
-  onReorder
+  onReorder,
+  riderToRate
 }: OrderDetailsContentProps) => {
   return (
     <CardContent className="p-3 sm:p-4 md:p-6">
@@ -105,6 +110,8 @@ const OrderDetailsContent = ({
             discount={order.discount}
             paymentMethod={order.paymentMethod || "Credit Card"}
           />
+
+          {riderToRate && <RateRiderButton rider={riderToRate} />}
 
           <OrderActions 
             status={order.status}

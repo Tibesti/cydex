@@ -13,6 +13,7 @@ import DeliveryAddressBar from '@/components/customer/address/DeliveryAddressBar
 import RiderLocationBar from '@/components/rider/location/RiderLocationBar';
 import RiderLocationGate from '@/components/rider/location/RiderLocationGate';
 import { useNotificationsRealtime } from '@/hooks/useNotifications';
+import RiderRatingPrompt from '@/components/customer/ratings/RiderRatingPrompt';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -107,6 +108,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
 
       {/* Customers without a saved address and vendors without a store location are asked to add one */}
       {(userRole === 'CUSTOMER' || userRole === 'VENDOR') && <AddressOnboarding role={userRole} />}
+      {/* Customers are asked once per session to rate the rider of their latest delivery */}
+      {userRole === 'CUSTOMER' && <RiderRatingPrompt />}
       {/* Riders must share their live location while using the app */}
       {userRole === 'RIDER' && <RiderLocationGate />}
     </div>

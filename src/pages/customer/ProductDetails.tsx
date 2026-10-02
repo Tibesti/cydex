@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { isAvailable, maxOrderable, stockLabel, stockLimit } from '@/lib/products';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { useCartContext } from '@/contexts/CartContext';
@@ -83,14 +84,15 @@ const ProductDetails = () => {
   }, [productId]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || !isAvailable(product)) return;
 
     addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
       vendor_id: product.vendor_id,
-      vendor_name: product.vendor?.name || 'Unknown Vendor'
+      vendor_name: product.vendor?.name || 'Unknown Vendor',
+      max_quantity: stockLimit(product)
     }, quantity);
   };
 
@@ -212,7 +214,7 @@ const ProductDetails = () => {
                     <span className="text-2xl sm:text-3xl md:text-4xl font-bold">₦{product.price.toLocaleString()}</span>
                     <Badge variant="outline" className="flex items-center gap-1 w-fit text-xs sm:text-sm">
                       <Package className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>{product.stock_quantity} in stock</span>
+                      <span>{stockLabel(product) ?? 'Available'}</span>
                     </Badge>
                   </div>
 
@@ -281,10 +283,10 @@ const ProductDetails = () => {
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        setQuantity((prev) => Math.min(product.stock_quantity, prev + 1));
+                        setQuantity((prev) => Math.min(maxOrderable(product), prev + 1));
                       }}
                       className="px-3 sm:px-4 h-10 sm:h-11 min-w-[44px] touch-manipulation"
-                      disabled={quantity >= product.stock_quantity}
+                      disabled={!isAvailable(product) || quantity >= maxOrderable(product)}
                     >
                       <span className="text-lg sm:text-xl font-semibold">+</span>
                     </Button>
@@ -296,10 +298,17 @@ const ProductDetails = () => {
                       e.stopPropagation();
                       handleAddToCart();
                     }}
+                    disabled={!isAvailable(product)}
                   >
                     <ShoppingCart className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="hidden xs:inline">Add to Cart</span>
-                    <span className="xs:hidden">Add</span>
+                    {isAvailable(product) ? (
+                      <>
+                        <span className="hidden xs:inline">Add to Cart</span>
+                        <span className="xs:hidden">Add</span>
+                      </>
+                    ) : (
+                      <span>{stockLabel(product)}</span>
+                    )}
                   </Button>
                 </div>
               </CardContent>

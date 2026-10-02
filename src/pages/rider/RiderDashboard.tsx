@@ -9,7 +9,7 @@ import { useRiderData } from '@/hooks/useRiderData';
 import { EarningsOverview } from '@/components/rider/dashboard/EarningsOverview';
 import { CurrentDeliveryCard } from '@/components/rider/dashboard/CurrentDeliveryCard';
 import { AvailableOrdersList } from '@/components/rider/dashboard/AvailableOrdersList';
-import { WeeklyScheduleCard } from '@/components/rider/dashboard/WeeklyScheduleCard';
+import { RecentDeliveriesCard } from '@/components/rider/dashboard/RecentDeliveriesCard';
 import { EarningsBreakdownCard } from '@/components/rider/dashboard/EarningsBreakdownCard';
 
 const RiderDashboard = () => {
@@ -82,7 +82,7 @@ const RiderDashboard = () => {
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <WeeklyScheduleCard />
+          <RecentDeliveriesCard />
           <EarningsBreakdownCard todaysEarnings={todaysEarnings} />
         </div>
       </div>

@@ -53,11 +53,6 @@ export const fetchRiderData = async (userId: string) => {
           total_deliveries: 0,
           vehicle_type: 'bicycle',
           verification_status: 'pending',
-          delivery_preferences: {
-            max_distance: 15,
-            preferred_zones: [],
-            available_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-          },
           notification_preferences: {
             app: true,
             email: true,

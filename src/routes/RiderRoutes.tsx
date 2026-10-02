@@ -2,6 +2,7 @@
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import Notifications from '../pages/rider/Notifications';
+import DeliveryHistory from '../pages/rider/DeliveryHistory';
 import RiderDashboard from '../pages/rider/RiderDashboard';
 import AvailableOrders from '../pages/rider/AvailableOrders';
 import CurrentDeliveries from '../pages/rider/CurrentDeliveries';
@@ -65,6 +66,15 @@ const RiderRoutes = () => {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/deliveries" 
+        element={
+          <ProtectedRoute allowedRoles={['RIDER']}>
+            <DeliveryHistory />
+          </ProtectedRoute>
+        } 
+      />
+
       <Route 
         path="/notifications" 
         element={

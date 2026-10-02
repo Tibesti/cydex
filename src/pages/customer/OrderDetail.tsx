@@ -7,6 +7,7 @@ import { useSupabase } from '@/contexts/SupabaseContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useCartContext } from '@/contexts/CartContext';
 import { orderActions } from '@/services/orderActions';
+import { isAvailable, stockLimit } from '@/lib/products';
 import { errorMessage } from '@/lib/address';
 
 // Import custom hooks and components
@@ -138,28 +139,45 @@ const OrderDetailPage = () => {
     // TODO: Implement actual PDF generation and download
   };
 
+  // Adds the order's products back to the cart at today's prices, skipping
+  // anything no longer available and capping stock-tracked items
   const handleReorder = async () => {
-    if (!order?.order_items) {
+    if (!order?.order_items?.length) {
       toast.error('No items found in this order');
       return;
     }
 
     try {
-      // Clear existing cart
-      clearCart();
+      const { data: lines } = await supabase
+        .from('order_items')
+        .select('product_id, quantity')
+        .eq('order_id', order.id);
+      const productIds = [...new Set((lines ?? []).map((l) => l.product_id).filter(Boolean))] as string[];
+      const { data: products } = productIds.length
+        ? await supabase.from('products').select('id, name, price, vendor_id, status, track_stock, stock_quantity').in('id', productIds)
+        : { data: [] };
 
-      // Add all items from the order to cart
-      for (const item of order.order_items) {
-        addToCart({
-          id: `reorder-${item.id}`, // Use a temporary ID for reorder items
-          name: item.product_name,
-          price: item.unit_price,
-          vendor_id: order.vendor_id || '',
-          vendor_name: order.vendor?.name || 'Unknown Vendor'
-        }, item.quantity);
+      const available = (products ?? []).filter((p) => isAvailable(p));
+      if (available.length === 0) {
+        toast.error('None of these products are available right now');
+        return;
       }
 
-      toast.success(`${order.order_items.length} items added to cart`);
+      clearCart();
+      for (const product of available) {
+        const quantity = (lines ?? []).filter((l) => l.product_id === product.id).reduce((n, l) => n + l.quantity, 0);
+        addToCart({
+          id: product.id,
+          name: product.name,
+          price: Number(product.price),
+          vendor_id: product.vendor_id,
+          vendor_name: order.vendor?.name || 'Unknown Vendor',
+          max_quantity: stockLimit(product),
+        }, quantity);
+      }
+
+      const skipped = productIds.length - available.length;
+      if (skipped > 0) toast.info(`${skipped} item${skipped === 1 ? ' is' : 's are'} no longer available and weren't added`);
       navigate('/customer/new-order');
     } catch (error) {
       console.error('Error reordering:', error);
@@ -249,6 +267,13 @@ const OrderDetailPage = () => {
              onCancelOrder={handleCancelOrder}
              onDownloadReceipt={handleDownloadReceipt}
              onReorder={handleReorder}
+             riderToRate={order.status === 'delivered' && order.rider_id ? {
+               orderId: order.id,
+               orderNumber: order.order_number,
+               riderId: order.rider_id,
+               riderName: order.rider?.name ?? null,
+               riderAvatar: order.rider?.avatar ?? null,
+             } : null}
            />
         </Card>
       </div>

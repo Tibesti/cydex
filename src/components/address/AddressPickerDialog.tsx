@@ -200,6 +200,18 @@ export const AddressPickerDialog: React.FC<AddressPickerDialogProps> = ({
   );
 };
 
+// The map + search on its own (no saving), e.g. for a rider request's drop-off
+export const MapLocationPicker = ({ value, onChange }: LocationPickerProps) =>
+  GOOGLE_MAPS_API_KEY ? (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY} region="NG">
+      <LocationPicker value={value} onChange={onChange} />
+    </APIProvider>
+  ) : (
+    <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+      Address search is unavailable because VITE_GOOGLE_MAPS_API_KEY is not set.
+    </p>
+  );
+
 interface LocationPickerProps {
   value: PickedLocation | null;
   onChange: (location: PickedLocation) => void;

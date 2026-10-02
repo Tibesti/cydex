@@ -76,11 +76,6 @@ export const transformProfileData = (
     documents,
     bankDetails: bankDetailsData || [],
     preferences: {
-      deliveryPreferences: {
-        maxDistance: riderData?.delivery_preferences?.max_distance || 15,
-        preferredZones: riderData?.delivery_preferences?.preferred_zones || [],
-        availableDays: riderData?.delivery_preferences?.available_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-      },
       notifications: {
         app: riderData?.notification_preferences?.app !== undefined ? riderData.notification_preferences.app : true,
         email: riderData?.notification_preferences?.email !== undefined ? riderData.notification_preferences.email : true,

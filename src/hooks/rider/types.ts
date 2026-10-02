@@ -71,11 +71,6 @@ export interface RiderProfileData {
   documents: DocumentInfo;
   bankDetails: BankDetail[];
   preferences: {
-    deliveryPreferences: {
-      maxDistance: number;
-      preferredZones: string[];
-      availableDays: string[];
-    };
     notifications: {
       app: boolean;
       email: boolean;

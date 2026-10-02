@@ -3,6 +3,9 @@ import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import Notifications from '../pages/vendor/Notifications';
 import Products from '../pages/vendor/Products';
+import RiderRequests from '../pages/vendor/rider-requests/RiderRequests';
+import NewRiderRequest from '../pages/vendor/rider-requests/NewRiderRequest';
+import RiderRequestDetail from '../pages/vendor/rider-requests/RiderRequestDetail';
 import VendorDashboard from '../pages/vendor/VendorDashboard';
 import VendorOrders from '../pages/vendor/Orders';
 import VendorOrderDetail from '../pages/vendor/OrderDetail';
@@ -79,10 +82,46 @@ const VendorRoutes = () => {
       />
 
       <Route 
+        path="/rider-requests" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <RiderRequests />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/rider-requests/new" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <NewRiderRequest />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/rider-requests/:orderId" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <RiderRequestDetail />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
         path="/products" 
         element={
           <ProtectedRoute allowedRoles={['VENDOR']}>
             <Products />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/edit-product/:productId" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']}>
+            <AddProduct />
           </ProtectedRoute>
         } 
       />

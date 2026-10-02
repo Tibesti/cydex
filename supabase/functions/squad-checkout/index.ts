@@ -1,6 +1,7 @@
 // Customer payments through Squad, called from the app (signed-in customer).
 //   { action: 'initiate', order_number }  -> { checkout_url }
-//     Starts a Squad checkout for the order's total as stored in the database.
+//     Starts a Squad checkout for the order's total as stored in the database
+//     (for a vendor's rider request: the part their wallet didn't cover).
 //   { action: 'verify', transaction_ref }  -> { status }
 //     Called when Squad redirects back; marks the order paid if Squad confirms it.
 // The squad-webhook function does the same confirmation if the customer never returns.
@@ -28,10 +29,13 @@ Deno.serve(async (req) => {
 
     const { data: order } = await adminClient()
       .from('orders')
-      .select('id, order_number, customer_id, status, payment_status, total_amount')
+      .select('id, order_number, order_type, customer_id, vendor_id, status, payment_status, total_amount, wallet_amount')
       .eq('order_number', orderNumber)
       .maybeSingle();
-    if (!order || order.customer_id !== user.id) return json({ error: 'Order not found' }, 404);
+    // The customer pays for their order; the vendor pays for their own rider request
+    const isRiderRequest = order?.order_type === 'rider_request';
+    const payer = isRiderRequest ? order?.vendor_id : order?.customer_id;
+    if (!order || payer !== user.id) return json({ error: 'Order not found' }, 404);
 
     if (body.action === 'verify') {
       const status = await confirmPayment(String(body.transaction_ref));
@@ -50,12 +54,15 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${squadSecret()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: Math.round(Number(order.total_amount) * 100),
+        // Rider requests: the card pays what the wallet didn't cover
+        amount: Math.round((Number(order.total_amount) - Number(order.wallet_amount ?? 0)) * 100),
         email: user.email,
         currency: 'NGN',
         initiate_type: 'inline',
         transaction_ref: newReference(order.order_number),
-        callback_url: `${origin}/customer/order-confirmation?order=${encodeURIComponent(order.order_number)}`,
+        callback_url: isRiderRequest
+          ? `${origin}/vendor/rider-requests/${order.id}`
+          : `${origin}/customer/order-confirmation?order=${encodeURIComponent(order.order_number)}`,
         customer_name: user.user_metadata?.name,
         payment_channels: ['card', 'bank', 'ussd', 'transfer'],
         metadata: { order_number: order.order_number, customer_id: user.id },

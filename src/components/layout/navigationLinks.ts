@@ -1,6 +1,6 @@
 
 import { 
-  Bell, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield
+  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -37,6 +37,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
         { name: 'Dashboard', href: '/vendor', icon: Home },
         { name: 'Orders', href: '/vendor/orders', icon: Package },
         { name: 'Products', href: '/vendor/products', icon: Boxes },
+        { name: 'Request Rider', href: '/vendor/rider-requests', icon: Bike },
         { name: 'Notifications', href: '/vendor/notifications', icon: Bell },
         { name: 'Wallet', href: '/vendor/wallet', icon: Wallet },
         // { name: 'Recycling', href: '/vendor/recycling', icon: Recycle },

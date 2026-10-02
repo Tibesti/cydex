@@ -676,6 +676,39 @@ export type Database = {
           },
         ]
       }
+      rider_ratings: {
+        Row: { id: string; order_id: string; customer_id: string; rider_id: string; rating: number; feedback: string | null; created_at: string }
+        Insert: { id?: string; order_id: string; customer_id: string; rider_id: string; rating: number; feedback?: string | null; created_at?: string }
+        Update: { id?: string; order_id?: string; customer_id?: string; rider_id?: string; rating?: number; feedback?: string | null; created_at?: string }
+        Relationships: []
+      }
+      rider_rating_prompt_dismissals: {
+        Row: { order_id: string; customer_id: string; dismissed_at: string }
+        Insert: { order_id: string; customer_id: string; dismissed_at?: string }
+        Update: { order_id?: string; customer_id?: string; dismissed_at?: string }
+        Relationships: []
+      }
+      vendor_customers: {
+        Row: {
+          id: string; vendor_id: string; name: string; phone: string; place_name: string | null
+          formatted_address: string; street: string | null; city: string | null; state: string | null
+          country: string | null; place_id: string | null; latitude: number; longitude: number
+          directions: string | null; created_at: string; updated_at: string
+        }
+        Insert: {
+          id?: string; vendor_id: string; name: string; phone: string; place_name?: string | null
+          formatted_address: string; street?: string | null; city?: string | null; state?: string | null
+          country?: string | null; place_id?: string | null; latitude: number; longitude: number
+          directions?: string | null; created_at?: string; updated_at?: string
+        }
+        Update: {
+          id?: string; vendor_id?: string; name?: string; phone?: string; place_name?: string | null
+          formatted_address?: string; street?: string | null; city?: string | null; state?: string | null
+          country?: string | null; place_id?: string | null; latitude?: number; longitude?: number
+          directions?: string | null; created_at?: string; updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -869,7 +902,7 @@ export type Database = {
           cancelled_at: string | null
           carbon_credits_earned: number | null
           created_at: string
-          customer_id: string
+          customer_id: string | null
           delivered_at: string | null
           delivery_address: Json
           delivery_address_id: string | null
@@ -885,6 +918,9 @@ export type Database = {
           is_student_order: boolean | null
           late_night_fee: number | null
           order_number: string
+          order_type: string
+          wallet_amount: number
+          wallet_refunded: number
           payment_details: Json | null
           payment_gateway: string | null
           payment_method: string | null
@@ -917,7 +953,7 @@ export type Database = {
           cancelled_at?: string | null
           carbon_credits_earned?: number | null
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           delivered_at?: string | null
           delivery_address: Json
           delivery_address_id?: string | null
@@ -933,6 +969,9 @@ export type Database = {
           is_student_order?: boolean | null
           late_night_fee?: number | null
           order_number?: string
+          order_type?: string
+          wallet_amount?: number
+          wallet_refunded?: number
           payment_details?: Json | null
           payment_gateway?: string | null
           payment_method?: string | null
@@ -965,7 +1004,7 @@ export type Database = {
           cancelled_at?: string | null
           carbon_credits_earned?: number | null
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           delivered_at?: string | null
           delivery_address?: Json
           delivery_address_id?: string | null
@@ -981,6 +1020,9 @@ export type Database = {
           is_student_order?: boolean | null
           late_night_fee?: number | null
           order_number?: string
+          order_type?: string
+          wallet_amount?: number
+          wallet_refunded?: number
           payment_details?: Json | null
           payment_gateway?: string | null
           payment_method?: string | null
@@ -1205,6 +1247,7 @@ export type Database = {
           price: number
           status: string | null
           stock_quantity: number | null
+          track_stock: boolean
           updated_at: string | null
           vendor_id: string
         }
@@ -1220,6 +1263,7 @@ export type Database = {
           price: number
           status?: string | null
           stock_quantity?: number | null
+          track_stock?: boolean
           updated_at?: string | null
           vendor_id: string
         }
@@ -1235,6 +1279,7 @@ export type Database = {
           price?: number
           status?: string | null
           stock_quantity?: number | null
+          track_stock?: boolean
           updated_at?: string | null
           vendor_id?: string
         }
@@ -1266,6 +1311,7 @@ export type Database = {
           phone: string | null
           role: string
           status: string | null
+          store_banner_url: string | null
           verified: boolean | null
         }
         Insert: {
@@ -1285,6 +1331,7 @@ export type Database = {
           phone?: string | null
           role?: string
           status?: string | null
+          store_banner_url?: string | null
           verified?: boolean | null
         }
         Update: {
@@ -1304,6 +1351,7 @@ export type Database = {
           phone?: string | null
           role?: string
           status?: string | null
+          store_banner_url?: string | null
           verified?: boolean | null
         }
         Relationships: []
@@ -2508,6 +2556,47 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      rider_request_quote: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: {
+          status: string; distance_km: number | null; base_rate: number | null; distance_fee: number | null
+          delivery_fee: number | null; commission: number | null; total_amount: number | null
+          wallet_balance: number; wallet_amount: number | null; card_amount: number | null
+        }[]
+      }
+      create_rider_request: {
+        Args: {
+          p_recipient_name: string; p_recipient_phone: string; p_location: Json
+          p_package_details?: string; p_save_customer?: boolean
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      cancel_rider_request: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      vendor_cards_near_address: {
+        Args: { p_address_id: string }
+        Returns: {
+          vendor_id: string; name: string; logo_url: string | null; banner_url: string | null; verified: boolean
+          distance_km: number; product_count: number; categories: string[]; average_rating: number | null
+          rating_count: number; recent_orders: number
+        }[]
+      }
+      vendor_storefront: {
+        Args: { p_vendor_id: string; p_address_id?: string }
+        Returns: {
+          vendor_id: string; name: string; logo_url: string | null; banner_url: string | null; verified: boolean
+          store_address: string | null; average_rating: number | null; rating_count: number; distance_km: number | null
+        }[]
+      }
+      rider_rating_prompt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          order_id: string; order_number: string; rider_id: string; rider_name: string | null
+          rider_avatar: string | null; delivered_at: string | null
+        }[]
+      }
       address_snapshot: {
         Args: { a: Database["public"]["Tables"]["addresses"]["Row"] }
         Returns: Json

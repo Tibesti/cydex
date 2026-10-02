@@ -7,15 +7,8 @@ import { quoteProblem } from '@/lib/pricing';
 import { useAddresses } from '@/hooks/useAddresses';
 import { toCartLines, useOrderQuote } from '@/hooks/useOrderQuote';
 import { addressHeadline } from '@/lib/address';
+import type { CartItem } from '@/hooks/useCart';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  vendor_id: string;
-  vendor_name: string;
-}
 
 interface ShoppingCartSidebarProps {
   isOpen: boolean;
@@ -92,6 +85,8 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
                             size="sm" 
                             className="h-7 w-7 p-0 rounded-full"
                             onClick={() => updateQuantity(item.id, 1)}
+                            disabled={item.max_quantity != null && item.quantity >= item.max_quantity}
+                            title={item.max_quantity != null && item.quantity >= item.max_quantity ? `Only ${item.max_quantity} available` : undefined}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
