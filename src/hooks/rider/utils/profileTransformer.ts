@@ -19,17 +19,6 @@ export const transformProfileData = (
     bankDetailsData
   });
 
-  // Handle address properly - extract string from object or use as-is
-  let addressValue = '';
-  if (typeof profileData.address === 'string') {
-    addressValue = profileData.address;
-  } else if (profileData.address?.full_address) {
-    addressValue = profileData.address.full_address;
-  } else if (profileData.address) {
-    console.warn('[ProfileTransformer] Unexpected address format:', profileData.address);
-    addressValue = JSON.stringify(profileData.address);
-  }
-
   // Calculate stats from deliveries
   const completedDeliveries = deliveriesData.filter(d => d.status === 'delivered');
   const totalCarbonSaved = deliveriesData.reduce((sum, d) => sum + (d.carbon_saved || 0), 0);
@@ -76,8 +65,8 @@ export const transformProfileData = (
     id: profileData.id,
     name: profileData.name || 'Unknown',
     email: profileData.email || 'No email',
-    phone: profileData.phone || 'No phone',
-    address: addressValue,
+    // Empty when missing (the edit form saves this value back, so no placeholder text)
+    phone: profileData.phone || '',
     avatar: profileData.avatar || `https://api.dicebear.com/7.x/personas/svg?seed=${profileData.email}`,
     joinDate,
     isOnline: riderData?.rider_status === 'available',
@@ -87,11 +76,6 @@ export const transformProfileData = (
     documents,
     bankDetails: bankDetailsData || [],
     preferences: {
-      deliveryPreferences: {
-        maxDistance: riderData?.delivery_preferences?.max_distance || 15,
-        preferredZones: riderData?.delivery_preferences?.preferred_zones || [],
-        availableDays: riderData?.delivery_preferences?.available_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-      },
       notifications: {
         app: riderData?.notification_preferences?.app !== undefined ? riderData.notification_preferences.app : true,
         email: riderData?.notification_preferences?.email !== undefined ? riderData.notification_preferences.email : true,

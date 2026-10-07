@@ -7,6 +7,7 @@ import AdminOrders from '../pages/admin/Orders';
 import AdminPayments from '../pages/admin/Payments';
 import AdminContent from '../pages/admin/Content';
 import AdminSecurity from '../pages/admin/Security';
+import AdminVerifications from '../pages/admin/Verifications';
 
 const AdminRoutes = () => {
   return (
@@ -27,6 +28,15 @@ const AdminRoutes = () => {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/verifications" 
+        element={
+          <ProtectedRoute allowedRoles={['ADMIN']}>
+            <AdminVerifications />
+          </ProtectedRoute>
+        } 
+      />
+
       <Route 
         path="/orders" 
         element={

@@ -3,20 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Package, MapPin, User, CheckCircle, X } from 'lucide-react';
-import { Order } from '@/hooks/useCustomerOrders';
+import type { VendorOrder } from '@/hooks/useVendorOrders';
 
 interface VendorOrderAcceptanceProps {
-  order: Order;
+  order: VendorOrder;
   onAccept: (orderId: string) => void;
   onReject: (orderId: string, reason: string) => void;
   loading?: boolean;
+  /** False while the vendor has no phone number on their profile */
+  canAccept?: boolean;
 }
 
 export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
   order,
   onAccept,
   onReject,
-  loading = false
+  loading = false,
+  canAccept = true
 }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -68,8 +71,8 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-gray-500" />
               <span className="text-sm">
-                <span className="font-medium">{order.vendor?.name}</span>
-                <span className="text-gray-600"> • {order.vendor?.email}</span>
+                <span className="font-medium">{order.customer?.name}</span>
+                {order.customer?.phone && <span className="text-muted-foreground"> • {order.customer.phone}</span>}
               </span>
             </div>
             
@@ -87,23 +90,16 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
 
           {/* Order Summary */}
           <div className="space-y-3">
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-muted rounded-lg p-3">
               <div className="text-sm font-medium mb-2">Order Summary:</div>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Items ({order.order_items?.length || 0}):</span>
                   <span>{formatCurrency(order.subtotal)}</span>
                 </div>
-                {order.delivery_fee > 0 && (
-                  <div className="flex justify-between">
-                    <span>Delivery Fee:</span>
-                    <span>{formatCurrency(order.delivery_fee)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-medium border-t pt-1">
-                  <span>Total:</span>
-                  <span>{formatCurrency(order.total_amount)}</span>
-                </div>
+                <p className="text-xs text-muted-foreground pt-1">
+                  Paid. Cydex's commission is taken from the items total; see the breakdown below.
+                </p>
               </div>
             </div>
           </div>
@@ -136,7 +132,7 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
         <div className="flex gap-3 pt-4 border-t">
           <Button
             onClick={() => onAccept(order.id)}
-            disabled={loading}
+            disabled={loading || !canAccept}
             className="flex-1 bg-green-600 hover:bg-green-700"
           >
             <CheckCircle className="h-4 w-4 mr-2" />

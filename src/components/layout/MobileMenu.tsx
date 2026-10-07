@@ -6,6 +6,9 @@ import { X, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types/auth.types';
+import UnreadBadge from '@/components/notifications/UnreadBadge';
+import InstallAppMenuItem from '@/components/pwa/InstallAppMenuItem';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface SidebarLink {
   name: string;
@@ -30,6 +33,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   handleLogout,
   userRoleTitle
 }) => {
+  const { unreadCount } = useNotifications();
   if (!isOpen) return null;
 
   return (
@@ -76,10 +80,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                     onClick={onClose}
                   >
                     <link.icon className="h-5 w-5" />
-                    <span className="ml-3">{link.name}</span>
+                    <span className="ml-3 flex-1">{link.name}</span>
+                    {link.href.endsWith('/notifications') && <UnreadBadge count={unreadCount} />}
                   </Link>
                 </li>
               ))}
+              <li>
+                <InstallAppMenuItem onDone={onClose} />
+              </li>
             </ul>
           </nav>
         </div>

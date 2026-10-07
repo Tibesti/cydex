@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#FAFAF7" />
+  <title>You're offline · Cydex</title>
+  <style>
+    :root { --bg: #FAFAF7; --fg: #151515; --muted: #5b6168; --accent: #6CE000; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #0b0d0c; --fg: #f3f3ee; --muted: #a7ada9; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); color: var(--fg); padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; }
+    main { max-width: 360px; }
+    img { width: 88px; height: 88px; border-radius: 22px; }
+    h1 { font-size: 24px; margin: 24px 0 8px; }
+    p { color: var(--muted); line-height: 1.5; margin: 0 0 24px; }
+    button { background: var(--accent); color: #151515; border: 0; border-radius: 10px; padding: 12px 24px;
+      font-size: 16px; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/icons/icon-192.png" alt="Cydex" />
+    <h1>You're offline</h1>
+    <p>Cydex needs an internet connection to load your orders. Check your data or Wi-Fi, then try again.</p>
+    <button type="button" onclick="location.reload()">Try again</button>
+  </main>
+  <script>window.addEventListener('online', () => location.reload());</script>
+</body>
+</html>

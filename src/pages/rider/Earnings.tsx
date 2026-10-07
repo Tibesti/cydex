@@ -17,7 +17,6 @@ import {
   Calendar,
   RefreshCw,
   Download,
-  ArrowUp,
   ArrowDown,
   Plus
 } from 'lucide-react';
@@ -149,20 +148,16 @@ const EarningsPage = () => {
 
   // Calculate totals
   const todaysTotal = todaysEarnings.reduce((sum, earning) => 
-    sum + (earning.delivery_fee + earning.eco_bonus + earning.tip_amount), 0
+    sum + (earning.delivery_fee + earning.tip_amount), 0
   );
   
   const weeklyTotal = weeklyEarnings.reduce((sum, earning) => 
-    sum + (earning.delivery_fee + earning.eco_bonus + earning.tip_amount), 0
+    sum + (earning.delivery_fee + earning.tip_amount), 0
   );
   
   const monthlyTotal = monthlyEarnings.reduce((sum, earning) => 
-    sum + (earning.delivery_fee + earning.eco_bonus + earning.tip_amount), 0
+    sum + (earning.delivery_fee + earning.tip_amount), 0
   );
-
-  const todaysEcoBonus = todaysEarnings.reduce((sum, earning) => sum + Number(earning.eco_bonus), 0);
-  const weeklyEcoBonus = weeklyEarnings.reduce((sum, earning) => sum + Number(earning.eco_bonus), 0);
-  const monthlyEcoBonus = monthlyEarnings.reduce((sum, earning) => sum + Number(earning.eco_bonus), 0);
 
   const deliveriesCompleted = todaysEarnings.length;
   const weeklyDeliveries = weeklyEarnings.length;
@@ -174,13 +169,13 @@ const EarningsPage = () => {
   const getEarningsData = () => {
     switch (selectedPeriod) {
       case 'today':
-        return { total: todaysTotal, eco: todaysEcoBonus, deliveries: deliveriesCompleted };
+        return { total: todaysTotal, deliveries: deliveriesCompleted };
       case 'week':
-        return { total: weeklyTotal, eco: weeklyEcoBonus, deliveries: weeklyDeliveries };
+        return { total: weeklyTotal, deliveries: weeklyDeliveries };
       case 'month':
-        return { total: monthlyTotal, eco: monthlyEcoBonus, deliveries: monthlyDeliveries };
+        return { total: monthlyTotal, deliveries: monthlyDeliveries };
       default:
-        return { total: todaysTotal, eco: todaysEcoBonus, deliveries: deliveriesCompleted };
+        return { total: todaysTotal, deliveries: deliveriesCompleted };
     }
   };
 
@@ -335,12 +330,6 @@ const EarningsPage = () => {
                   <TrendingUp className="h-3 w-3 text-green-600" />
                 </div>
               </div>
-              {currentData.eco > 0 && (
-                <div className="flex items-center mt-1 text-green-600">
-                  <ArrowUp className="h-2 w-2 mr-1" />
-                  <span className="text-xs">+{formatCurrency(currentData.eco)} eco</span>
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -406,13 +395,7 @@ const EarningsPage = () => {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Delivery Fees</span>
                 <span className="font-medium">
-                  {formatCurrency(currentData.total - currentData.eco)}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Eco Bonuses</span>
-                <span className="font-medium text-green-600">
-                  +{formatCurrency(currentData.eco)}
+                  {formatCurrency(currentData.total)}
                 </span>
               </div>
               <div className="border-t pt-2 flex justify-between items-center">
@@ -514,13 +497,8 @@ const EarningsPage = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-medium">
-                        {formatCurrency(earning.delivery_fee + earning.eco_bonus + earning.tip_amount)}
+                        {formatCurrency(earning.delivery_fee + earning.tip_amount)}
                       </p>
-                      {earning.eco_bonus > 0 && (
-                        <p className="text-xs text-green-600">
-                          +{formatCurrency(earning.eco_bonus)} eco
-                        </p>
-                      )}
                     </div>
                   </div>
                 ))}

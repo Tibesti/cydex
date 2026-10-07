@@ -1,42 +1,27 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
 
 interface ProfileStatusProps {
-  profile: any;
-  onStatusToggle?: (isOnline: boolean) => void;
+  profile: { isVerified: boolean };
 }
 
-const ProfileStatus = ({ profile, onStatusToggle }: ProfileStatusProps) => {
-  const handleStatusChange = (checked: boolean) => {
-    if (onStatusToggle) {
-      onStatusToggle(checked);
-    }
-  };
+// Online/offline follows the rider's live location; there's no manual toggle
+const ProfileStatus = ({ profile }: ProfileStatusProps) => {
+  const { isOnline } = useRiderLocation();
 
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm">Offline</span>
-          <Switch 
-            checked={profile.isOnline} 
-            onCheckedChange={handleStatusChange}
-            className="data-[state=checked]:bg-green-500"
-          />
-          <span className="text-xs sm:text-sm">Online</span>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Badge className={profile.isOnline ? "bg-green-500" : "bg-gray-500"} variant="default">
-          {profile.isOnline ? 'Online' : 'Offline'}
+        <Badge className={isOnline ? "bg-green-500" : "bg-gray-500"} variant="default">
+          {isOnline ? 'Online' : 'Offline'}
         </Badge>
         <Badge variant="outline" className={`text-xs ${profile.isVerified ? 'border-green-500 text-green-600' : 'border-red-500 text-red-600'}`}>
           {profile.isVerified ? 'Verified' : 'Not Verified'}
         </Badge>
       </div>
+      <p className="text-xs text-muted-foreground">Online while your live location is on</p>
     </div>
   );
 };

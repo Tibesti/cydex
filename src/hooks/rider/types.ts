@@ -62,7 +62,6 @@ export interface RiderProfileData {
   name: string;
   email: string;
   phone: string;
-  address: string;
   avatar?: string;
   joinDate: string;
   isOnline: boolean;
@@ -72,11 +71,6 @@ export interface RiderProfileData {
   documents: DocumentInfo;
   bankDetails: BankDetail[];
   preferences: {
-    deliveryPreferences: {
-      maxDistance: number;
-      preferredZones: string[];
-      availableDays: string[];
-    };
     notifications: {
       app: boolean;
       email: boolean;

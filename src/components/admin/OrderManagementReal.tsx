@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Search, Filter, Package, Eye, MoreHorizontal } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { getAllOrders, getOrdersByStatus, updateOrderStatus } from '@/utils/adminUtils';
+import { getAllOrders, getOrdersByStatus } from '@/utils/adminUtils';
 import { toast } from 'sonner';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import AdminRiderActionDialog, { type RiderAction } from './AdminRiderActionDialog';
+import { ORDER_STATUSES, orderStatusLabel } from '@/lib/orderStatus';
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // Define the order type to match what we actually get from Supabase
@@ -36,6 +39,7 @@ export function OrderManagementReal() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderFromSupabase | null>(null);
+  const [riderAction, setRiderAction] = useState<{ action: RiderAction; order: OrderFromSupabase } | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -109,20 +113,6 @@ export function OrderManagementReal() {
     setIsDetailDialogOpen(true);
   };
 
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
-    try {
-      const success = await updateOrderStatus(orderId, newStatus);
-      if (success) {
-        toast.success(`Order status updated to ${newStatus}`);
-        loadOrders();
-      } else {
-        toast.error('Failed to update order status');
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Failed to update order status');
-    }
-  };
 
   const getStatusBadgeColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -190,15 +180,9 @@ export function OrderManagementReal() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="preparing">Preparing</SelectItem>
-                  <SelectItem value="ready">Ready</SelectItem>
-                  <SelectItem value="out_for_delivery">Out for Delivery</SelectItem>
-                  <SelectItem value="delivered">Delivered</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                  <SelectItem value="refunded">Refunded</SelectItem>
+                  {ORDER_STATUSES.map((st) => (
+                    <SelectItem key={st} value={st}>{orderStatusLabel(st)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button variant="outline" className="gap-1.5" onClick={loadOrders}>
@@ -248,9 +232,7 @@ export function OrderManagementReal() {
                         </div>
                       </td>
                       <td className="py-4">
-                        <Badge className={getStatusBadgeColor(order.status)}>
-                          {formatStatus(order.status)}
-                        </Badge>
+                        <OrderStatusBadge status={order.status} />
                       </td>
                       <td className="py-4">
                         <Badge className={getPaymentStatusColor(order.payment_status)}>
@@ -293,22 +275,16 @@ export function OrderManagementReal() {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <div className="border-t my-1"></div>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'confirmed')}>
-                              Confirm Order
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'processing')}>
-                              Start Processing
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'out_for_delivery')}>
-                              Out for Delivery
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'delivered')}>
-                              Mark Delivered
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusChange(order.id, 'cancelled')}>
-                              Cancel Order
-                            </DropdownMenuItem>
+                            {['rider_assigned', 'picking_up'].includes(order.status) && (
+                              <DropdownMenuItem onClick={() => setRiderAction({ action: 'relieve', order })}>
+                                Relieve rider
+                              </DropdownMenuItem>
+                            )}
+                            {['ready_for_pickup', 'rider_assigned', 'picking_up'].includes(order.status) && (
+                              <DropdownMenuItem onClick={() => setRiderAction({ action: 'reassign', order })}>
+                                {order.rider ? 'Reassign rider' : 'Assign a rider'}
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -343,7 +319,7 @@ export function OrderManagementReal() {
                   <h3 className="font-semibold mb-2">Order Information</h3>
                   <div className="space-y-2 text-sm">
                     <div><span className="font-medium">Order Number:</span> {selectedOrder.order_number}</div>
-                    <div><span className="font-medium">Status:</span> <Badge className={getStatusBadgeColor(selectedOrder.status)}>{formatStatus(selectedOrder.status)}</Badge></div>
+                    <div><span className="font-medium">Status:</span> <OrderStatusBadge status={selectedOrder.status} /></div>
                     <div><span className="font-medium">Created:</span> {new Date(selectedOrder.created_at).toLocaleString()}</div>
                     {selectedOrder.delivered_at && (
                       <div><span className="font-medium">Delivered:</span> {new Date(selectedOrder.delivered_at).toLocaleString()}</div>
@@ -405,26 +381,32 @@ export function OrderManagementReal() {
             <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
               Close
             </Button>
-            {selectedOrder && (
+            {selectedOrder && ['ready_for_pickup', 'rider_assigned', 'picking_up'].includes(selectedOrder.status) && (
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => handleStatusChange(selectedOrder.id, 'confirmed')}
-                  disabled={selectedOrder.status === 'confirmed'}
-                >
-                  Confirm
-                </Button>
-                <Button 
-                  onClick={() => handleStatusChange(selectedOrder.id, 'delivered')}
-                  disabled={selectedOrder.status === 'delivered'}
-                >
-                  Mark Delivered
+                {['rider_assigned', 'picking_up'].includes(selectedOrder.status) && (
+                  <Button variant="outline" onClick={() => setRiderAction({ action: 'relieve', order: selectedOrder })}>
+                    Relieve rider
+                  </Button>
+                )}
+                <Button onClick={() => setRiderAction({ action: 'reassign', order: selectedOrder })}>
+                  {selectedOrder.rider ? 'Reassign rider' : 'Assign a rider'}
                 </Button>
               </div>
             )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AdminRiderActionDialog
+        action={riderAction?.action ?? null}
+        order={riderAction?.order ?? null}
+        onClose={() => setRiderAction(null)}
+        onDone={() => {
+          setRiderAction(null);
+          setIsDetailDialogOpen(false);
+          loadOrders();
+        }}
+      />
     </div>
   );
 }

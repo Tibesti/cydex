@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ShoppingCart, Menu } from 'lucide-react';
+import { Bell, ShoppingCart, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,6 +11,8 @@ import LogoutConfirmationDialog from '@/components/auth/LogoutConfirmationDialog
 import { useCartContext } from '@/contexts/CartContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { toast } from 'sonner';
+import UnreadBadge from '@/components/notifications/UnreadBadge';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface MobileHeaderProps {
   onMenuToggle: () => void;
@@ -28,6 +30,9 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { cartItems, setIsCartOpen } = useCartContext();
   const { theme, setTheme } = useTheme();
+  const { unreadCount } = useNotifications();
+  const role = userRole.toLowerCase();
+  const hasNotifications = role === 'customer' || role === 'vendor' || role === 'rider';
 
   // Get role title for display
   const getRoleTitle = () => {
@@ -77,6 +82,17 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
         </span>
       </div>
       <div className="flex items-center space-x-2">
+        {hasNotifications && (
+          <Link
+            to={`/${role}/notifications`}
+            className="p-2 rounded-full hover:bg-muted relative transition-colors"
+            title="Notifications"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+            <UnreadBadge count={unreadCount} className="absolute -top-1 -right-1" />
+          </Link>
+        )}
         {userRole === 'customer' && (
           <button 
             className="p-2 rounded-full hover:bg-muted relative transition-colors"

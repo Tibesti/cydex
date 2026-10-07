@@ -1,6 +1,6 @@
 
 import { 
-  Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield, Calculator
+  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -18,7 +18,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
       return [
         { name: 'Home', href: '/customer', icon: Home },
         { name: 'Orders', href: '/customer/orders', icon: Package },
-        { name: 'Pricing', href: '/customer/pricing', icon: Calculator },
+        { name: 'Notifications', href: '/customer/notifications', icon: Bell },
         { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
         // { name: 'Recycling', href: '/customer/recycling', icon: Recycle },
         { name: 'Profile', href: '/customer/profile', icon: User },
@@ -28,6 +28,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
         { name: 'Dashboard', href: '/rider', icon: Home },
         { name: 'Available Orders', href: '/rider/available', icon: Package },
         { name: 'Current Deliveries', href: '/rider/current', icon: Navigation },
+        { name: 'Notifications', href: '/rider/notifications', icon: Bell },
         { name: 'Earnings', href: '/rider/earnings', icon: Wallet },
         { name: 'Profile', href: '/rider/profile', icon: User },
       ];
@@ -35,6 +36,9 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
       return [
         { name: 'Dashboard', href: '/vendor', icon: Home },
         { name: 'Orders', href: '/vendor/orders', icon: Package },
+        { name: 'Products', href: '/vendor/products', icon: Boxes },
+        { name: 'Request Rider', href: '/vendor/rider-requests', icon: Bike },
+        { name: 'Notifications', href: '/vendor/notifications', icon: Bell },
         { name: 'Wallet', href: '/vendor/wallet', icon: Wallet },
         // { name: 'Recycling', href: '/vendor/recycling', icon: Recycle },
         { name: 'Settings', href: '/vendor/settings', icon: Settings },
@@ -43,6 +47,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
       return [
         { name: 'Overview', href: '/admin', icon: Home },
         { name: 'Users', href: '/admin/users', icon: Users },
+        { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
         { name: 'Orders', href: '/admin/orders', icon: Package },
         { name: 'Payments', href: '/admin/payments', icon: CreditCard },
         { name: 'Content', href: '/admin/content', icon: FileText },

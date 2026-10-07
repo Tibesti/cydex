@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import { IN_PROGRESS_STATUSES, type OrderStatus } from '@/lib/orderStatus';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, Package, Calendar, MapPin, CreditCard, Truck, Plus } from 'lucide-react';
@@ -23,27 +25,12 @@ const OrdersPage = () => {
     vendorName: string;
   } | null>(null);
 
-  // Filter orders by status
-  const activeOrders = orders.filter(order => 
-    ['pending', 'processing', 'confirmed', 'shipped', 'out_for_delivery'].includes(order.status)
+  // Filter orders by status (docs/ORDER_FLOW.md)
+  const activeOrders = orders.filter(order =>
+    order.status === 'pending' || IN_PROGRESS_STATUSES.includes(order.status as OrderStatus)
   );
-  const completedOrders = orders.filter(order => 
-    ['delivered', 'completed'].includes(order.status)
-  );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'processing': return 'bg-blue-100 text-blue-800';
-      case 'confirmed': return 'bg-purple-100 text-purple-800';
-      case 'shipped': return 'bg-indigo-100 text-indigo-800';
-      case 'out_for_delivery': return 'bg-orange-100 text-orange-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-muted text-foreground';
-    }
-  };
+  const completedOrders = orders.filter(order => order.status === 'delivered');
+  const cancelledOrders = orders.filter(order => order.status === 'cancelled' || order.status === 'rejected');
 
   const handleRateVendor = (order: any) => {
     setSelectedOrderForRating({
@@ -69,9 +56,7 @@ const OrdersPage = () => {
                 <span className="truncate">{formatDistanceToNow(new Date(order.created_at), { addSuffix: true })}</span>
               </CardDescription>
             </div>
-            <Badge className={`${getStatusColor(order.status)} text-xs px-1.5 py-0.5 whitespace-nowrap`}>
-              {order.status.replace('_', ' ').substring(0, 10)}
-            </Badge>
+            <OrderStatusBadge status={order.status} className="text-xs px-1.5 py-0.5 whitespace-nowrap" />
           </div>
         </CardHeader>
         
@@ -199,7 +184,11 @@ const OrdersPage = () => {
 
         {/* Tabs - Compact */}
         <Tabs defaultValue="active" className="space-y-3 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-2 h-8 sm:h-10">
+          <TabsList className="grid w-full grid-cols-4 h-8 sm:h-10">
+            <TabsTrigger value="all" className="text-xs sm:text-sm px-1 sm:px-3">
+              All
+              <span className="ml-1">({orders.length})</span>
+            </TabsTrigger>
             <TabsTrigger value="active" className="text-xs sm:text-sm px-1 sm:px-3">
               <span className="hidden xs:inline">Active Orders</span>
               <span className="xs:hidden">Active</span>
@@ -210,7 +199,29 @@ const OrdersPage = () => {
               <span className="xs:hidden">Completed</span>
               <span className="ml-1">({completedOrders.length})</span>
             </TabsTrigger>
+            <TabsTrigger value="cancelled" className="text-xs sm:text-sm px-1 sm:px-3">
+              Cancelled
+              <span className="ml-1">({cancelledOrders.length})</span>
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="all" className="space-y-3 sm:space-y-4">
+            {orders.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
+                  <Package className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2">No orders yet</h3>
+                  <Button onClick={() => navigate('/customer/new-order')} size="sm" className="w-full xs:w-auto">
+                    Place Your First Order
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              orders.map(order => (
+                <OrderCard key={order.id} order={order} showRatingButton={order.status === 'delivered'} />
+              ))
+            )}
+          </TabsContent>
 
           <TabsContent value="active" className="space-y-3 sm:space-y-4">
             {activeOrders.length === 0 ? (
@@ -249,6 +260,22 @@ const OrdersPage = () => {
             ) : (
               completedOrders.map(order => (
                 <OrderCard key={order.id} order={order} showRatingButton={true} />
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="cancelled" className="space-y-3 sm:space-y-4">
+            {cancelledOrders.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-6 sm:py-8 p-3 sm:p-6">
+                  <Package className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h3 className="text-base sm:text-lg font-medium mb-2">No cancelled orders</h3>
+                  <p className="text-muted-foreground text-sm sm:text-base">Cancelled and rejected orders will appear here.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              cancelledOrders.map(order => (
+                <OrderCard key={order.id} order={order} />
               ))
             )}
           </TabsContent>

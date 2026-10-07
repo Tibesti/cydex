@@ -2,14 +2,8 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useEffect, useState } from 'react';
-import { squadPaymentService } from '@/services/squadPaymentService';
 import { toast } from 'sonner';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { invokeFunction } from '@/lib/edgeFunctions';
 
 interface LocationState {
   orderNumber?: string;
@@ -37,32 +31,25 @@ const OrderConfirmation: React.FC = () => {
 
       setIsVerifying(true);
       try {
-        // Verify payment with Squad
-        const verification = await squadPaymentService.verifyPayment(transactionRef);
-        
-        if (verification.success && verification.data?.transaction_status === 'Success') {
-          setVerificationStatus('success');
-          
-          // Update order payment status in database
-          const { error } = await supabase
-            .from('orders')
-            .update({
-              payment_status: 'paid',
-              payment_reference: transactionRef,
-              payment_gateway: 'squad',
-              updated_at: new Date().toISOString(),
-            })
-            .eq('order_number', orderNumber);
+        // Squad is asked server-side (squad-checkout Edge Function), which marks
+        // the order paid. The squad-webhook function does the same if this page
+        // never loads, so a repeat is harmless.
+        const data = await invokeFunction<{ status: string }>('squad-checkout', {
+          action: 'verify', transaction_ref: transactionRef,
+        });
 
-          if (error) {
-            console.error('Error updating order:', error);
-            toast.error('Payment verified but failed to update order. Please contact support.');
-          } else {
-            toast.success('Payment verified successfully!');
-          }
+        if (data?.status === 'paid' || data?.status === 'already_paid') {
+          setVerificationStatus('success');
+          toast.success('Payment confirmed!');
+        } else if (data?.status === 'refunded') {
+          setVerificationStatus('success');
+          toast.info('This order was cancelled, so your payment was refunded to your wallet.');
+        } else if (data?.status === 'amount_mismatch') {
+          setVerificationStatus('failed');
+          toast.error('The amount paid doesn\'t match the order. Please contact support.');
         } else {
           setVerificationStatus('failed');
-          toast.error('Payment verification failed. Please contact support.');
+          toast.error('We couldn\'t confirm this payment yet.');
         }
       } catch (error) {
         console.error('Payment verification error:', error);

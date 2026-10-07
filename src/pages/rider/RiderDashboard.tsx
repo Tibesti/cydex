@@ -2,13 +2,14 @@
 import React from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import RiderPhoneNotice from '@/components/rider/RiderPhoneNotice';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
 import { useRiderData } from '@/hooks/useRiderData';
 import { EarningsOverview } from '@/components/rider/dashboard/EarningsOverview';
 import { CurrentDeliveryCard } from '@/components/rider/dashboard/CurrentDeliveryCard';
 import { AvailableOrdersList } from '@/components/rider/dashboard/AvailableOrdersList';
-import { WeeklyScheduleCard } from '@/components/rider/dashboard/WeeklyScheduleCard';
+import { RecentDeliveriesCard } from '@/components/rider/dashboard/RecentDeliveriesCard';
 import { EarningsBreakdownCard } from '@/components/rider/dashboard/EarningsBreakdownCard';
 
 const RiderDashboard = () => {
@@ -18,11 +19,11 @@ const RiderDashboard = () => {
     availableDeliveries,
     currentDeliveries,
     todaysEarnings,
-    riderProfile,
     acceptDelivery,
-    updateDeliveryStatus,
-    updateRiderStatus
+    refetch
   } = useRiderData();
+  // Online = live location coming through (no manual toggle)
+  const { isOnline } = useRiderLocation();
 
   if (loading) {
     return (
@@ -42,20 +43,14 @@ const RiderDashboard = () => {
   }
 
   const deliveriesCompleted = todaysEarnings.length;
-  const isOnline = riderProfile?.rider_status === 'available';
-
   const handleAcceptOrder = async (orderId: string) => {
     await acceptDelivery(orderId);
-  };
-
-  const handleToggleOnlineStatus = async (checked: boolean) => {
-    const newStatus = checked ? 'available' : 'offline';
-    await updateRiderStatus(newStatus);
   };
 
   return (
     <DashboardLayout userRole="RIDER">
       <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+        <RiderPhoneNotice />
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Welcome, {user?.name}</h1>
@@ -67,15 +62,7 @@ const RiderDashboard = () => {
             <Badge className={`text-xs sm:text-sm ${isOnline ? 'bg-green-500' : 'bg-gray-500'}`}>
               {isOnline ? 'Available for Deliveries' : 'Offline'}
             </Badge>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Offline</span>
-              <Switch
-                checked={isOnline}
-                onCheckedChange={handleToggleOnlineStatus}
-                className="data-[state=checked]:bg-green-500"
-              />
-              <span className="text-sm text-gray-600">Online</span>
-            </div>
+            <span className="text-xs text-muted-foreground">Based on your live location</span>
           </div>
         </div>
 
@@ -86,7 +73,7 @@ const RiderDashboard = () => {
 
         <CurrentDeliveryCard 
           currentDeliveries={currentDeliveries}
-          onUpdateStatus={updateDeliveryStatus}
+          onChanged={() => refetch.currentDeliveries()}
         />
 
         <AvailableOrdersList 
@@ -95,7 +82,7 @@ const RiderDashboard = () => {
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <WeeklyScheduleCard />
+          <RecentDeliveriesCard />
           <EarningsBreakdownCard todaysEarnings={todaysEarnings} />
         </div>
       </div>

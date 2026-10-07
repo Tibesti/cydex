@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import AppRoutes from "@/routes/AppRoutes";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
+import InstallBanner from "@/components/pwa/InstallBanner";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ function App() {
                   <div className="min-h-screen bg-background font-sans antialiased ">
                     <AppRoutes />
                   </div>
+                  <InstallBanner />
                 </BrowserRouter>
               </TooltipProvider>
             </CartProvider>

@@ -8,6 +8,13 @@ import MobileMenu from './MobileMenu';
 import MobileHeader from './MobileHeader';
 import { getNavLinks, getRoleTitle } from './navigationLinks';
 import { UserRole } from '@/types/auth.types';
+import AddressOnboarding from '@/components/address/AddressOnboarding';
+import DeliveryAddressBar from '@/components/customer/address/DeliveryAddressBar';
+import RiderLocationBar from '@/components/rider/location/RiderLocationBar';
+import RiderLocationGate from '@/components/rider/location/RiderLocationGate';
+import { useNotificationsRealtime } from '@/hooks/useNotifications';
+import RiderRatingPrompt from '@/components/customer/ratings/RiderRatingPrompt';
+import PushPrompt from '@/components/notifications/PushPrompt';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -19,6 +26,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  useNotificationsRealtime();
 
   // Memoize navigation links to prevent recreation on every render
   const navLinks = useMemo(() => getNavLinks(userRole), [userRole]);
@@ -94,8 +102,19 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
         isSidebarOpen ? "lg:ml-64" : "lg:ml-20",
         "pt-16 lg:pt-0"
       )}>
+        {userRole === 'CUSTOMER' && <DeliveryAddressBar />}
+        {userRole === 'RIDER' && <RiderLocationBar />}
+        {/* Vendors are asked to turn on push so they don't miss orders (a reminder, never a block) */}
+        {userRole === 'VENDOR' && <PushPrompt tone="warning" className="m-2 sm:m-4 md:mx-6" />}
         {children}
       </main>
+
+      {/* Customers without a saved address and vendors without a store location are asked to add one */}
+      {(userRole === 'CUSTOMER' || userRole === 'VENDOR') && <AddressOnboarding role={userRole} />}
+      {/* Customers are asked once per session to rate the rider of their latest delivery */}
+      {userRole === 'CUSTOMER' && <RiderRatingPrompt />}
+      {/* Riders must share their live location while using the app */}
+      {userRole === 'RIDER' && <RiderLocationGate />}
     </div>
   );
 };

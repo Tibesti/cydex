@@ -1,15 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import RiderPhoneNotice from '@/components/rider/RiderPhoneNotice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Navigation, Phone, Leaf, RefreshCw, AlertCircle } from 'lucide-react';
+import { TrendingUp, Navigation, Phone, RefreshCw, AlertCircle } from 'lucide-react';
 import { useRiderData } from '@/hooks/useRiderData';
 import { useRiderDeliveries } from '@/hooks/rider/useRiderDeliveries';
 import { OrderFilters } from '@/components/rider/orders/OrderFilters';
 import { OrderCard } from '@/components/rider/orders/OrderCard';
 import { OrdersTable } from '@/components/rider/orders/OrdersTable';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
+import { pickupDistanceKm } from '@/lib/riderLocation';
 
 const AvailableOrdersPage = () => {
   const { 
@@ -27,7 +30,7 @@ const AvailableOrdersPage = () => {
   } = useRiderDeliveries();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterEco, setFilterEco] = useState(false);
+  const { position } = useRiderLocation();
   const [sortBy, setSortBy] = useState('distance');
   const [filteredOrders, setFilteredOrders] = useState(availableDeliveries);
   const [acceptingOrder, setAcceptingOrder] = useState<string | null>(null);
@@ -65,21 +68,18 @@ const AvailableOrdersPage = () => {
       );
     }
 
-    // Eco filter
-    if (filterEco) {
-      filtered = filtered.filter((order) => Number(order.eco_bonus) > 0);
-    }
-
     // Sort logic
     switch (sortBy) {
       case 'distance':
-        filtered.sort((a, b) => Number(a.actual_distance || 0) - Number(b.actual_distance || 0));
+        // Nearest pickup first; unknown distances last
+        filtered.sort((a, b) => {
+          const da = pickupDistanceKm(a.pickup_location, position) ?? Infinity;
+          const db = pickupDistanceKm(b.pickup_location, position) ?? Infinity;
+          return da === db ? 0 : da - db;
+        });
         break;
       case 'fee':
-        filtered.sort((a, b) => Number(b.delivery_fee) - Number(a.delivery_fee));
-        break;
-      case 'eco_bonus':
-        filtered.sort((a, b) => Number(b.eco_bonus) - Number(a.eco_bonus));
+        filtered.sort((a, b) => Number(b.rider_earning ?? 0) - Number(a.rider_earning ?? 0));
         break;
       case 'time':
         filtered.sort((a, b) => 
@@ -89,9 +89,11 @@ const AvailableOrdersPage = () => {
       default:
         break;
     }
+    // Orders an admin put back in the pool (rider relieved) always come first
+    filtered.sort((a, b) => (b.order?.dispatch_priority ?? 0) - (a.order?.dispatch_priority ?? 0));
 
     setFilteredOrders(filtered);
-  }, [ordersToUse, searchQuery, filterEco, sortBy]);
+  }, [ordersToUse, searchQuery, sortBy, position]);
 
   const handleAcceptOrder = async (orderId: string) => {
     if (acceptingOrder) return; // Prevent multiple simultaneous accepts
@@ -121,12 +123,13 @@ const AvailableOrdersPage = () => {
   return (
     <DashboardLayout userRole="RIDER">
       <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
+        <RiderPhoneNotice />
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Available Orders</h1>
             <p className="text-sm sm:text-base text-gray-600">
-              Accept eco-friendly deliveries and earn bonuses
+              Deliveries with pickups within 5 km of you
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -174,8 +177,6 @@ const AvailableOrdersPage = () => {
         <OrderFilters
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          filterEco={filterEco}
-          onFilterEcoChange={setFilterEco}
           sortBy={sortBy}
           onSortChange={setSortBy}
         />
@@ -259,12 +260,12 @@ const AvailableOrdersPage = () => {
               
               <div className="flex items-start space-x-3">
                 <div className="flex-shrink-0 p-2 bg-amber-50 rounded-full">
-                  <Leaf className="h-4 w-4 text-amber-600" />
+                  <TrendingUp className="h-4 w-4 text-amber-600" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-gray-900">Prioritize Eco-Friendly Orders</h3>
+                  <h3 className="text-sm font-medium text-gray-900">Longer Trips Pay More</h3>
                   <p className="text-xs text-gray-500 mt-1">
-                    Choose deliveries with eco bonuses to increase earnings and environmental impact.
+                    The delivery fee rises with distance above the ₦600 minimum. Sort by highest pay to compare.
                   </p>
                 </div>
               </div>

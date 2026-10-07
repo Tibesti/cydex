@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { User, Save } from 'lucide-react';
+import { useRiderLocation } from '@/hooks/useRiderLocation';
+import SingleAddressField from '@/components/address/SingleAddressField';
 
 interface PersonalInfoFormProps {
   formData: {
     name: string;
     email: string;
     phone: string;
-    address: string;
   };
   editing: boolean;
   onInputChange: (field: string, value: string) => void;
@@ -19,6 +20,10 @@ interface PersonalInfoFormProps {
 }
 
 const PersonalInfoForm = ({ formData, editing, onInputChange, onSave }: PersonalInfoFormProps) => {
+  const { permission, position, label } = useRiderLocation();
+  const liveLocation =
+    permission !== 'granted' ? 'Location is off' : !position ? 'Finding your location…' : label ? `Near ${label}` : 'Location on';
+
   return (
     <Card>
       <CardHeader>
@@ -73,15 +78,22 @@ const PersonalInfoForm = ({ formData, editing, onInputChange, onSave }: Personal
               </p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input 
-              id="address" 
-              value={formData.address}
-              onChange={(e) => onInputChange('address', e.target.value)}
-              disabled={!editing}
-              className={!editing ? "bg-gray-50" : ""} 
+          <div className="md:col-span-2">
+            {/* Saved address; saves on its own through the address picker */}
+            <SingleAddressField
+              label="Address"
+              addressLabel="Home"
+              pickerTitle="Your address"
+              pickerDescription="Search for your address, then drag the map so the pin sits exactly on it."
             />
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label>Current location</Label>
+            {/* Live location, separate from the saved address (used for the 5 km order radius) */}
+            <p className="rounded-md border p-3 text-sm">
+              {liveLocation}
+              <span className="block text-xs text-muted-foreground">Updated automatically while you use the app</span>
+            </p>
           </div>
         </div>
         

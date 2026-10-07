@@ -3,6 +3,8 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/customer/ProductCard';
+import { stockLimit } from '@/lib/products';
+import type { CartItem } from '@/hooks/useCart';
 import { Product } from '@/hooks/useProducts';
 
 interface ProductsGridProps {
@@ -14,7 +16,7 @@ interface ProductsGridProps {
   setSearchQuery: (query: string) => void;
   setSelectedCategory: (category: string | null) => void;
   setSelectedVendor: (vendorId: string | null) => void;
-  addToCart: (item: { id: string; name: string; price: number; vendor_id: string; vendor_name: string }) => void;
+  addToCart: (item: Omit<CartItem, 'quantity'>) => void;
 }
 
 export const ProductsGrid: React.FC<ProductsGridProps> = ({
@@ -68,9 +70,10 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
               addToCart={() => addToCart({
                 id: product.id,
                 name: product.name,
-                price: product.price + 20, // Add ₦20 platform fee
+                price: product.price,
                 vendor_id: product.vendor_id,
-                vendor_name: product.vendor?.name || 'Unknown Vendor'
+                vendor_name: product.vendor?.name || 'Unknown Vendor',
+                max_quantity: stockLimit(product)
               })} 
             />
           ))}

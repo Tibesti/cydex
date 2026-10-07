@@ -4,91 +4,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Package, MapPin, Clock, User, Navigation, Leaf } from 'lucide-react';
 import { DeliveryData } from '@/hooks/useRiderData';
-import { VerificationInput } from '../VerificationInput';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import RiderDeliveryActions from '@/components/rider/RiderDeliveryActions';
+import { orderStatusForDelivery } from '@/lib/orderStatus';
 
 interface CurrentDeliveryCardProps {
   currentDeliveries: DeliveryData[];
-  onUpdateStatus: (deliveryId: string, status: DeliveryData['status']) => void;
+  onChanged?: () => void;
 }
 
 export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
   currentDeliveries,
-  onUpdateStatus
+  onChanged
 }) => {
-  const [showVerification, setShowVerification] = useState<string | null>(null);
-
-  const handleStatusUpdate = (deliveryId: string, status: DeliveryData['status']) => {
-    if (status === 'delivered') {
-      setShowVerification(deliveryId);
-    } else {
-      onUpdateStatus(deliveryId, status);
-    }
-  };
-
-  const handleVerificationSuccess = (deliveryId: string) => {
-    onUpdateStatus(deliveryId, 'delivered');
-    setShowVerification(null);
-  };
-
-  const handleVerificationFailure = () => {
-    setShowVerification(null);
-  };
-
-  const getStatusButton = (delivery: DeliveryData) => {
-    switch (delivery.status) {
-      case 'accepted':
-        return (
-          <Button
-            onClick={() => handleStatusUpdate(delivery.id, 'picking_up')}
-            className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm h-7 sm:h-8"
-          >
-            Start Pickup
-          </Button>
-        );
-      case 'picking_up':
-        return (
-          <Button
-            onClick={() => handleStatusUpdate(delivery.id, 'picked_up')}
-            className="bg-orange-600 hover:bg-orange-700 text-xs sm:text-sm h-7 sm:h-8"
-          >
-            Mark Picked Up
-          </Button>
-        );
-      case 'picked_up':
-        return (
-          <Button
-            onClick={() => handleStatusUpdate(delivery.id, 'delivering')}
-            className="bg-purple-600 hover:bg-purple-700 text-xs sm:text-sm h-7 sm:h-8"
-          >
-            Start Delivery
-          </Button>
-        );
-      case 'delivering':
-        return (
-          <Button
-            onClick={() => handleStatusUpdate(delivery.id, 'delivered')}
-            className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm h-7 sm:h-8"
-          >
-            Complete Delivery
-          </Button>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      accepted: { color: 'bg-blue-100 text-blue-800', label: 'Accepted' },
-      picking_up: { color: 'bg-orange-100 text-orange-800', label: 'Picking Up' },
-      picked_up: { color: 'bg-purple-100 text-purple-800', label: 'Picked Up' },
-      delivering: { color: 'bg-green-100 text-green-800', label: 'Delivering' },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.accepted;
-    return <Badge className={`${config.color} text-xs`}>{config.label}</Badge>;
-  };
-
   return (
     <Card>
       <CardHeader className="pb-3 sm:pb-4">
@@ -105,25 +33,16 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
           ) : (
             currentDeliveries.map((delivery) => (
               <div key={delivery.id}>
-                {showVerification === delivery.id ? (
-                  <VerificationInput
-                    orderNumber={delivery.order_id}
-                    customerName={delivery.customer_name || 'Unknown Customer'}
-                    expectedCode="1234" // This should come from the order data
-                    onVerificationSuccess={() => handleVerificationSuccess(delivery.id)}
-                    onVerificationFailure={handleVerificationFailure}
-                  />
-                ) : (
                   <div className="bg-card border-border border rounded-lg p-3 sm:p-4">
                     <div className="flex flex-col space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Package className="h-5 w-5 text-blue-600" />
                           <span className="font-medium text-sm sm:text-base">
-                            Order {delivery.order_id}
+                            Order #{delivery.order?.order_number ?? delivery.order_id.slice(0, 8)}
                           </span>
                         </div>
-                        {getStatusBadge(delivery.status)}
+                        <OrderStatusBadge status={orderStatusForDelivery(delivery.status)} className="text-xs" />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -149,10 +68,7 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
                         <div className="flex items-center gap-4">
                           <div className="text-sm">
                             <span className="font-medium">
-                              ₦{Number(delivery.delivery_fee).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                            </span>
-                            <span className="text-green-600 ml-2">
-                              +₦{Number(delivery.eco_bonus).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})} eco
+                              ₦{Number(delivery.rider_earning ?? 0).toLocaleString('en-NG', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </span>
                           </div>
                           <div className="flex items-center text-xs bg-green-50 text-green-700 px-2 py-1 rounded">
@@ -160,11 +76,15 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
                             <span>{Number(delivery.carbon_saved).toFixed(1)} kg CO₂</span>
                           </div>
                         </div>
-                        {getStatusButton(delivery)}
                       </div>
+                      <RiderDeliveryActions
+                        orderId={delivery.order_id}
+                        status={orderStatusForDelivery(delivery.status)}
+                        onChanged={onChanged}
+                        compact
+                      />
                     </div>
                   </div>
-                )}
               </div>
             ))
           )}

@@ -8,17 +8,18 @@ import { MapPin, Clock, Leaf, Phone, Navigation, RefreshCw, AlertCircle } from '
 import { useRiderData } from '@/hooks/useRiderData';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { toast } from 'sonner';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import RiderDeliveryActions from '@/components/rider/RiderDeliveryActions';
+import { orderStatusForDelivery } from '@/lib/orderStatus';
 
 const CurrentDeliveriesPage = () => {
   const { user } = useAuth();
   const { 
     loading: riderDataLoading, 
     currentDeliveries, 
-    updateDeliveryStatus,
     refetch
   } = useRiderData();
   
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
   const [refreshing, setRefreshing] = useState(false);
 
   // Auto-refresh every 30 seconds for real-time updates
@@ -41,51 +42,6 @@ const CurrentDeliveriesPage = () => {
       toast.error('Failed to refresh deliveries');
     } finally {
       setRefreshing(false);
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      accepted: { label: 'Accepted', className: 'bg-blue-500' },
-      picking_up: { label: 'Picking Up', className: 'bg-yellow-500' },
-      picked_up: { label: 'Picked Up', className: 'bg-amber-500' },
-      delivering: { label: 'Delivering', className: 'bg-orange-500' },
-      delivered: { label: 'Delivered', className: 'bg-green-500' },
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || 
-                  { label: 'Unknown', className: 'bg-gray-500' };
-    
-    return <Badge className={`${config.className} text-white text-xs`}>{config.label}</Badge>;
-  };
-
-  const getNextAction = (status: string) => {
-    const actions = {
-      accepted: { label: 'Start Pickup', nextStatus: 'picking_up' },
-      picking_up: { label: 'Mark Picked Up', nextStatus: 'picked_up' },
-      picked_up: { label: 'Start Delivery', nextStatus: 'delivering' },
-      delivering: { label: 'Mark Delivered', nextStatus: 'delivered' },
-    };
-    
-    return actions[status as keyof typeof actions] || 
-           { label: 'Complete', nextStatus: 'delivered' };
-  };
-
-  const handleStatusUpdate = async (deliveryId: string, currentStatus: string) => {
-    const nextAction = getNextAction(currentStatus);
-    
-    setLoadingStates(prev => ({ ...prev, [deliveryId]: true }));
-    
-    try {
-      const success = await updateDeliveryStatus(deliveryId, nextAction.nextStatus as any);
-      if (success) {
-        toast.success(`Status updated to ${nextAction.nextStatus.replace('_', ' ')}`);
-      }
-    } catch (error) {
-      console.error('Error updating delivery status:', error);
-      toast.error('Failed to update delivery status');
-    } finally {
-      setLoadingStates(prev => ({ ...prev, [deliveryId]: false }));
     }
   };
 
@@ -165,9 +121,8 @@ const CurrentDeliveriesPage = () => {
         ) : (
           <div className="space-y-4">
             {currentDeliveries.map((delivery) => {
-              const nextAction = getNextAction(delivery.status);
-              const isLoading = loadingStates[delivery.id];
-              
+              const orderStatus = orderStatusForDelivery(delivery.status);
+
               return (
                 <Card key={delivery.id} className="border-2 border-primary">
                   <CardHeader className="pb-3">
@@ -177,10 +132,10 @@ const CurrentDeliveriesPage = () => {
                           {delivery.vendor_name} → {delivery.customer_name}
                         </CardTitle>
                         <CardDescription className="text-sm">
-                          Order #{delivery.order_id?.slice(0, 8)}
+                          Order #{delivery.order?.order_number ?? delivery.order_id?.slice(0, 8)}
                         </CardDescription>
                       </div>
-                      {getStatusBadge(delivery.status)}
+                      <OrderStatusBadge status={orderStatus} />
                     </div>
                   </CardHeader>
                   
@@ -217,17 +172,9 @@ const CurrentDeliveriesPage = () => {
                           <span>{delivery.items_count || 0}</span>
                         </div>
                         <div className="text-sm">
-                          <span className="font-medium">Fee: </span>
-                          <span>₦{Number(delivery.delivery_fee || 0).toLocaleString()}</span>
+                          <span className="font-medium">Your earning: </span>
+                          <span>₦{Number(delivery.rider_earning ?? 0).toLocaleString()}</span>
                         </div>
-                        {Number(delivery.eco_bonus || 0) > 0 && (
-                          <div className="text-sm">
-                            <span className="font-medium">Eco Bonus: </span>
-                            <span className="text-green-600">
-                              +₦{Number(delivery.eco_bonus).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
                         <div className="flex items-center text-sm bg-green-50 text-green-700 px-2 py-1 rounded w-fit">
                           <Leaf className="h-4 w-4 mr-1 flex-shrink-0" />
                           <span>{Number(delivery.carbon_saved || 0).toFixed(1)} kg CO₂ saved</span>
@@ -246,6 +193,14 @@ const CurrentDeliveriesPage = () => {
                         </div>
                       </div>
                     )}
+
+                    <div className="mb-4">
+                      <RiderDeliveryActions
+                        orderId={delivery.order_id}
+                        status={orderStatus}
+                        onChanged={() => refetch.currentDeliveries()}
+                      />
+                    </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                       <Button
@@ -277,13 +232,6 @@ const CurrentDeliveriesPage = () => {
                         View Details
                       </Button>
                       
-                      <Button
-                        onClick={() => handleStatusUpdate(delivery.order_id, delivery.status)}
-                        disabled={isLoading}
-                        className="bg-primary hover:bg-primary/90 text-black flex-1 sm:flex-none"
-                      >
-                        {isLoading ? 'Updating...' : nextAction.label}
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>

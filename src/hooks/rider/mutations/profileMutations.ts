@@ -37,12 +37,6 @@ export const updateProfile = async (userId: string, updates: Partial<RiderProfil
     const profileUpdate: any = {};
     if (updates.name !== undefined) profileUpdate.name = updates.name;
     if (updates.phone !== undefined) profileUpdate.phone = updates.phone;
-    if (updates.address !== undefined) {
-      // Store address as a simple string in the address field
-      profileUpdate.address = typeof updates.address === 'string' 
-        ? { full_address: updates.address }
-        : { full_address: updates.address || '' };
-    }
     
     if (Object.keys(profileUpdate).length > 0) {
       console.log('[ProfileMutations] Updating profiles table:', profileUpdate);
@@ -67,13 +61,6 @@ export const updateProfile = async (userId: string, updates: Partial<RiderProfil
     }
 
     if (updates.preferences) {
-      if (updates.preferences.deliveryPreferences) {
-        riderUpdate.delivery_preferences = {
-          max_distance: updates.preferences.deliveryPreferences.maxDistance || 15,
-          preferred_zones: updates.preferences.deliveryPreferences.preferredZones || [],
-          available_days: updates.preferences.deliveryPreferences.availableDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-        };
-      }
       if (updates.preferences.notifications) {
         riderUpdate.notification_preferences = {
           app: updates.preferences.notifications.app !== undefined ? updates.preferences.notifications.app : true,

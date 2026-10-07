@@ -10,17 +10,11 @@ import {
   Trash2, 
   Eye, 
   EyeOff,
-  Search,
-  MoreVertical
+  Search
 } from 'lucide-react';
-import { useVendorProducts } from '@/hooks/useVendorProducts';
+import { useVendorProducts, type VendorProduct } from '@/hooks/useVendorProducts';
+import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const ProductsManagement = () => {
   const { products, loading, toggleProductStatus, deleteProduct } = useVendorProducts();
@@ -36,18 +30,18 @@ const ProductsManagement = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { color: 'bg-green-100 text-green-800', icon: Eye },
-      inactive: { color: 'bg-gray-100 text-gray-800', icon: EyeOff },
-      out_of_stock: { color: 'bg-red-100 text-red-800', icon: Package }
+      active: { color: 'bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-300', icon: Eye, label: 'Available' },
+      inactive: { color: 'bg-muted text-foreground', icon: EyeOff, label: 'Unavailable' },
+      out_of_stock: { color: 'bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300', icon: Package, label: 'Out of stock' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
     const Icon = config.icon;
 
     return (
-      <Badge className={`${config.color} text-xs whitespace-nowrap`}>
+      <Badge className={`${config.color} text-xs whitespace-nowrap border-transparent`}>
         <Icon className="w-3 h-3 mr-1" />
-        {status.replace('_', ' ')}
+        {config.label}
       </Badge>
     );
   };
@@ -74,7 +68,7 @@ const ProductsManagement = () => {
         <CardContent className="p-3">
           <div className="animate-pulse space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-gray-200 rounded"></div>
+              <div key={i} className="h-16 bg-muted rounded"></div>
             ))}
           </div>
         </CardContent>
@@ -82,72 +76,39 @@ const ProductsManagement = () => {
     );
   }
 
-  const ProductActions = ({ product }: { product: any }) => (
-    <div className="flex items-center gap-1">
-      <div className="hidden sm:flex items-center gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleStatusToggle(product.id, product.status)}
-          className="text-xs h-8"
-        >
-          {product.status === 'active' ? (
-            <>
-              <EyeOff className="h-3 w-3 mr-1" />
-              Hide
-            </>
-          ) : (
-            <>
-              <Eye className="h-3 w-3 mr-1" />
-              Show
-            </>
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => navigate(`/vendor/edit-product/${product.id}`)}
-          className="text-xs h-8"
-        >
-          <Edit className="h-3 w-3" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleDelete(product.id)}
-          className="text-xs h-8 text-red-600 hover:text-red-700"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
-      
-      <div className="sm:hidden">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleStatusToggle(product.id, product.status)}>
-              {product.status === 'active' ? (
-                <><EyeOff className="h-3 w-3 mr-2" />Hide</>
-              ) : (
-                <><Eye className="h-3 w-3 mr-2" />Show</>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(`/vendor/edit-product/${product.id}`)}>
-              <Edit className="h-3 w-3 mr-2" />Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => handleDelete(product.id)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-3 w-3 mr-2" />Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+  const ProductActions = ({ product }: { product: VendorProduct }) => (
+    <div className="flex items-center gap-2">
+      {/* Products without stock tracking are switched available / unavailable here;
+          stock-tracked ones follow their stock (edit to restock) */}
+      {!product.track_stock && (
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Switch
+            checked={product.status === 'active'}
+            onCheckedChange={() => handleStatusToggle(product.id, product.status)}
+            aria-label={`${product.name} available`}
+          />
+          <span className="hidden sm:inline">Available</span>
+        </label>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => navigate(`/vendor/edit-product/${product.id}`)}
+        className="text-xs h-8"
+        aria-label={`Edit ${product.name}`}
+      >
+        <Edit className="h-3 w-3" />
+        <span className="ml-1 hidden sm:inline">{product.track_stock ? 'Edit / restock' : 'Edit'}</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => handleDelete(product.id)}
+        className="text-xs h-8 text-red-600 hover:text-red-700"
+        aria-label={`Delete ${product.name}`}
+      >
+        <Trash2 className="h-3 w-3" />
+      </Button>
     </div>
   );
 
@@ -169,7 +130,7 @@ const ProductsManagement = () => {
           </Button>
         </div>
         <div className="relative w-full">
-          <Search className="h-3 w-3 absolute left-2.5 top-2.5 text-gray-400" />
+          <Search className="h-3 w-3 absolute left-2.5 top-2.5 text-muted-foreground" />
           <Input
             placeholder="Search products..."
             value={searchTerm}
@@ -180,8 +141,8 @@ const ProductsManagement = () => {
       </CardHeader>
       <CardContent className="p-0">
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-6 px-3 text-gray-500">
-            <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+          <div className="text-center py-6 px-3 text-muted-foreground">
+            <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
             <p className="text-sm font-medium mb-1">No products found</p>
             <p className="text-xs">
               {searchTerm ? 'Try adjusting your search' : 'Add your first product to get started'}
@@ -192,18 +153,20 @@ const ProductsManagement = () => {
             {filteredProducts.map((product) => (
               <div
                 key={product.id}
-                className="flex items-start justify-between p-3 hover:bg-gray-50"
+                className="flex items-start justify-between p-3 hover:bg-muted/60"
               >
                 <div className="flex-1 min-w-0 pr-2">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <h3 className="font-medium text-sm">{product.name}</h3>
                     {getStatusBadge(product.status)}
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-muted-foreground">
                     <p className="line-clamp-1">{product.description}</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       <span className="whitespace-nowrap">Category: {product.category || 'N/A'}</span>
-                      <span className="whitespace-nowrap">Stock: {product.stock_quantity}</span>
+                      <span className="whitespace-nowrap">
+                        {product.track_stock ? `Stock: ${product.stock_quantity ?? 0}` : 'Stock not tracked'}
+                      </span>
                       <span className="whitespace-nowrap">Price: {formatCurrency(product.price)}</span>
                     </div>
                   </div>

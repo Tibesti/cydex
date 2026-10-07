@@ -1,0 +1,100 @@
+{
+  "id": "/",
+  "name": "Cydex: Eco-Friendly Delivery",
+  "short_name": "Cydex",
+  "description": "Order from vendors near you and get it delivered by bike, on foot or e-bike.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#FAFAF7",
+  "theme_color": "#FAFAF7",
+  "lang": "en-NG",
+  "dir": "ltr",
+  "categories": [
+    "food",
+    "shopping",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-monochrome-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "monochrome"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/home-mobile.webp",
+      "sizes": "1080x2340",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Cydex home"
+    },
+    {
+      "src": "/screenshots/auth-mobile.webp",
+      "sizes": "1080x2340",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Sign in as a customer, vendor or rider"
+    },
+    {
+      "src": "/screenshots/home-wide.webp",
+      "sizes": "1920x1080",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Cydex on desktop"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My orders",
+      "url": "/customer/orders",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "url": "/customer/notifications",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

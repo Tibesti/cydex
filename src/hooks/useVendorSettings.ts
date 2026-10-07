@@ -29,7 +29,6 @@ export interface VendorProfile {
   name: string;
   email: string;
   phone?: string;
-  address?: any;
   avatar?: string;
   verified: boolean;
   created_at: string;
@@ -280,25 +279,6 @@ export const useVendorSettings = () => {
     }
   };
 
-  // Format address for display
-  const formatAddress = (address: any) => {
-    if (!address) return '';
-    
-    if (typeof address === 'string') return address;
-    
-    if (typeof address === 'object' && !Array.isArray(address)) {
-      const parts = [
-        address.street,
-        address.city,
-        address.state,
-        address.country
-      ].filter(Boolean);
-      return parts.join(', ');
-    }
-    
-    return '';
-  };
-
   // Initial load
   useEffect(() => {
     const loadData = async () => {
@@ -323,7 +303,6 @@ export const useVendorSettings = () => {
     updateSettings,
     updateProfile,
     fetchVendorStats,
-    fetchRecentActivity,
-    formatAddress
+    fetchRecentActivity
   };
 };

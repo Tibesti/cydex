@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Star, Plus } from 'lucide-react';
 import { Product } from '@/hooks/useProducts';
 import { useVendorRatings } from '@/hooks/useVendorRatings';
+import { isAvailable, stockLabel } from '@/lib/products';
+import { cn } from '@/lib/utils';
 
 interface ProductCardProps {
   product: Product;
@@ -23,6 +25,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) 
     navigate(`/customer/products/${product.id}`);
   };
 
+  const available = isAvailable(product);
+  const stock = stockLabel(product);
   const vendorRating = getRatingForVendor(product.vendor_id);
   const displayRating = vendorRating.average_rating > 0 ? vendorRating.average_rating : 4.5; // Fallback rating
 
@@ -32,17 +36,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) 
         <img 
           src={product.image_url || '/placeholder.svg'} 
           alt={product.name} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className={cn(
+            "w-full h-full object-cover group-hover:scale-105 transition-transform duration-300",
+            !available && "opacity-50 grayscale"
+          )}
         />
+        {!available && (
+          <span className="absolute left-1.5 top-1.5 rounded bg-background/90 px-1.5 py-0.5 text-[10px] font-semibold sm:text-xs">
+            {stock}
+          </span>
+        )}
       </div>
       
       <CardContent className="p-1.5 xs:p-2 sm:p-3 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-1">
           <h3 className="font-medium line-clamp-1 text-xs sm:text-sm flex-1 mr-1 leading-tight">{product.name}</h3>
-          <span className="font-bold text-xs sm:text-sm text-primary whitespace-nowrap">₦{(product.price + 20).toLocaleString()}</span>
+          <span className="font-bold text-xs sm:text-sm text-primary whitespace-nowrap">₦{product.price.toLocaleString()}</span>
         </div>
         
-        <p className="text-xs text-gray-500 mb-1 hidden xs:block">{product.stock_quantity} in stock</p>
+        {available && stock && <p className="text-xs text-muted-foreground mb-1 hidden xs:block">{stock}</p>}
         
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-gray-600 truncate flex-1 mr-1">{product.vendor?.name || 'Unknown Vendor'}</span>
@@ -65,11 +77,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, addToCart }) 
           className="w-full bg-primary hover:bg-primary/80 text-black text-xs sm:text-sm h-6 xs:h-7 sm:h-8 transition-all duration-200 flex items-center justify-center"
           onClick={(e) => {
             e.stopPropagation();
-            addToCart();
+            if (available) addToCart();
           }}
-          title="Add to Cart"
+          disabled={!available}
+          title={available ? 'Add to Cart' : stock ?? 'Unavailable'}
         >
-          <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+          {available ? <Plus className="h-3 w-3 sm:h-4 sm:w-4" /> : <span className="text-[10px] sm:text-xs">{stock}</span>}
         </Button>
       </CardFooter>
     </Card>

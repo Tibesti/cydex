@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useHasPhone } from '@/hooks/useHasPhone';
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,6 @@ import {
   Phone, 
   Mail, 
   Package, 
-  Leaf, 
   User, 
   Store,
   AlertCircle,
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { DeliveryData } from '@/hooks/rider/useRiderDeliveries';
 import { supabase } from '@/integrations/supabase/client';
+import { formatNaira } from '@/lib/pricing';
 
 interface OrderDetailModalProps {
   isOpen: boolean;
@@ -39,10 +40,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onAcceptOrder,
   loading = false
 }) => {
+  // Riders need a phone number on their profile to accept deliveries
+  const hasPhone = useHasPhone();
   if (!order) return null;
 
-  const totalEarnings = 500 + Number(order.eco_bonus); // Flat rate of ₦500 + eco bonus
-  const hasEcoBonus = Number(order.eco_bonus) > 0;
+  const totalEarnings = Number(order.rider_earning ?? 0); // Rider's share of the delivery fee
   const hasCarbonSavings = Number(order.carbon_saved) > 0;
 
   // Prefer richer sources if present
@@ -75,8 +77,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           order_items(
             product_name,
             quantity,
-            unit_price,
-            total_price,
             product_description
           )
         `)
@@ -96,7 +96,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         } else {
           const { data: directItems } = await supabase
             .from('order_items')
-            .select('product_name, quantity, unit_price, total_price, product_description')
+            .select('product_name, quantity, product_description')
             .eq('order_id', (order as any).order_id);
           if (!isMounted) return;
           setResolvedItems(directItems || []);
@@ -108,34 +108,24 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     return () => { isMounted = false; };
   }, [order, customerEmail, initialOrderItems]);
 
-  const formatAddress = (address: any) => {
+  // Full address text (never shortened) plus any directions left by the customer or vendor
+  type AddressLike = string | Record<string, string | undefined> | null | undefined;
+  const fullAddress = (address: AddressLike): string => {
     if (!address) return 'Address not available';
-    
-    if (typeof address === 'string') {
-      return address;
-    }
-    
-    // Handle the simplified address format (new campus format)
-    if (address.location) {
-      let formattedAddress = address.location;
-      if (address.landmark) {
-        formattedAddress += `, Near ${address.landmark}`;
-      }
-      if (address.additional_info) {
-        formattedAddress += `, ${address.additional_info}`;
-      }
-      return formattedAddress;
-    }
-    
-    // Handle the full address format (old format)
-    const parts = [];
-    if (address.street) parts.push(address.street);
-    if (address.landmark) parts.push(`Near ${address.landmark}`);
-    if (address.city) parts.push(address.city);
-    if (address.state) parts.push(address.state);
-    
-    return parts.join(', ') || 'Address not available';
+    if (typeof address === 'string') return address;
+    if (address.formatted_address || address.address) return address.formatted_address || address.address;
+    if (address.location) return [address.location, address.landmark && `Near ${address.landmark}`].filter(Boolean).join(', ');
+    return [address.street, address.landmark && `Near ${address.landmark}`, address.city, address.state]
+      .filter(Boolean).join(', ') || 'Address not available';
   };
+  const directionsOf = (address: AddressLike): string =>
+    (address && typeof address === 'object' && (address.additional_info || address.directions)) || '';
+
+  const pickupAddress = order.pickup_location;
+  const deliveryAddress = order.delivery_address && Object.keys(order.delivery_address).length > 0
+    ? order.delivery_address
+    : order.delivery_location;
+  const vendorPhone = order.vendor_phone || '';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -151,46 +141,65 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         </DialogHeader>
         
         <div className="space-y-6 py-4">
-          {/* Order Overview */}
+          {/* Pickup and drop-off (full addresses, wrapped rather than cut off) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
+            <div className="rounded-lg border p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <Store className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Pickup Location</p>
-                  <p className="text-sm text-muted-foreground">{order.vendor_name}</p>
-                </div>
+                <Store className="h-4 w-4 text-muted-foreground shrink-0" />
+                <p className="font-medium">Pickup</p>
               </div>
-              
+              <p className="text-sm font-medium break-words">{order.vendor_name}</p>
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground break-words whitespace-normal">{fullAddress(pickupAddress)}</p>
+              </div>
+              {directionsOf(pickupAddress) && (
+                <p className="text-xs text-muted-foreground break-words pl-6">Directions: {directionsOf(pickupAddress)}</p>
+              )}
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Delivery To</p>
-                  <p className="text-sm text-muted-foreground">{resolvedName}</p>
-                </div>
+                <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
+                {vendorPhone ? (
+                  <a href={`tel:${vendorPhone}`} className="text-sm hover:underline break-all">{vendorPhone}</a>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Vendor phone not available</span>
+                )}
               </div>
             </div>
-            
-            <div className="space-y-3">
+
+            <div className="rounded-lg border p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <Navigation className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Distance</p>
-                  <p className="text-sm text-muted-foreground">{Number(order.actual_distance || 1.5).toFixed(1)} km</p>
-                </div>
+                <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                <p className="font-medium">Delivery</p>
               </div>
-              
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">Estimated Delivery</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(order.estimated_delivery_time).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                </div>
+              <p className="text-sm font-medium break-words">{resolvedName}</p>
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground break-words whitespace-normal">{fullAddress(deliveryAddress)}</p>
+              </div>
+              {directionsOf(deliveryAddress) && (
+                <p className="text-xs text-muted-foreground break-words pl-6">Directions: {directionsOf(deliveryAddress)}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Navigation className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div>
+                <p className="font-medium">Distance</p>
+                <p className="text-sm text-muted-foreground">{Number(order.actual_distance || 1.5).toFixed(1)} km</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div>
+                <p className="font-medium">Estimated Delivery</p>
+                <p className="text-sm text-muted-foreground">
+                  {new Date(order.estimated_delivery_time).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </p>
               </div>
             </div>
           </div>
@@ -214,7 +223,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Email</p>
-                    <p className="text-sm text-muted-foreground">{resolvedEmail || 'Email Not Available'}</p>
+                    <p className="text-sm text-muted-foreground break-all">{resolvedEmail || 'Email Not Available'}</p>
                   </div>
                 </div>
               </div>
@@ -233,20 +242,6 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
           <Separator />
 
-          {/* Delivery Address */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-lg">Delivery Address</h3>
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-sm font-medium">Address</p>
-                <p className="text-sm text-muted-foreground">{formatAddress(order.delivery_address)}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Order Items */}
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Order Items</h3>
@@ -259,19 +254,15 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       {item.product_description && (
                         <p className="text-xs text-muted-foreground">{item.product_description}</p>
                       )}
-                      <p className="text-xs text-muted-foreground">
-                        Qty: {item.quantity || 1} × ₦{(item.unit_price || 0).toLocaleString()}
-                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-sm">₦{(item.total_price || 0).toLocaleString()}</p>
+                      <p className="font-semibold text-sm">× {item.quantity || 1}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No items available</p>
+                <div className="rounded-lg bg-muted p-3 text-sm">
+                  A package from the vendor{order.special_instructions ? `: ${order.special_instructions}` : '.'}
                 </div>
               )}
             </div>
@@ -284,46 +275,39 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="space-y-3">
               <h3 className="font-semibold text-lg">Special Instructions</h3>
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5" />
-                <p className="text-sm text-gray-600">{order.special_instructions}</p>
+                <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                <p className="text-sm text-muted-foreground break-words">{order.special_instructions}</p>
               </div>
+              <Separator />
             </div>
           )}
-
-          <Separator />
 
           {/* Earnings Summary */}
           <div className="space-y-3">
             <h3 className="font-semibold text-lg">Earnings Summary</h3>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-950 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-50">
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm">Delivery Fee:</span>
-                  <span className="text-sm font-medium">₦500.00</span>
+                  <span className="text-sm">Delivery fee:</span>
+                  <span className="text-sm">{formatNaira(Number(order.delivery_fee ?? 0))}</span>
                 </div>
-                
-                {hasEcoBonus && (
-                  <div className="flex justify-between">
-                    <span className="text-sm text-green-600">Eco Bonus:</span>
-                    <span className="text-sm font-medium text-green-600">+₦{Number(order.eco_bonus).toLocaleString('en-NG', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}</span>
-                  </div>
-                )}
+                <div className="flex justify-between">
+                  <span className="text-sm">Cydex commission:</span>
+                  <span className="text-sm">−{formatNaira(Number(order.delivery_fee ?? 0) - Number(order.rider_earning ?? 0))}</span>
+                </div>
                 
                 {hasCarbonSavings && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-green-600">Carbon Saved:</span>
-                    <span className="text-sm font-medium text-green-600">{Number(order.carbon_saved).toFixed(1)} kg CO₂</span>
+                    <span className="text-sm text-green-700 dark:text-green-300">Carbon Saved:</span>
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">{Number(order.carbon_saved).toFixed(1)} kg CO₂</span>
                   </div>
                 )}
                 
                 <Separator className="my-2" />
                 
                 <div className="flex justify-between">
-                  <span className="font-semibold">Total Earnings:</span>
-                  <span className="font-bold text-lg text-green-700">₦{totalEarnings.toLocaleString('en-NG', {
+                  <span className="font-semibold">You’ll receive:</span>
+                  <span className="font-bold text-lg text-green-700 dark:text-green-300">₦{totalEarnings.toLocaleString('en-NG', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })}</span>
@@ -339,7 +323,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </Button>
             <Button 
               onClick={() => onAcceptOrder(order.id)} 
-              disabled={loading}
+              disabled={loading || !hasPhone}
+              title={hasPhone ? undefined : 'Add a phone number to your profile first'}
               className="flex-1 bg-primary hover:bg-primary/90 text-black"
             >
               {loading ? 'Accepting...' : 'Accept Order'}

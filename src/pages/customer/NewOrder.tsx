@@ -9,11 +9,16 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { ShoppingCartSidebar } from '@/components/customer/ShoppingCartSidebar';
 import { DeliveryScheduler } from '@/components/customer/DeliveryScheduler';
-import { useCustomerAddress } from '@/hooks/useCustomerAddress';
 import { useProducts } from '@/hooks/useProducts';
+import { isAvailable } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
-import { DeliveryAddressModal } from '@/components/customer/DeliveryAddressModal';
+import { ConfirmDeliveryAddressDialog } from '@/components/customer/address/ConfirmDeliveryAddressDialog';
+import type { Address } from '@/hooks/useAddresses';
+import { errorMessage } from '@/lib/address';
+import { toCartLines } from '@/hooks/useOrderQuote';
+import { supabase as typedSupabase } from '@/integrations/supabase/client';
 import { PaymentModal } from '@/components/customer/PaymentModal';
+import type { Json } from '@/integrations/supabase/types';
 import { useCartContext } from '@/contexts/CartContext';
 import { VendorRatingModal } from '@/components/customer/VendorRatingModal';
 import { VendorSelectionPage } from '@/components/customer/VendorSelectionPage';
@@ -23,7 +28,7 @@ import { DesktopCategoriesSidebar } from '@/components/customer/order/DesktopCat
 import { ProductsGrid } from '@/components/customer/order/ProductsGrid';
 import { PaginationSection } from '@/components/customer/order/PaginationSection';
 import { OrderHeader } from '@/components/customer/order/OrderHeader';
-import { DELIVERY_FEE } from '@/constants/delivery';
+import VendorStorefrontHeader from '@/components/customer/vendors/VendorStorefrontHeader';
 
 const NewOrder = () => {
   const { user } = useAuth();
@@ -53,6 +58,8 @@ const NewOrder = () => {
     order_number: string; 
     total_amount: number;
     payment_reference?: string;
+    // Snapshot of the chosen address, including the customer's phone (place_order)
+    delivery_address?: Json | null;
   } | null>(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [ratingOrderData, setRatingOrderData] = useState<{
@@ -63,25 +70,9 @@ const NewOrder = () => {
   } | null>(null);
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
-  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-  const { savedAddress } = useCustomerAddress();
-  const [deliveryAddress, setDeliveryAddress] = useState<any>(null);
+  const [isAddressConfirmOpen, setIsAddressConfirmOpen] = useState(false);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  // Autofill deliveryAddress from savedAddress so modal is skipped next orders
-  // IMPORTANT: convert saved full address shape -> simplified modal shape
-  // savedAddress comes from useCustomerAddress() and has {street, city, state, country, landmark, phone, additional_info}
-  // but deliveryAddress used in this component expects the simplified shape {location, landmark, phone, additional_info}
-  useEffect(() => {
-    if (!deliveryAddress && savedAddress) {
-      setDeliveryAddress({
-        location: savedAddress.street,
-        landmark: savedAddress.landmark,
-        phone: savedAddress.phone,
-        additional_info: savedAddress.additional_info,
-      });
-    }
-  }, [savedAddress]);
-  
   // Auto-select vendor from URL params or cart items
   useEffect(() => {
     // First check URL params (from product details checkout)
@@ -119,6 +110,9 @@ const NewOrder = () => {
     }
   }, [searchParams, cartItems, selectedVendor, isCartOpen, setIsCartOpen]);
   
+  // The order goes to the vendor whose items are in the cart
+  const cartVendorId = cartItems[0]?.vendor_id ?? null;
+
   const itemsPerPage = 12;
 
   // Filter products to only show those from selected vendor with valid vendor info
@@ -151,6 +145,8 @@ const NewOrder = () => {
 
   // Sort products
   const sortedProducts = [...filteredProducts].sort((a, b) => {
+    // Available products first
+    if (isAvailable(a) !== isAvailable(b)) return isAvailable(a) ? -1 : 1;
     if (sortBy === 'price-low') return a.price - b.price;
     if (sortBy === 'price-high') return b.price - a.price;
     if (sortBy === 'recommended') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -163,10 +159,11 @@ const NewOrder = () => {
   const currentProducts = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
 
+  // Browsing another vendor keeps the cart; adding their items asks first
+  // (one vendor per order, see CartVendorConflictDialog)
   const handleVendorSelect = (vendorId: string, vendorName: string) => {
     setSelectedVendor(vendorId);
     setSelectedVendorName(vendorName);
-    clearCart(); // Clear cart when switching vendors
   };
 
   const handleBackToVendors = () => {
@@ -174,7 +171,6 @@ const NewOrder = () => {
     setSelectedVendorName(null);
     setSelectedCategory(null);
     setSearchQuery('');
-    clearCart(); // Clear cart when going back to vendor selection
   };
 
   const handleCheckout = async () => {
@@ -189,7 +185,7 @@ const NewOrder = () => {
         return;
       }
 
-      if (!selectedVendor) {
+      if (!cartVendorId) {
         toast.error('Please select a vendor first');
         return;
       }
@@ -206,12 +202,6 @@ const NewOrder = () => {
         return;
       }
 
-      // Show address modal if no delivery address is set
-      if (!deliveryAddress) {
-        setIsAddressModalOpen(true);
-        return;
-      }
-
       // Verify all items are from the same vendor
       const vendorIds = Array.from(new Set(cartItems.map(item => item.vendor_id)));
       if (vendorIds.length > 1) {
@@ -219,101 +209,39 @@ const NewOrder = () => {
         return;
       }
 
-      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const delivery_fee = DELIVERY_FEE;
-      const total_amount = subtotal + delivery_fee;
-
-      await createOrderWithAddress();
+      // Confirm the delivery address; the order is created once it's chosen
+      setIsAddressConfirmOpen(true);
     } catch (error) {
       console.error('Error in checkout process:', error);
       toast.error('Failed to proceed with checkout. Please try again.');
     }
   };
 
-  const handleActualCheckout = async () => {
+  const createOrderWithAddress = async (address: Address) => {
+    if (!user?.id || !cartVendorId) return;
+
+    setIsCreatingOrder(true);
     try {
-      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const delivery_fee = DELIVERY_FEE;
-      const total_amount = subtotal + delivery_fee;
-
-      await createOrderWithAddress();
-    } catch (error) {
-      console.error('Error placing order:', error);
-      toast.error('Failed to place order. Please try again.');
-    }
-  };
-
-  const createOrderWithAddress = async () => {
-    if (!user?.id || !selectedVendor || !deliveryAddress) return;
-    
-    try {
-      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const delivery_fee = DELIVERY_FEE;
-      const total_amount = subtotal + delivery_fee;
-
-      // Build full delivery address for database, supporting both simplified and full shapes
-      const fullDeliveryAddress = (
-        // If we have the simplified shape (from modal)
-        (deliveryAddress as any).location !== undefined
-      ) ? {
-        street: (deliveryAddress as any).location,
-        city: 'Ibadan',
-        state: 'Oyo State',
-        country: 'Nigeria',
-        landmark: (deliveryAddress as any).landmark,
-        phone: (deliveryAddress as any).phone,
-        additional_info: (deliveryAddress as any).additional_info,
-      } : {
-        // Otherwise, assume it's already in full shape (from savedAddress)
-        street: (deliveryAddress as any).street,
-        city: (deliveryAddress as any).city || 'Ibadan',
-        state: (deliveryAddress as any).state || 'Oyo State',
-        country: (deliveryAddress as any).country || 'Nigeria',
-        landmark: (deliveryAddress as any).landmark,
-        phone: (deliveryAddress as any).phone,
-        additional_info: (deliveryAddress as any).additional_info,
-      };
-
-      // Create the order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          customer_id: user.id,
-          vendor_id: selectedVendor,
-          status: 'pending',
-          payment_status: 'pending',
-          delivery_type: 'standard',
-          delivery_address: fullDeliveryAddress,
-          subtotal,
-          delivery_fee,
-          total_amount
-        })
-        .select()
-        .single();
+      // The database creates and prices the order: items at current product
+      // prices (place_order), then the delivery fee and Service Charge
+      // (price_new_order). It rejects vendors more than 5 km away.
+      const { data: order, error: orderError } = await typedSupabase.rpc('place_order', {
+        p_vendor_id: cartVendorId,
+        p_address_id: address.id,
+        p_items: toCartLines(cartItems),
+      });
 
       if (orderError) throw orderError;
 
-      // Create order items
-      const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
       setCurrentOrder(order);
+      setIsAddressConfirmOpen(false);
       setIsPaymentModalOpen(true);
       setIsCartOpen(false);
     } catch (error) {
       console.error('Error creating order:', error);
-      toast.error('Failed to create order. Please try again.');
+      toast.error(errorMessage(error, 'Failed to create order. Please try again.'));
+    } finally {
+      setIsCreatingOrder(false);
     }
   };
 
@@ -321,19 +249,8 @@ const NewOrder = () => {
     if (!currentOrder) return;
 
     try {
-      // Update order with payment reference and status - keep as pending until vendor accepts
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          payment_status: 'paid', 
-          status: 'pending', // Keep as pending until vendor accepts
-          payment_reference: reference,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentOrder.id);
-
-      if (error) throw error;
-
+      // Payment is confirmed server-side (squad-checkout / squad-webhook Edge
+      // Functions), which also marks the order paid.
       // Get vendor info for rating modal
       const vendorItem = cartItems.find(item => item.vendor_id);
       if (vendorItem) {
@@ -365,7 +282,6 @@ const NewOrder = () => {
   const handleRatingModalClose = () => {
     setIsRatingModalOpen(false);
     setRatingOrderData(null);
-    setDeliveryAddress(null);
     clearCart();
     navigate('/customer/orders');
   };
@@ -403,37 +319,15 @@ const NewOrder = () => {
     <DashboardLayout userRole="CUSTOMER">
       <div className="px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto space-y-2 sm:space-y-4">
         
-        {/* Vendor Header with Back Button */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleBackToVendors}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Vendors
-            </Button>
-            <div className="border-l h-6 border-border"></div>
-            <div>
-              <h1 className="text-xl font-bold">{selectedVendorName}</h1>
-              <p className="text-sm text-muted-foreground">Browse menu and add items to cart</p>
-            </div>
-          </div>
-          
-          {/* Cart Button for Desktop and Mobile */}
-          <div className="block">
-            <Button
-              variant="default"
-              onClick={() => setIsCartOpen(true)}
-              className="flex items-center gap-2"
-            >
-              Cart ({cartItems.length})
-            </Button>
-          </div>
-        </div>
-        
+        {/* Vendor details: banner, logo, name, verified, rating, address */}
+        <VendorStorefrontHeader
+          vendorId={selectedVendor}
+          fallbackName={selectedVendorName}
+          cartCount={cartItems.length}
+          onBack={handleBackToVendors}
+          onOpenCart={() => setIsCartOpen(true)}
+        />
+
         {/* Compact Search Bar */}
         <div className="relative">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 h-3 w-3 sm:h-4 sm:w-4" />
@@ -510,6 +404,14 @@ const NewOrder = () => {
           orderNumber={currentOrder?.order_number || ''}
           customerEmail={user?.email || ''}
           customerId={user?.id}
+          customerDetails={(() => {
+            const address = (currentOrder.delivery_address ?? {}) as Record<string, string | undefined>;
+            return {
+              name: user?.name,
+              phone: address.phone || undefined,
+              address: address.formatted_address || address.address || undefined,
+            };
+          })()}
           metadata={{
             order_id: currentOrder?.id,
             user_id: user?.id,
@@ -535,17 +437,15 @@ const NewOrder = () => {
         />
       )}
       
-      {/* Delivery Address Modal */}
-      <DeliveryAddressModal
-        isOpen={isAddressModalOpen}
-        onClose={() => setIsAddressModalOpen(false)}
-        onAddressConfirmed={(address) => {
-          setDeliveryAddress(address);
-          setIsAddressModalOpen(false);
-          // Proceed with checkout after address is confirmed
-          handleActualCheckout();
-        }}
-        customerPhone=""
+      {/* Delivery address confirmation (default preselected) */}
+      <ConfirmDeliveryAddressDialog
+        open={isAddressConfirmOpen}
+        onOpenChange={setIsAddressConfirmOpen}
+        onConfirm={createOrderWithAddress}
+        confirming={isCreatingOrder}
+        vendorId={cartVendorId}
+        items={toCartLines(cartItems)}
+        cartSubtotal={calculateTotal()}
       />
       
       {/* Delivery Scheduler Dialog */}

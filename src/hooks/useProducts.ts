@@ -12,7 +12,8 @@ export interface Product {
   category: string | null;
   is_eco_friendly: boolean;
   carbon_impact: number;
-  stock_quantity: number;
+  stock_quantity: number | null;
+  track_stock: boolean;
   image_url: string | null;
   status: 'active' | 'inactive' | 'out_of_stock';
   created_at: string;
@@ -33,7 +34,8 @@ export const useProducts = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch only active products with stock and their vendor details
+      // Every product with its vendor; unavailable ones are shown but can't be
+      // added to the cart (see lib/products)
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -43,8 +45,6 @@ export const useProducts = () => {
             email
           )
         `)
-        .eq('status', 'active')
-        .gt('stock_quantity', 0)
         .order('created_at', { ascending: false });
 
       if (productsError) throw productsError;

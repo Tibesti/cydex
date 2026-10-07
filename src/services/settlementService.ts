@@ -2,14 +2,7 @@
 // Handles fund settlement, escrow management, and payout operations
 
 import { supabase } from '@/integrations/supabase/client';
-import { squadTransferService } from '@/services/squadTransferService';
-
-interface SettlementCalculation {
-  vendorAmount: number;
-  riderAmount: number;
-  platformFee: number;
-  total: number;
-}
+import { invokeFunction } from '@/lib/edgeFunctions';
 
 interface PaymentHold {
   id: string;
@@ -34,53 +27,6 @@ interface Settlement {
 }
 
 class SettlementService {
-  /**
-   * Calculate settlement amounts for an order
-   */
-  async calculateSettlement(orderId: string): Promise<SettlementCalculation> {
-    const { data: order, error } = await supabase
-      .from('orders')
-      .select('subtotal, delivery_fee, total_amount')
-      .eq('id', orderId)
-      .single();
-
-    if (error || !order) {
-      throw new Error(`Failed to fetch order: ${error?.message || 'Order not found'}`);
-    }
-
-    // Get order items to calculate platform fee per item
-    const { data: orderItems, error: itemsError } = await supabase
-      .from('order_items')
-      .select('quantity, unit_price')
-      .eq('order_id', orderId);
-
-    if (itemsError) {
-      throw new Error(`Failed to fetch order items: ${itemsError.message}`);
-    }
-
-    // Calculate platform fee: ₦20 per item
-    const totalItems = orderItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-    const platformFeePerItem = totalItems * 20;
-
-    // Vendor's original price (before platform fee)
-    const vendorOriginalPrice = order.subtotal - platformFeePerItem;
-
-    // Platform takes 10% from vendor's original sales + ₦20 per item
-    const platformFeePercentage = vendorOriginalPrice * 0.10;
-    const totalPlatformFee = platformFeePercentage + platformFeePerItem;
-    
-    // Vendor receives: original price - 10% platform fee
-    const vendorAmount = vendorOriginalPrice - platformFeePercentage;
-    const riderAmount = order.delivery_fee;
-
-    return {
-      vendorAmount,
-      riderAmount,
-      platformFee: totalPlatformFee,
-      total: order.total_amount,
-    };
-  }
-
   /**
    * Get payment hold for an order
    */
@@ -183,11 +129,6 @@ class SettlementService {
       
       if (!vaError && vaData) {
         virtualAccount = vaData;
-        // Link it to wallet
-        await supabase
-          .from('vendor_wallet')
-          .update({ virtual_account_id: vaData.id })
-          .eq('vendor_id', vendorId);
       }
     }
 
@@ -243,11 +184,6 @@ class SettlementService {
       
       if (!vaError && vaData) {
         virtualAccount = vaData;
-        // Link it to wallet
-        await supabase
-          .from('rider_wallet')
-          .update({ virtual_account_id: vaData.id })
-          .eq('rider_id', riderId);
       }
     }
 
@@ -302,11 +238,6 @@ class SettlementService {
       
       if (!vaError && vaData) {
         virtualAccount = vaData;
-        // Link it to wallet
-        await supabase
-          .from('customer_wallet')
-          .update({ virtual_account_id: vaData.id })
-          .eq('customer_id', customerId);
       }
     }
 
@@ -356,369 +287,37 @@ class SettlementService {
   }
 
   /**
-   * Request vendor payout - initiates Squad transfer
+   * Withdraw from the signed-in user's wallet to one of their bank accounts.
+   * The database checks and deducts the balance; the squad-payout Edge
+   * Function sends the transfer and restores the balance if it fails.
    */
-  async requestVendorPayout(
-    vendorId: string,
-    amount: number,
-    bankAccountId: string
-  ) {
-    // Check available balance
-    const wallet = await this.getVendorWalletBalance(vendorId);
-    
-    if (wallet.available_balance < amount) {
-      throw new Error('Insufficient balance for payout');
-    }
+  private async requestPayout(amount: number, bankAccountId: string) {
+    const { payout } = await invokeFunction<{ payout: unknown }>('squad-payout', {
+      action: 'request', amount, bank_account_id: bankAccountId,
+    });
+    return payout;
+  }
 
-    // Fetch bank account details
-    const { data: bankAccount, error: bankError } = await supabase
-      .from('vendor_bank_accounts')
-      .select('*')
-      .eq('id', bankAccountId)
-      .eq('vendor_id', vendorId)
-      .single();
+  async requestVendorPayout(_vendorId: string, amount: number, bankAccountId: string) {
+    return this.requestPayout(amount, bankAccountId);
+  }
 
-    if (bankError || !bankAccount) {
-      throw new Error(`Bank account not found: ${bankError?.message || 'Unknown error'}`);
-    }
+  async requestRiderPayout(_riderId: string, amount: number, bankAccountId: string) {
+    return this.requestPayout(amount, bankAccountId);
+  }
 
-    if (!bankAccount.bank_code) {
-      throw new Error('Bank code is required for payout. Please update your bank account details.');
-    }
-
-    // Calculate fee (1.5%)
-    const fee = amount * 0.015;
-    const netAmount = amount - fee;
-
-    // Lookup account name via Squad (required before transfer)
-    let accountName = bankAccount.account_name;
-    try {
-      const lookupResult = await squadTransferService.lookupAccount(
-        bankAccount.bank_code,
-        bankAccount.account_number
-      );
-      if (lookupResult.data?.account_name) {
-        accountName = lookupResult.data.account_name;
-      }
-    } catch (error) {
-      console.warn('Account lookup failed, using stored name:', error);
-      // Continue with stored name if lookup fails
-    }
-
-    // Generate transfer reference
-    const transferReference = `CYDEX_VENDOR_${vendorId.slice(0, 8)}_${Date.now()}`;
-
-    // Initiate Squad transfer
-    let transferResult;
-    try {
-      transferResult = await squadTransferService.initiateTransfer({
-        amount: netAmount, // Transfer net amount after fee
-        bankCode: bankAccount.bank_code,
-        accountNumber: bankAccount.account_number,
-        accountName: accountName,
-        remark: `Vendor payout - ${vendorId.slice(0, 8)}`,
-        reference: transferReference,
-      });
-    } catch (error) {
-      throw new Error(`Transfer initiation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // Create payout request with transfer reference
-    const { data, error } = await supabase
-      .from('vendor_payout_requests')
-      .insert({
-        vendor_id: vendorId,
-        bank_account_id: bankAccountId,
-        amount,
-        fee,
-        net_amount: netAmount,
-        status: transferResult.status === 200 ? 'processing' : 'pending',
-        transfer_reference: transferReference,
-        transfer_metadata: transferResult.data || {},
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create payout request: ${error.message}`);
-    }
-
-    // Update wallet to reflect pending payout
-    await supabase
-      .from('vendor_wallet')
-      .update({
-        available_balance: wallet.available_balance - amount,
-        total_withdrawn: wallet.total_withdrawn + amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('vendor_id', vendorId);
-
-    return data;
+  async requestCustomerWithdrawal(_customerId: string, amount: number, bankAccountId: string) {
+    return this.requestPayout(amount, bankAccountId);
   }
 
   /**
-   * Request rider payout - initiates Squad transfer
+   * Ask Squad for a payout's transfer status (a failed transfer is refunded to the wallet)
    */
-  async requestRiderPayout(
-    riderId: string,
-    amount: number,
-    bankAccountId: string
-  ) {
-    // Check available balance
-    const wallet = await this.getRiderWalletBalance(riderId);
-    
-    if (wallet.available_balance < amount) {
-      throw new Error('Insufficient balance for payout');
-    }
-
-    // Fetch bank account details
-    const { data: bankAccount, error: bankError } = await supabase
-      .from('rider_bank_details')
-      .select('*')
-      .eq('id', bankAccountId)
-      .eq('rider_id', riderId)
-      .single();
-
-    if (bankError || !bankAccount) {
-      throw new Error(`Bank account not found: ${bankError?.message || 'Unknown error'}`);
-    }
-
-    if (!bankAccount.bank_code) {
-      throw new Error('Bank code is required for payout. Please update your bank account details.');
-    }
-
-    // Calculate fee (1.5%)
-    const fee = amount * 0.015;
-    const netAmount = amount - fee;
-
-    // Lookup account name via Squad (required before transfer)
-    let accountName = bankAccount.account_name;
-    try {
-      const lookupResult = await squadTransferService.lookupAccount(
-        bankAccount.bank_code,
-        bankAccount.account_number
-      );
-      if (lookupResult.data?.account_name) {
-        accountName = lookupResult.data.account_name;
-      }
-    } catch (error) {
-      console.warn('Account lookup failed, using stored name:', error);
-      // Continue with stored name if lookup fails
-    }
-
-    // Generate transfer reference
-    const transferReference = `CYDEX_RIDER_${riderId.slice(0, 8)}_${Date.now()}`;
-
-    // Initiate Squad transfer
-    let transferResult;
-    try {
-      transferResult = await squadTransferService.initiateTransfer({
-        amount: netAmount, // Transfer net amount after fee
-        bankCode: bankAccount.bank_code,
-        accountNumber: bankAccount.account_number,
-        accountName: accountName,
-        remark: `Rider payout - ${riderId.slice(0, 8)}`,
-        reference: transferReference,
-      });
-    } catch (error) {
-      throw new Error(`Transfer initiation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // Create payout request with transfer reference
-    const { data, error } = await supabase
-      .from('rider_payout_requests')
-      .insert({
-        rider_id: riderId,
-        bank_account_id: bankAccountId,
-        amount,
-        fee,
-        net_amount: netAmount,
-        status: transferResult.status === 200 ? 'processing' : 'pending',
-        transfer_reference: transferReference,
-        transfer_metadata: transferResult.data || {},
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create payout request: ${error.message}`);
-    }
-
-    // Update wallet to reflect pending payout
-    await supabase
-      .from('rider_wallet')
-      .update({
-        available_balance: wallet.available_balance - amount,
-        total_withdrawn: wallet.total_withdrawn + amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('rider_id', riderId);
-
-    return data;
-  }
-
-  /**
-   * Request customer withdrawal
-   */
-  async requestCustomerWithdrawal(
-    customerId: string,
-    amount: number,
-    bankAccountId: string
-  ) {
-    // Check available balance
-    const wallet = await this.getCustomerWalletBalance(customerId);
-    
-    if (wallet.available_balance < amount) {
-      throw new Error('Insufficient balance for withdrawal');
-    }
-
-    // Fetch bank account details
-    const { data: bankAccount, error: bankError } = await supabase
-      .from('customer_bank_accounts')
-      .select('*')
-      .eq('id', bankAccountId)
-      .eq('customer_id', customerId)
-      .single();
-
-    if (bankError || !bankAccount) {
-      throw new Error(`Bank account not found: ${bankError?.message || 'Unknown error'}`);
-    }
-
-    if (!bankAccount.bank_code) {
-      throw new Error('Bank code is required for withdrawal. Please update your bank account details.');
-    }
-
-    // Calculate fee (1.5%)
-    const fee = amount * 0.015;
-    const netAmount = amount - fee;
-
-    // Lookup account name via Squad
-    let accountName = bankAccount.account_name;
-    try {
-      const lookupResult = await squadTransferService.lookupAccount(
-        bankAccount.bank_code,
-        bankAccount.account_number
-      );
-      if (lookupResult.data?.account_name) {
-        accountName = lookupResult.data.account_name;
-      }
-    } catch (error) {
-      console.warn('Account lookup failed, using stored name:', error);
-    }
-
-    // Generate transfer reference
-    const transferReference = `CYDEX_CUSTOMER_${customerId.slice(0, 8)}_${Date.now()}`;
-
-    // Initiate Squad transfer
-    let transferResult;
-    try {
-      transferResult = await squadTransferService.initiateTransfer({
-        amount: netAmount,
-        bankCode: bankAccount.bank_code,
-        accountNumber: bankAccount.account_number,
-        accountName: accountName,
-        remark: `Customer withdrawal - ${customerId.slice(0, 8)}`,
-        reference: transferReference,
-      });
-    } catch (error) {
-      throw new Error(`Transfer initiation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-
-    // Create withdrawal request
-    const { data, error } = await supabase
-      .from('customer_withdrawal_requests')
-      .insert({
-        customer_id: customerId,
-        bank_account_id: bankAccountId,
-        amount,
-        fee,
-        net_amount: netAmount,
-        status: transferResult.status === 200 ? 'processing' : 'pending',
-        transfer_reference: transferReference,
-        transfer_metadata: transferResult.data || {},
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create withdrawal request: ${error.message}`);
-    }
-
-    // Update wallet
-    await supabase
-      .from('customer_wallet')
-      .update({
-        available_balance: wallet.available_balance - amount,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('customer_id', customerId);
-
-    return data;
-  }
-
-  /**
-   * Requery payout transfer status and update payout request
-   */
-  async requeryPayoutStatus(
-    payoutRequestId: string,
-    userType: 'vendor' | 'rider' | 'customer'
-  ) {
-    const tableName = userType === 'vendor' 
-      ? 'vendor_payout_requests' 
-      : userType === 'rider' 
-      ? 'rider_payout_requests'
-      : 'customer_withdrawal_requests';
-    
-    // Fetch payout request
-    const { data: payout, error: fetchError } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq('id', payoutRequestId)
-      .single();
-
-    if (fetchError || !payout || !payout.transfer_reference) {
-      throw new Error('Payout request not found or missing transfer reference');
-    }
-
-    // Requery Squad transfer
-    try {
-      const requeryResult = await squadTransferService.requeryTransfer(payout.transfer_reference);
-      
-      // Update payout status based on Squad response
-      let newStatus = payout.status;
-      if (requeryResult.status === 200 && requeryResult.data) {
-        // Check transfer status from Squad response
-        const transferStatus = requeryResult.data.transaction_status || requeryResult.data.status;
-        if (transferStatus === 'success' || transferStatus === 'completed') {
-          newStatus = 'completed';
-        } else if (transferStatus === 'failed' || transferStatus === 'reversed') {
-          newStatus = 'failed';
-        } else if (transferStatus === 'pending') {
-          newStatus = 'processing';
-        }
-      }
-
-      // Update payout request
-      const { data: updatedPayout, error: updateError } = await supabase
-        .from(tableName)
-        .update({
-          status: newStatus,
-          transfer_metadata: requeryResult.data || payout.transfer_metadata,
-          processed_at: newStatus === 'completed' || newStatus === 'failed' ? new Date().toISOString() : payout.processed_at,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', payoutRequestId)
-        .select()
-        .single();
-
-      if (updateError) {
-        throw new Error(`Failed to update payout: ${updateError.message}`);
-      }
-
-      return updatedPayout;
-    } catch (error) {
-      throw new Error(`Failed to requery transfer: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+  async requeryPayoutStatus(payoutRequestId: string, _userType: 'vendor' | 'rider' | 'customer') {
+    const { payout } = await invokeFunction<{ payout: unknown }>('squad-payout', {
+      action: 'requery', payout_id: payoutRequestId,
+    });
+    return payout;
   }
 
   /**
@@ -729,30 +328,34 @@ class SettlementService {
     userType: 'vendor' | 'rider' | 'customer',
     limit = 50
   ) {
-    let tableName = '';
-    let idField = '';
+    // One typed query per role (a table name held in a string can't be type-checked)
+    const fetchHistory = () => {
+      switch (userType) {
+        case 'vendor':
+          return supabase
+            .from('vendor_transactions')
+            .select('*')
+            .eq('vendor_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        case 'rider':
+          return supabase
+            .from('rider_transactions')
+            .select('*')
+            .eq('rider_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+        case 'customer':
+          return supabase
+            .from('customer_transactions')
+            .select('*')
+            .eq('customer_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(limit);
+      }
+    };
 
-    switch (userType) {
-      case 'vendor':
-        tableName = 'vendor_transactions';
-        idField = 'vendor_id';
-        break;
-      case 'rider':
-        tableName = 'rider_transactions';
-        idField = 'rider_id';
-        break;
-      case 'customer':
-        tableName = 'customer_transactions';
-        idField = 'customer_id';
-        break;
-    }
-
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .eq(idField, userId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    const { data, error } = await fetchHistory();
 
     if (error) {
       console.error('Error fetching transaction history:', error);
@@ -789,128 +392,6 @@ class SettlementService {
     const hoursSinceOrder = (now.getTime() - orderDate.getTime()) / (1000 * 60 * 60);
 
     return hoursSinceOrder <= 24;
-  }
-
-  /**
-   * Process refund for cancelled order
-   * @param orderId - Order ID to refund
-   * @param reason - Reason for refund
-   * @param bypassTimeCheck - If true, bypasses the 24-hour window check (for vendor rejections)
-   */
-  async processRefund(orderId: string, reason: string, bypassTimeCheck: boolean = false) {
-    // Get order and payment hold
-    const { data: order } = await supabase
-      .from('orders')
-      .select('*, payment_holds(*)')
-      .eq('id', orderId)
-      .single();
-
-    if (!order) {
-      throw new Error('Order not found');
-    }
-
-    if (!(await this.canRefundOrder(orderId, bypassTimeCheck))) {
-      throw new Error('Order cannot be refunded');
-    }
-
-    // Update payment hold status
-    await supabase
-      .from('payment_holds')
-      .update({
-        status: 'refunded',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('order_id', orderId);
-
-    // Create customer transaction for refund
-    const transactionId = `REFUND-${order.order_number}-${Date.now()}`;
-    const { error: transactionError } = await supabase
-      .from('customer_transactions')
-      .insert({
-        customer_id: order.customer_id,
-        transaction_id: transactionId,
-        type: 'refund',
-        amount: order.total_amount,
-        status: 'completed',
-        description: `Refund for cancelled order ${order.order_number}`,
-        reference_id: orderId,
-        reference_type: 'order',
-        metadata: {
-          reason,
-          original_payment_reference: order.payment_reference,
-        },
-        processed_at: new Date().toISOString(),
-      });
-
-    if (transactionError) {
-      console.error('Error creating refund transaction:', transactionError);
-      throw new Error('Failed to create refund transaction');
-    }
-
-    // Update customer wallet balance - add refund amount to available balance
-    const { data: wallet, error: walletError } = await supabase
-      .from('customer_wallet')
-      .select('available_balance')
-      .eq('customer_id', order.customer_id)
-      .single();
-
-    if (walletError && walletError.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Error fetching customer wallet:', walletError);
-      // Continue anyway - wallet might not exist yet
-    }
-
-    // Insert or update customer wallet
-    if (wallet) {
-      // Update existing wallet
-      const { error: updateError } = await supabase
-        .from('customer_wallet')
-        .update({
-          available_balance: (parseFloat(wallet.available_balance.toString()) || 0) + order.total_amount,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('customer_id', order.customer_id);
-
-      if (updateError) {
-        console.error('Error updating customer wallet:', updateError);
-        throw new Error('Failed to update customer wallet');
-      }
-    } else {
-      // Create new wallet entry
-      const { error: insertError } = await supabase
-        .from('customer_wallet')
-        .insert({
-          customer_id: order.customer_id,
-          available_balance: order.total_amount,
-          bonus_balance: 0,
-          carbon_credits: 0,
-          total_spent: 0,
-        });
-
-      if (insertError) {
-        console.error('Error creating customer wallet:', insertError);
-        throw new Error('Failed to create customer wallet');
-      }
-    }
-
-    // Update order status with cancellation details
-    const { error: orderUpdateError } = await supabase
-      .from('orders')
-      .update({
-        status: 'cancelled',
-        payment_status: 'refunded',
-        cancelled_at: new Date().toISOString(),
-        cancel_reason: reason,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', orderId);
-
-    if (orderUpdateError) {
-      console.error('Error updating order status:', orderUpdateError);
-      throw new Error('Failed to update order status');
-    }
-
-    console.log(`Refund processed for order ${order.order_number} - ₦${order.total_amount} credited to customer wallet`);
-    return { success: true, transactionId };
   }
 
   /**

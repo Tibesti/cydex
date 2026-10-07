@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,34 +12,19 @@ import SecuritySettings from '@/components/customer/profile/SecuritySettings';
 import PreferencesSettings from '@/components/customer/profile/PreferencesSettings';
 import AccountSummary from '@/components/customer/profile/AccountSummary';
 import RecentActivity from '@/components/customer/profile/RecentActivity';
+import SavedAddresses from '@/components/customer/address/SavedAddresses';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  // ?tab=addresses opens Saved addresses (linked from the Deliver to bar)
+  const [searchParams] = useSearchParams();
 
   const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
-  // Helper for parsing address
-  const formatAddress = (address: any) => {
-    // Address should be an object, not an array, and contain street/city/state/country
-    if (address && typeof address === "object" && !Array.isArray(address)) {
-      // Use optional chaining and fallback to empty string
-      const street = address?.street ?? "";
-      const city = address?.city ?? "";
-      const state = address?.state ?? "";
-      const country = address?.country ?? "";
-
-      // Build address string, skipping empty parts
-      return [street, city, state, country].filter(Boolean).join(", ");
-    }
-    // If it's a string (legacy), just return it
-    if (typeof address === "string") return address;
-    return "";
-  };
 
   // Fetch user's profile
   useEffect(() => {
@@ -63,7 +49,6 @@ const ProfilePage = () => {
         name: data.name || "",
         email: data.email || "",
         phone: data.phone || "",
-        address: formatAddress(data.address),
         dateJoined: data.created_at
           ? new Date(data.created_at).toLocaleString("en-NG", {
               year: "numeric",
@@ -84,18 +69,10 @@ const ProfilePage = () => {
   const handleSave = async () => {
     if (!user?.id) return;
     setIsEditing(false);
-    // Save a minimal address object as required - split on commas
-    let addressToSave = null;
-    if (profileData.address) {
-      // Try to parse input from the form to populate street (very basic)
-      const [street = "", city = "", state = "", country = ""] = profileData.address.split(",").map(str => str.trim());
-      addressToSave = { street, city, state, country };
-    }
-
+    // Addresses are managed in the Saved addresses tab
     const updates: any = {
       name: profileData.name,
       phone: profileData.phone,
-      address: addressToSave,
     };
     const { error } = await supabase
       .from('profiles')
@@ -159,9 +136,13 @@ const ProfilePage = () => {
             <CardDescription className="text-sm">View and update your personal details</CardDescription>
           </CardHeader>
           <CardContent className="pt-0">
-            <Tabs defaultValue="account" className="w-full">
+            <Tabs defaultValue={searchParams.get('tab') ?? 'account'} className="w-full">
               <TabsList className="mb-3 sm:mb-4 w-full">
                 <TabsTrigger value="account" className="text-xs sm:text-sm flex-1">Account</TabsTrigger>
+                <TabsTrigger value="addresses" className="text-xs sm:text-sm flex-1">
+                  <span className="sm:hidden">Addresses</span>
+                  <span className="hidden sm:inline">Saved addresses</span>
+                </TabsTrigger>
                 <TabsTrigger value="security" className="text-xs sm:text-sm flex-1">Security</TabsTrigger>
                 <TabsTrigger value="preferences" className="text-xs sm:text-sm flex-1">Preferences</TabsTrigger>
               </TabsList>
@@ -177,6 +158,10 @@ const ProfilePage = () => {
                     setIsEditing={setIsEditing}
                   />
                 </div>
+              </TabsContent>
+
+              <TabsContent value="addresses">
+                <SavedAddresses />
               </TabsContent>
 
               <TabsContent value="security">

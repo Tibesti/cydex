@@ -7,20 +7,163 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      addresses: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          directions: string | null
+          formatted_address: string
+          id: string
+          is_default: boolean
+          label: string
+          latitude: number
+          longitude: number
+          place_id: string | null
+          place_name: string | null
+          profile_id: string
+          state: string | null
+          street: string | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          directions?: string | null
+          formatted_address: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude: number
+          longitude: number
+          place_id?: string | null
+          place_name?: string | null
+          profile_id: string
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          directions?: string | null
+          formatted_address?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          latitude?: number
+          longitude?: number
+          place_id?: string | null
+          place_name?: string | null
+          profile_id?: string
+          state?: string | null
+          street?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addresses_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          priority: string
+          published_at: string | null
+          status: string
+          target_audience: string[]
+          title: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          published_at?: string | null
+          status?: string
+          target_audience: string[]
+          title: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          published_at?: string | null
+          status?: string
+          target_audience?: string[]
+          title?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
           admin_id: string | null
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_values: Json | null
           old_values: Json | null
           target_id: string | null
@@ -32,7 +175,7 @@ export type Database = {
           admin_id?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           target_id?: string | null
@@ -44,7 +187,7 @@ export type Database = {
           admin_id?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_values?: Json | null
           old_values?: Json | null
           target_id?: string | null
@@ -67,7 +210,7 @@ export type Database = {
           activity_type: string
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           user_agent: string | null
           user_id: string
@@ -77,7 +220,7 @@ export type Database = {
           activity_type: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           user_agent?: string | null
           user_id: string
@@ -87,7 +230,7 @@ export type Database = {
           activity_type?: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           user_agent?: string | null
           user_id?: string
@@ -96,6 +239,53 @@ export type Database = {
           {
             foreignKeyName: "customer_activity_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_code: string | null
+          bank_name: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_default: boolean | null
+          is_verified: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_code?: string | null
+          bank_name: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_code?: string | null
+          bank_name?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_default?: boolean | null
+          is_verified?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_bank_accounts_customer_id_fkey"
+            columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -140,6 +330,189 @@ export type Database = {
           },
         ]
       }
+      customer_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          payment_method: string | null
+          processed_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          status: string
+          transaction_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          transaction_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          payment_method?: string | null
+          processed_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string
+          transaction_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transactions_reference_id_fkey"
+            columns: ["reference_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_wallet: {
+        Row: {
+          available_balance: number
+          bonus_balance: number
+          carbon_credits: number | null
+          created_at: string | null
+          customer_id: string
+          id: string
+          total_spent: number
+          updated_at: string | null
+          virtual_account_id: string | null
+        }
+        Insert: {
+          available_balance?: number
+          bonus_balance?: number
+          carbon_credits?: number | null
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          total_spent?: number
+          updated_at?: string | null
+          virtual_account_id?: string | null
+        }
+        Update: {
+          available_balance?: number
+          bonus_balance?: number
+          carbon_credits?: number | null
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          total_spent?: number
+          updated_at?: string | null
+          virtual_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_wallet_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_wallet_virtual_account_id_fkey"
+            columns: ["virtual_account_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_withdrawal_requests: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          created_at: string | null
+          customer_id: string
+          failure_reason: string | null
+          fee: number | null
+          id: string
+          net_amount: number
+          processed_at: string | null
+          requested_at: string | null
+          status: string
+          transfer_metadata: Json | null
+          transfer_reference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          created_at?: string | null
+          customer_id: string
+          failure_reason?: string | null
+          fee?: number | null
+          id?: string
+          net_amount: number
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          transfer_metadata?: Json | null
+          transfer_reference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          created_at?: string | null
+          customer_id?: string
+          failure_reason?: string | null
+          fee?: number | null
+          id?: string
+          net_amount?: number
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          transfer_metadata?: Json | null
+          transfer_reference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_withdrawal_requests_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "customer_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_withdrawal_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deliveries: {
         Row: {
           accepted_at: string | null
@@ -148,6 +521,8 @@ export type Database = {
           carbon_saved: number | null
           created_at: string | null
           delivered_at: string | null
+          delivering_at: string | null
+          delivery_address_id: string | null
           delivery_fee: number | null
           delivery_location: Json | null
           eco_bonus: number | null
@@ -156,7 +531,10 @@ export type Database = {
           id: string
           order_id: string | null
           picked_up_at: string | null
+          picking_up_at: string | null
+          pickup_address_id: string | null
           pickup_location: Json | null
+          rider_earning: number | null
           rider_id: string | null
           special_instructions: string | null
           status: Database["public"]["Enums"]["delivery_status"] | null
@@ -170,6 +548,8 @@ export type Database = {
           carbon_saved?: number | null
           created_at?: string | null
           delivered_at?: string | null
+          delivering_at?: string | null
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_location?: Json | null
           eco_bonus?: number | null
@@ -178,7 +558,10 @@ export type Database = {
           id?: string
           order_id?: string | null
           picked_up_at?: string | null
+          picking_up_at?: string | null
+          pickup_address_id?: string | null
           pickup_location?: Json | null
+          rider_earning?: number | null
           rider_id?: string | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["delivery_status"] | null
@@ -192,6 +575,8 @@ export type Database = {
           carbon_saved?: number | null
           created_at?: string | null
           delivered_at?: string | null
+          delivering_at?: string | null
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_location?: Json | null
           eco_bonus?: number | null
@@ -200,7 +585,10 @@ export type Database = {
           id?: string
           order_id?: string | null
           picked_up_at?: string | null
+          picking_up_at?: string | null
+          pickup_address_id?: string | null
           pickup_location?: Json | null
+          rider_earning?: number | null
           rider_id?: string | null
           special_instructions?: string | null
           status?: Database["public"]["Enums"]["delivery_status"] | null
@@ -209,10 +597,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "deliveries_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "deliveries_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deliveries_pickup_address_id_fkey"
+            columns: ["pickup_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
             referencedColumns: ["id"]
           },
           {
@@ -224,8 +626,239 @@ export type Database = {
           },
         ]
       }
+      email_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          data: Json
+          id: string
+          last_error: string | null
+          profile_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string
+          template: string
+          to_email: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          last_error?: string | null
+          profile_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject: string
+          template: string
+          to_email: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          data?: Json
+          id?: string
+          last_error?: string | null
+          profile_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          template?: string
+          to_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outbox_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_ratings: {
+        Row: { id: string; order_id: string; customer_id: string; rider_id: string; rating: number; feedback: string | null; created_at: string }
+        Insert: { id?: string; order_id: string; customer_id: string; rider_id: string; rating: number; feedback?: string | null; created_at?: string }
+        Update: { id?: string; order_id?: string; customer_id?: string; rider_id?: string; rating?: number; feedback?: string | null; created_at?: string }
+        Relationships: []
+      }
+      rider_rating_prompt_dismissals: {
+        Row: { order_id: string; customer_id: string; dismissed_at: string }
+        Insert: { order_id: string; customer_id: string; dismissed_at?: string }
+        Update: { order_id?: string; customer_id?: string; dismissed_at?: string }
+        Relationships: []
+      }
+      vendor_customers: {
+        Row: {
+          id: string; vendor_id: string; name: string; phone: string; place_name: string | null
+          formatted_address: string; street: string | null; city: string | null; state: string | null
+          country: string | null; place_id: string | null; latitude: number; longitude: number
+          directions: string | null; created_at: string; updated_at: string
+        }
+        Insert: {
+          id?: string; vendor_id: string; name: string; phone: string; place_name?: string | null
+          formatted_address: string; street?: string | null; city?: string | null; state?: string | null
+          country?: string | null; place_id?: string | null; latitude: number; longitude: number
+          directions?: string | null; created_at?: string; updated_at?: string
+        }
+        Update: {
+          id?: string; vendor_id?: string; name?: string; phone?: string; place_name?: string | null
+          formatted_address?: string; street?: string | null; city?: string | null; state?: string | null
+          country?: string | null; place_id?: string | null; latitude?: number; longitude?: number
+          directions?: string | null; created_at?: string; updated_at?: string
+        }
+        Relationships: []
+      }
+      verifications: {
+        Row: {
+          profile_id: string
+          role: string
+          status: string
+          access_while_pending: boolean
+          status_before_suspension: string | null
+          business_category_id: string | null
+          is_registered_business: boolean | null
+          business_license_path: string | null
+          vehicle_type: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+          vehicle_color: string | null
+          vehicle_registration: string | null
+          id_document_type: string | null
+          id_document_path: string | null
+          rejection_reason: string | null
+          suspension_reason: string | null
+          submitted_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          profile_id: string
+          role: string
+          status: string
+          access_while_pending?: boolean
+          status_before_suspension?: string | null
+          business_category_id?: string | null
+          is_registered_business?: boolean | null
+          business_license_path?: string | null
+          vehicle_type?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+          id_document_type?: string | null
+          id_document_path?: string | null
+          rejection_reason?: string | null
+          suspension_reason?: string | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          profile_id?: string
+          role?: string
+          status?: string
+          access_while_pending?: boolean
+          status_before_suspension?: string | null
+          business_category_id?: string | null
+          is_registered_business?: boolean | null
+          business_license_path?: string | null
+          vehicle_type?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+          id_document_type?: string | null
+          id_document_path?: string | null
+          rejection_reason?: string | null
+          suspension_reason?: string | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      business_categories: {
+        Row: {
+          id: string
+          name: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          profile_id: string
+          email_enabled: boolean
+          push_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          profile_id: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          profile_id?: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          profile_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
+          push_sent_at: string | null
           created_at: string
           expires_at: string | null
           id: string
@@ -238,6 +871,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          push_sent_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -250,6 +884,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          push_sent_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -271,6 +906,41 @@ export type Database = {
           },
         ]
       }
+      order_handover_codes: {
+        Row: {
+          code: string
+          created_at: string
+          failed_attempts: number
+          kind: string
+          order_id: string
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          failed_attempts?: number
+          kind: string
+          order_id: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          failed_attempts?: number
+          kind?: string
+          order_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_handover_codes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           carbon_impact: number | null
@@ -280,6 +950,7 @@ export type Database = {
           order_id: string
           product_category: string | null
           product_description: string | null
+          product_id: string | null
           product_name: string
           quantity: number
           total_price: number
@@ -293,6 +964,7 @@ export type Database = {
           order_id: string
           product_category?: string | null
           product_description?: string | null
+          product_id?: string | null
           product_name: string
           quantity: number
           total_price: number
@@ -306,6 +978,7 @@ export type Database = {
           order_id?: string
           product_category?: string | null
           product_description?: string | null
+          product_id?: string | null
           product_name?: string
           quantity?: number
           total_price?: number
@@ -317,6 +990,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -367,14 +1047,16 @@ export type Database = {
       }
       orders: {
         Row: {
+          dispatch_priority: number
           base_rate: number | null
           cancel_reason: string | null
           cancelled_at: string | null
           carbon_credits_earned: number | null
           created_at: string
-          customer_id: string
+          customer_id: string | null
           delivered_at: string | null
           delivery_address: Json
+          delivery_address_id: string | null
           delivery_fee: number | null
           delivery_type: string
           distance_fee: number | null
@@ -387,13 +1069,20 @@ export type Database = {
           is_student_order: boolean | null
           late_night_fee: number | null
           order_number: string
+          order_type: string
+          wallet_amount: number
+          wallet_refunded: number
+          payment_details: Json | null
+          payment_gateway: string | null
           payment_method: string | null
           payment_reference: string | null
           payment_status: string
           picked_up_at: string | null
+          pickup_started_at: string | null
           ready_for_pickup_at: string | null
           rider_assigned_at: string | null
           rider_id: string | null
+          service_charge: number | null
           special_instructions: string | null
           status: string
           student_discount: number | null
@@ -410,14 +1099,16 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
           carbon_credits_earned?: number | null
           created_at?: string
-          customer_id: string
+          customer_id?: string | null
           delivered_at?: string | null
           delivery_address: Json
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_type?: string
           distance_fee?: number | null
@@ -429,14 +1120,21 @@ export type Database = {
           is_peak_hour?: boolean | null
           is_student_order?: boolean | null
           late_night_fee?: number | null
-          order_number: string
+          order_number?: string
+          order_type?: string
+          wallet_amount?: number
+          wallet_refunded?: number
+          payment_details?: Json | null
+          payment_gateway?: string | null
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
           picked_up_at?: string | null
+          pickup_started_at?: string | null
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
+          service_charge?: number | null
           special_instructions?: string | null
           status?: string
           student_discount?: number | null
@@ -453,14 +1151,16 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
           carbon_credits_earned?: number | null
           created_at?: string
-          customer_id?: string
+          customer_id?: string | null
           delivered_at?: string | null
           delivery_address?: Json
+          delivery_address_id?: string | null
           delivery_fee?: number | null
           delivery_type?: string
           distance_fee?: number | null
@@ -473,13 +1173,20 @@ export type Database = {
           is_student_order?: boolean | null
           late_night_fee?: number | null
           order_number?: string
+          order_type?: string
+          wallet_amount?: number
+          wallet_refunded?: number
+          payment_details?: Json | null
+          payment_gateway?: string | null
           payment_method?: string | null
           payment_reference?: string | null
           payment_status?: string
           picked_up_at?: string | null
+          pickup_started_at?: string | null
           ready_for_pickup_at?: string | null
           rider_assigned_at?: string | null
           rider_id?: string | null
+          service_charge?: number | null
           special_instructions?: string | null
           status?: string
           student_discount?: number | null
@@ -504,6 +1211,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "addresses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_rider_id_fkey"
             columns: ["rider_id"]
             isOneToOne: false
@@ -519,6 +1233,112 @@ export type Database = {
           },
         ]
       }
+      payment_holds: {
+        Row: {
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          order_id: string
+          payment_reference: string
+          platform_fee: number
+          rider_amount: number
+          rider_released_at: string | null
+          status: string
+          total_amount: number
+          updated_at: string | null
+          vendor_amount: number
+          vendor_released_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id: string
+          payment_reference: string
+          platform_fee?: number
+          rider_amount: number
+          rider_released_at?: string | null
+          status?: string
+          total_amount: number
+          updated_at?: string | null
+          vendor_amount: number
+          vendor_released_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          order_id?: string
+          payment_reference?: string
+          platform_fee?: number
+          rider_amount?: number
+          rider_released_at?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string | null
+          vendor_amount?: number
+          vendor_released_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_holds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_logs: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          customer_id: string | null
+          email: string | null
+          error_message: string | null
+          gateway: string | null
+          id: string
+          order_number: string | null
+          reference: string | null
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          error_message?: string | null
+          gateway?: string | null
+          id?: string
+          order_number?: string | null
+          reference?: string | null
+          status: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          email?: string | null
+          error_message?: string | null
+          gateway?: string | null
+          id?: string
+          order_number?: string | null
+          reference?: string | null
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pricing_config: {
         Row: {
           base_rate: number | null
@@ -527,9 +1347,12 @@ export type Database = {
           green_fee: number | null
           id: string
           late_night_fee: number | null
+          rider_share_rate: number | null
+          service_charge_rate: number | null
           student_discount_percent: number | null
           subscription_monthly_rate: number | null
           surge_multiplier: number | null
+          vendor_commission_rate: number | null
           weight_rates: Json | null
         }
         Insert: {
@@ -539,9 +1362,12 @@ export type Database = {
           green_fee?: number | null
           id?: string
           late_night_fee?: number | null
+          rider_share_rate?: number | null
+          service_charge_rate?: number | null
           student_discount_percent?: number | null
           subscription_monthly_rate?: number | null
           surge_multiplier?: number | null
+          vendor_commission_rate?: number | null
           weight_rates?: Json | null
         }
         Update: {
@@ -551,9 +1377,12 @@ export type Database = {
           green_fee?: number | null
           id?: string
           late_night_fee?: number | null
+          rider_share_rate?: number | null
+          service_charge_rate?: number | null
           student_discount_percent?: number | null
           subscription_monthly_rate?: number | null
           surge_multiplier?: number | null
+          vendor_commission_rate?: number | null
           weight_rates?: Json | null
         }
         Relationships: []
@@ -571,6 +1400,7 @@ export type Database = {
           price: number
           status: string | null
           stock_quantity: number | null
+          track_stock: boolean
           updated_at: string | null
           vendor_id: string
         }
@@ -586,6 +1416,7 @@ export type Database = {
           price: number
           status?: string | null
           stock_quantity?: number | null
+          track_stock?: boolean
           updated_at?: string | null
           vendor_id: string
         }
@@ -601,6 +1432,7 @@ export type Database = {
           price?: number
           status?: string | null
           stock_quantity?: number | null
+          track_stock?: boolean
           updated_at?: string | null
           vendor_id?: string
         }
@@ -616,7 +1448,6 @@ export type Database = {
       }
       profiles: {
         Row: {
-          address: Json | null
           avatar: string | null
           carbon_credits: number | null
           created_at: string | null
@@ -633,10 +1464,10 @@ export type Database = {
           phone: string | null
           role: string
           status: string | null
+          store_banner_url: string | null
           verified: boolean | null
         }
         Insert: {
-          address?: Json | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -651,12 +1482,12 @@ export type Database = {
           mfa_enabled?: boolean | null
           name: string
           phone?: string | null
-          role: string
+          role?: string
           status?: string | null
+          store_banner_url?: string | null
           verified?: boolean | null
         }
         Update: {
-          address?: Json | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -673,6 +1504,7 @@ export type Database = {
           phone?: string | null
           role?: string
           status?: string | null
+          store_banner_url?: string | null
           verified?: boolean | null
         }
         Relationships: []
@@ -814,38 +1646,50 @@ export type Database = {
         Row: {
           carbon_credits_earned: number | null
           created_at: string | null
-          delivery_fee: number | null
+          delivery_fee: number
           delivery_id: string | null
-          earnings_date: string | null
-          eco_bonus: number | null
+          earnings_date: string
+          eco_bonus: number
           id: string
-          rider_id: string | null
-          tip_amount: number | null
-          total_earnings: number | null
+          order_id: string | null
+          released_at: string | null
+          rider_id: string
+          status: string
+          tip_amount: number
+          total_earnings: number
+          updated_at: string | null
         }
         Insert: {
           carbon_credits_earned?: number | null
           created_at?: string | null
-          delivery_fee?: number | null
+          delivery_fee?: number
           delivery_id?: string | null
-          earnings_date?: string | null
-          eco_bonus?: number | null
+          earnings_date?: string
+          eco_bonus?: number
           id?: string
-          rider_id?: string | null
-          tip_amount?: number | null
-          total_earnings?: number | null
+          order_id?: string | null
+          released_at?: string | null
+          rider_id: string
+          status?: string
+          tip_amount?: number
+          total_earnings?: number
+          updated_at?: string | null
         }
         Update: {
           carbon_credits_earned?: number | null
           created_at?: string | null
-          delivery_fee?: number | null
+          delivery_fee?: number
           delivery_id?: string | null
-          earnings_date?: string | null
-          eco_bonus?: number | null
+          earnings_date?: string
+          eco_bonus?: number
           id?: string
-          rider_id?: string | null
-          tip_amount?: number | null
-          total_earnings?: number | null
+          order_id?: string | null
+          released_at?: string | null
+          rider_id?: string
+          status?: string
+          tip_amount?: number
+          total_earnings?: number
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -856,7 +1700,83 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "rider_earnings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rider_earnings_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_payout_requests: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          created_at: string | null
+          failure_reason: string | null
+          fee: number | null
+          id: string
+          net_amount: number
+          paystack_reference: string | null
+          processed_at: string | null
+          requested_at: string | null
+          rider_id: string
+          status: string
+          transfer_metadata: Json | null
+          transfer_reference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          created_at?: string | null
+          failure_reason?: string | null
+          fee?: number | null
+          id?: string
+          net_amount: number
+          paystack_reference?: string | null
+          processed_at?: string | null
+          requested_at?: string | null
+          rider_id: string
+          status?: string
+          transfer_metadata?: Json | null
+          transfer_reference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          created_at?: string | null
+          failure_reason?: string | null
+          fee?: number | null
+          id?: string
+          net_amount?: number
+          paystack_reference?: string | null
+          processed_at?: string | null
+          requested_at?: string | null
+          rider_id?: string
+          status?: string
+          transfer_metadata?: Json | null
+          transfer_reference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_payout_requests_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "rider_bank_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_payout_requests_rider_id_fkey"
             columns: ["rider_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1031,6 +1951,198 @@ export type Database = {
           {
             foreignKeyName: "rider_schedules_rider_id_fkey"
             columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          created_at: string | null
+          description: string | null
+          fee: number | null
+          id: string
+          metadata: Json | null
+          net_amount: number
+          processed_at: string | null
+          reference_id: string | null
+          reference_type: string | null
+          rider_id: string
+          status: string
+          transaction_id: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          net_amount: number
+          processed_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          rider_id: string
+          status?: string
+          transaction_id: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number
+          processed_at?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          rider_id?: string
+          status?: string
+          transaction_id?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "rider_bank_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_transactions_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rider_wallet: {
+        Row: {
+          available_balance: number
+          carbon_credits: number | null
+          created_at: string | null
+          id: string
+          pending_balance: number
+          rider_id: string
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string | null
+          virtual_account_id: string | null
+        }
+        Insert: {
+          available_balance?: number
+          carbon_credits?: number | null
+          created_at?: string | null
+          id?: string
+          pending_balance?: number
+          rider_id: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string | null
+          virtual_account_id?: string | null
+        }
+        Update: {
+          available_balance?: number
+          carbon_credits?: number | null
+          created_at?: string | null
+          id?: string
+          pending_balance?: number
+          rider_id?: string
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string | null
+          virtual_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rider_wallet_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rider_wallet_virtual_account_id_fkey"
+            columns: ["virtual_account_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlements: {
+        Row: {
+          amount: number
+          created_at: string | null
+          fee: number | null
+          id: string
+          metadata: Json | null
+          net_amount: number
+          order_id: string
+          payment_reference: string | null
+          paystack_transfer_code: string | null
+          recipient_id: string
+          recipient_type: string
+          settled_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          net_amount: number
+          order_id: string
+          payment_reference?: string | null
+          paystack_transfer_code?: string | null
+          recipient_id: string
+          recipient_type: string
+          settled_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          net_amount?: number
+          order_id?: string
+          payment_reference?: string | null
+          paystack_transfer_code?: string | null
+          recipient_id?: string
+          recipient_type?: string
+          settled_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_recipient_id_fkey"
+            columns: ["recipient_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1488,11 +2600,195 @@ export type Database = {
           },
         ]
       }
+      vendor_wallet: {
+        Row: {
+          available_balance: number
+          created_at: string | null
+          id: string
+          pending_balance: number
+          total_earned: number
+          total_withdrawn: number
+          updated_at: string | null
+          vendor_id: string
+          virtual_account_id: string | null
+        }
+        Insert: {
+          available_balance?: number
+          created_at?: string | null
+          id?: string
+          pending_balance?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string | null
+          vendor_id: string
+          virtual_account_id?: string | null
+        }
+        Update: {
+          available_balance?: number
+          created_at?: string | null
+          id?: string
+          pending_balance?: number
+          total_earned?: number
+          total_withdrawn?: number
+          updated_at?: string | null
+          vendor_id?: string
+          virtual_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_wallet_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_wallet_virtual_account_id_fkey"
+            columns: ["virtual_account_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      virtual_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          profile_id: string
+          role: string
+          squad_customer_identifier: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          bank_code: string
+          bank_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          profile_id: string
+          role: string
+          squad_customer_identifier: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          bank_code?: string
+          bank_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          profile_id?: string
+          role?: string
+          squad_customer_identifier?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "virtual_accounts_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      submit_vendor_onboarding: {
+        Args: { p_store_name: string; p_phone: string; p_category_id: string; p_is_registered: boolean; p_license_path?: string }
+        Returns: string
+      }
+      submit_rider_onboarding: {
+        Args: {
+          p_phone: string; p_vehicle_type: string; p_vehicle_model: string | null; p_vehicle_year: number | null
+          p_vehicle_color: string | null; p_vehicle_registration: string | null; p_id_document_type: string; p_id_document_path: string
+        }
+        Returns: string
+      }
+      admin_review_verification: {
+        Args: { p_profile_id: string; p_action: string; p_reason?: string }
+        Returns: string
+      }
+      admin_relieve_rider: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_reassign_order: {
+        Args: { p_order_id: string; p_rider_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_rider_candidates: {
+        Args: { p_order_id: string }
+        Returns: { rider_id: string; name: string | null; phone: string | null; online: boolean; distance_km: number | null; busy: boolean }[]
+      }
+      register_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string }
+        Returns: undefined
+      }
+      rider_request_quote: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: {
+          status: string; distance_km: number | null; base_rate: number | null; distance_fee: number | null
+          delivery_fee: number | null; commission: number | null; total_amount: number | null
+          wallet_balance: number; wallet_amount: number | null; card_amount: number | null
+        }[]
+      }
+      create_rider_request: {
+        Args: {
+          p_recipient_name: string; p_recipient_phone: string; p_location: Json
+          p_package_details?: string; p_save_customer?: boolean
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      cancel_rider_request: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      vendor_cards_near_address: {
+        Args: { p_address_id: string }
+        Returns: {
+          vendor_id: string; name: string; logo_url: string | null; banner_url: string | null; verified: boolean
+          distance_km: number; product_count: number; categories: string[]; average_rating: number | null
+          rating_count: number; recent_orders: number
+        }[]
+      }
+      vendor_storefront: {
+        Args: { p_vendor_id: string; p_address_id?: string }
+        Returns: {
+          vendor_id: string; name: string; logo_url: string | null; banner_url: string | null; verified: boolean
+          store_address: string | null; average_rating: number | null; rating_count: number; distance_km: number | null
+        }[]
+      }
+      rider_rating_prompt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          order_id: string; order_number: string; rider_id: string; rider_name: string | null
+          rider_avatar: string | null; delivered_at: string | null
+        }[]
+      }
+      address_snapshot: {
+        Args: { a: Database["public"]["Tables"]["addresses"]["Row"] }
+        Returns: Json
+      }
+      calculate_order_price: {
+        Args: { p_address_id: string; p_subtotal: number; p_vendor_id: string }
+        Returns: Record<string, unknown>
+      }
       calculate_rider_rating: {
         Args: { rider_uuid: string }
         Returns: {
@@ -1500,36 +2796,288 @@ export type Database = {
           total_reviews: number
         }[]
       }
-      create_order_notification: {
+      calculate_settlement_amounts: {
+        Args: { p_order_id: string }
+        Returns: Record<string, unknown>
+      }
+      cart_subtotal: {
+        Args: { p_items: Json; p_vendor_id: string }
+        Returns: number
+      }
+      check_handover_code: {
+        Args: { p_code: string; p_kind: string; p_order_id: string }
+        Returns: boolean
+      }
+      confirm_order_payment: {
         Args: {
-          p_order_id: string
-          p_recipient_id: string
-          p_recipient_type: string
-          p_notification_type: string
-          p_title: string
-          p_message: string
+          p_amount: number
+          p_details?: Json
+          p_order_number: string
+          p_reference: string
         }
         Returns: string
       }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
+      create_order_notification: {
+        Args: {
+          p_message: string
+          p_notification_type: string
+          p_order_id: string
+          p_recipient_id: string
+          p_recipient_type: string
+          p_title: string
+        }
         Returns: string
       }
-      generate_verification_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
+      create_wallet_for: {
+        Args: { p_profile_id: string; p_role: string }
+        Returns: undefined
       }
+      current_user_role: { Args: never; Returns: string }
+      customer_cancel_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      customer_vendor_radius_m: { Args: never; Returns: number }
+      distance_m: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
+      ensure_my_wallet: {
+        Args: never
+        Returns: {
+          id: string
+          virtual_account_id: string
+        }[]
+      }
+      generate_order_number: { Args: never; Returns: string }
+      generate_verification_code: { Args: never; Returns: string }
       get_vendor_average_rating: {
         Args: { vendor_uuid: string }
         Returns: {
-          average_rating: number
-          total_ratings: number
           average_delivery_rating: number
           average_product_quality_rating: number
+          average_rating: number
+          total_ratings: number
         }[]
       }
-      is_admin: {
-        Args: Record<PropertyKey, never>
+      get_wallet_balance: {
+        Args: { p_user_id: string; p_user_role: string }
+        Returns: {
+          available_balance: number
+          pending_balance: number
+          total_earned: number
+        }[]
+      }
+      is_admin: { Args: never; Returns: boolean }
+      is_vendor_of_paid_order_for: {
+        Args: { p_customer_id: string }
+        Returns: boolean
+      }
+      mark_stale_riders_offline: { Args: never; Returns: number }
+      new_handover_code: { Args: never; Returns: string }
+      notify_user: {
+        Args: {
+          p_message: string
+          p_order?: Database["public"]["Tables"]["orders"]["Row"]
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      order_for_action: {
+        Args: { p_as: string; p_order_id: string }
+        Returns: {
+          base_rate: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          carbon_credits_earned: number | null
+          created_at: string
+          customer_id: string
+          delivered_at: string | null
+          delivery_address: Json
+          delivery_address_id: string | null
+          delivery_fee: number | null
+          delivery_type: string
+          distance_fee: number | null
+          distance_km: number | null
+          estimated_delivery_time: string | null
+          green_fee: number | null
+          id: string
+          is_late_night: boolean | null
+          is_peak_hour: boolean | null
+          is_student_order: boolean | null
+          late_night_fee: number | null
+          order_number: string
+          payment_details: Json | null
+          payment_gateway: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          picked_up_at: string | null
+          pickup_started_at: string | null
+          ready_for_pickup_at: string | null
+          rider_assigned_at: string | null
+          rider_id: string | null
+          service_charge: number | null
+          special_instructions: string | null
+          status: string
+          student_discount: number | null
+          subscription_applied: boolean | null
+          subtotal: number
+          surge_fee: number | null
+          time_slot: string | null
+          total_amount: number
+          updated_at: string
+          vendor_accepted_at: string | null
+          vendor_id: string | null
+          verification_code: string | null
+          weight_fee: number | null
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      order_pickup_within_rider_radius: {
+        Args: { p_order_id: string }
+        Returns: boolean
+      }
+      payout_fee_rate: { Args: never; Returns: number }
+      place_order: {
+        Args: {
+          p_address_id: string
+          p_items: Json
+          p_special_instructions?: string
+          p_vendor_id: string
+        }
+        Returns: {
+          base_rate: number | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          carbon_credits_earned: number | null
+          created_at: string
+          customer_id: string
+          delivered_at: string | null
+          delivery_address: Json
+          delivery_address_id: string | null
+          delivery_fee: number | null
+          delivery_type: string
+          distance_fee: number | null
+          distance_km: number | null
+          estimated_delivery_time: string | null
+          green_fee: number | null
+          id: string
+          is_late_night: boolean | null
+          is_peak_hour: boolean | null
+          is_student_order: boolean | null
+          late_night_fee: number | null
+          order_number: string
+          payment_details: Json | null
+          payment_gateway: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          payment_status: string
+          picked_up_at: string | null
+          pickup_started_at: string | null
+          ready_for_pickup_at: string | null
+          rider_assigned_at: string | null
+          rider_id: string | null
+          service_charge: number | null
+          special_instructions: string | null
+          status: string
+          student_discount: number | null
+          subscription_applied: boolean | null
+          subtotal: number
+          surge_fee: number | null
+          time_slot: string | null
+          total_amount: number
+          updated_at: string
+          vendor_accepted_at: string | null
+          vendor_id: string | null
+          verification_code: string | null
+          weight_fee: number | null
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      queue_email: {
+        Args: {
+          p_data: Json
+          p_subject: string
+          p_template: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      quote_order: {
+        Args: { p_address_id: string; p_items: Json; p_vendor_id: string }
+        Returns: {
+          base_rate: number
+          delivery_fee: number
+          distance_fee: number
+          distance_km: number
+          service_charge: number
+          status: string
+          subtotal: number
+          total_amount: number
+        }[]
+      }
+      refund_order: { Args: { p_order_id: string }; Returns: undefined }
+      request_payout: {
+        Args: { p_amount: number; p_bank_account_id: string }
+        Returns: string
+      }
+      rider_accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      rider_confirm_delivery: {
+        Args: { p_code: string; p_order_id: string }
+        Returns: boolean
+      }
+      rider_order_radius_m: { Args: never; Returns: number }
+      rider_start_pickup: { Args: { p_order_id: string }; Returns: undefined }
+      settle_payout: {
+        Args: {
+          p_id: string
+          p_metadata?: Json
+          p_reason?: string
+          p_reference?: string
+          p_role: string
+          p_status: string
+        }
+        Returns: string
+      }
+      shares_order_with: { Args: { p_profile_id: string }; Returns: boolean }
+      update_customer_wallet_on_payment: {
+        Args: { p_amount: number; p_customer_id: string }
+        Returns: undefined
+      }
+      vendor_accept_order: { Args: { p_order_id: string }; Returns: undefined }
+      vendor_confirm_pickup: {
+        Args: { p_code: string; p_order_id: string }
+        Returns: boolean
+      }
+      vendor_mark_ready: { Args: { p_order_id: string }; Returns: undefined }
+      vendor_reject_order: {
+        Args: { p_order_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      vendors_near_address: {
+        Args: { p_address_id: string }
+        Returns: {
+          distance_km: number
+          vendor_id: string
+        }[]
+      }
+      within_rider_radius: {
+        Args: { p_latitude: number; p_longitude: number }
         Returns: boolean
       }
     }
@@ -1559,12 +3107,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1588,11 +3136,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1613,11 +3161,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1638,11 +3186,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1655,11 +3203,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1669,6 +3217,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       delivery_status: [

@@ -13,7 +13,9 @@ export interface VendorProduct {
   category?: string;
   is_eco_friendly: boolean;
   carbon_impact: number;
-  stock_quantity: number;
+  stock_quantity: number | null;
+  /** When true, stock_quantity is required and drives availability */
+  track_stock: boolean;
   image_url?: string;
   status: 'active' | 'inactive' | 'out_of_stock';
   created_at: string;
@@ -70,7 +72,8 @@ export const useVendorProducts = () => {
     category?: string;
     is_eco_friendly: boolean;
     carbon_impact: number;
-    stock_quantity: number;
+    track_stock: boolean;
+    stock_quantity: number | null;
     image_url?: string;
     status: 'active' | 'inactive' | 'out_of_stock';
   }) => {
@@ -96,7 +99,7 @@ export const useVendorProducts = () => {
       return true;
     } catch (error: any) {
       console.error('Error adding product:', error);
-      toast.error('Failed to add product');
+      toast.error(error?.message || 'Failed to add product');
       return false;
     }
   };
@@ -119,7 +122,7 @@ export const useVendorProducts = () => {
       return true;
     } catch (error: any) {
       console.error('Error updating product:', error);
-      toast.error('Failed to update product');
+      toast.error(error?.message || 'Failed to update product');
       return false;
     }
   };

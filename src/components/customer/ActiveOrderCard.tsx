@@ -2,6 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { Button } from '@/components/ui/button';
 import { Truck, Box, Clock, Leaf, ChevronRight } from 'lucide-react';
 
@@ -22,22 +23,7 @@ interface ActiveOrderProps {
 const ActiveOrderCard = ({ order }: ActiveOrderProps) => {
   const navigate = useNavigate();
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'processing':
-        return <Badge className="bg-blue-500">Processing</Badge>;
-      case 'in-transit':
-        return <Badge className="bg-amber-500">In Transit</Badge>;
-      case 'delivered':
-        return <Badge className="bg-green-500">Delivered</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-red-500">Cancelled</Badge>;
-      case 'pending':
-        return <Badge className="bg-purple-500">Pending</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
-    }
-  };
+  const getStatusBadge = (status: string) => <OrderStatusBadge status={status} />;
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
