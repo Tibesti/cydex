@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import StoreImagesUpload from '@/components/vendor/settings/StoreImagesUpload';
-import { VerifiedBadge } from '@/components/customer/vendors/VendorBadges';
+import VerificationCard from '@/components/vendor/settings/VerificationCard';
+import NotificationSettingsCard from '@/components/notifications/NotificationSettingsCard';
 import VendorRatings from '@/components/vendor/settings/VendorRatings';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -221,8 +222,8 @@ const VendorSettingsPage = () => {
                 <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
                   <div className="lg:w-1/3 flex flex-col items-center">
                     <StoreImagesUpload />
-                    <div className="mt-2">
-                      <VerifiedBadge verified={!!profile.verified} />
+                    <div className="mt-3 w-full">
+                      <VerificationCard />
                     </div>
                   </div>
 
@@ -415,45 +416,7 @@ const VendorSettingsPage = () => {
 
               <TabsContent value="preferences" className="mt-3 sm:mt-4">
                 <div className="space-y-3 sm:space-y-4">
-                  <PreferenceCard
-                    title="Notification Preferences"
-                    description="Manage your notification settings."
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm sm:text-base">Email Notifications</span>
-                        <Switch 
-                          id="email-notifications"
-                          checked={localSettings?.notification_preferences?.email || false}
-                          onCheckedChange={(checked) => handleNotificationChange('email', checked)}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm sm:text-base">Push Notifications</span>
-                        <Switch 
-                          id="push-notifications"
-                          checked={localSettings?.notification_preferences?.push || false}
-                          onCheckedChange={(checked) => handleNotificationChange('push', checked)}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm sm:text-base">SMS Notifications</span>
-                        <Switch 
-                          id="sms-notifications"
-                          checked={localSettings?.notification_preferences?.sms || false}
-                          onCheckedChange={(checked) => handleNotificationChange('sms', checked)}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm sm:text-base">Marketing Emails</span>
-                        <Switch 
-                          id="marketing-notifications"
-                          checked={localSettings?.notification_preferences?.marketing || false}
-                          onCheckedChange={(checked) => handleNotificationChange('marketing', checked)}
-                        />
-                      </div>
-                    </div>
-                  </PreferenceCard>
+                  <NotificationSettingsCard />
 
                   <PreferenceCard
                     title="Appearance"

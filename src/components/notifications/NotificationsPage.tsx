@@ -10,6 +10,7 @@ import { errorMessage } from '@/lib/address';
 import { toast } from 'sonner';
 import { useNotifications, useNotificationsPage, type AppNotification } from '@/hooks/useNotifications';
 import SimplePagination from '@/components/ui/simple-pagination';
+import PushPrompt from './PushPrompt';
 import { useState } from 'react';
 
 type Role = 'customer' | 'vendor' | 'rider';
@@ -69,6 +70,8 @@ const NotificationsPage = ({ role }: { role: Role }) => {
           Mark all as read
         </Button>
       </div>
+
+      <PushPrompt />
 
       {isLoading ? (
         <div className="space-y-2">

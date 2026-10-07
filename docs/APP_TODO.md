@@ -105,11 +105,16 @@ These were on the original list and are now live, so they've been left out above
   - payment confirmation on the server
 - **Request a rider (vendors):** vendors send a rider to deliver orders their customers placed with them directly, paying the delivery fee plus 10% from their wallet (card for any shortfall), with saved customers. See [ORDER_FLOW.md → Request a rider](ORDER_FLOW.md#request-a-rider).
 - **Rider dashboard and profile:** delivery preferences and the weekly schedule are gone (Cydex sets the order radius). The dashboard shows Recent deliveries, with **See all** going to My Deliveries.
+- **Vendor and rider verification:** onboarding, review screens, admin approvals with reasons, verified badges and business categories ([VERIFICATION.md](VERIFICATION.md)).
+- **Notification settings and push notifications,** with a reminder banner for vendors ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
+- **Admin order tools:** relieve a rider or reassign an order ([ORDER_FLOW.md → Admin tools](ORDER_FLOW.md#admin-tools)).
 - **Wallet balances are only changed by the database.** Users can read their wallet but not write it. Withdrawals go through `request_payout` (checks and deducts the balance) and the `squad-payout` Edge Function (sends the transfer, and puts the money back if it fails).
 
 
 
 # New checklist
+
+> **Built on 7 Oct 2026:** all three items below. See [VERIFICATION.md](VERIFICATION.md), [NOTIFICATIONS.md](NOTIFICATIONS.md) and [ORDER_FLOW.md → Admin tools](ORDER_FLOW.md#admin-tools). One choice differs from the note below: vendors are **reminded** to turn on push (a banner), not blocked, because iPhones can only receive push once the app is added to the Home Screen.
 
 - Lets handle vendor and rider verification. they cannot login directly after signup, they should be taken to their onboarding pages. Vendors onboarding page info to collect:  Store name (which is what customers see - update where necessary), Phone number, store logo and banner (also seen in their settings page), Business Category (a list added from the admin - factor this in in the admin too - for now the only thin on the list is Restaurant), Is this a registered Business (yes/no), If yes - Upload Business License (field to upload file) Then they submit. For those who Uploaded the file they are redirected to an awaiting verification screen, let them know they should watch their emails for the verification. When they try to login without being verified - if still pending, they are redirected to that screen. If they were rejected they will be redirected to a rscreen telling they have being rejected and they can edit their verification response to change back to pending. Vendors that do not upload document are given access to the dashboard immediately after onboarding - but they will be unverified - Customers can see this too
 

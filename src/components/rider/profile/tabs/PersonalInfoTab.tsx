@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import PersonalInfoForm from './forms/PersonalInfoForm';
-import NotificationPreferencesForm from './forms/NotificationPreferencesForm';
+import NotificationSettingsCard from '@/components/notifications/NotificationSettingsCard';
 
 export interface PersonalDraft {
   name: string;
@@ -104,12 +104,9 @@ const PersonalInfoTab = ({ editing, profile, onSaveProfile, onDraftChange }: Per
         onSave={handleSave}
       />
 
-      <NotificationPreferencesForm
-        preferences={preferences.notifications}
-        editing={editing}
-        onNotificationChange={handleNotificationChange}
-        onSave={handleSave}
-      />
+      <div className="mt-4">
+        <NotificationSettingsCard />
+      </div>
     </>
   );
 };

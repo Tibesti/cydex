@@ -709,8 +709,156 @@ export type Database = {
         }
         Relationships: []
       }
+      verifications: {
+        Row: {
+          profile_id: string
+          role: string
+          status: string
+          access_while_pending: boolean
+          status_before_suspension: string | null
+          business_category_id: string | null
+          is_registered_business: boolean | null
+          business_license_path: string | null
+          vehicle_type: string | null
+          vehicle_model: string | null
+          vehicle_year: number | null
+          vehicle_color: string | null
+          vehicle_registration: string | null
+          id_document_type: string | null
+          id_document_path: string | null
+          rejection_reason: string | null
+          suspension_reason: string | null
+          submitted_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          profile_id: string
+          role: string
+          status: string
+          access_while_pending?: boolean
+          status_before_suspension?: string | null
+          business_category_id?: string | null
+          is_registered_business?: boolean | null
+          business_license_path?: string | null
+          vehicle_type?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+          id_document_type?: string | null
+          id_document_path?: string | null
+          rejection_reason?: string | null
+          suspension_reason?: string | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          profile_id?: string
+          role?: string
+          status?: string
+          access_while_pending?: boolean
+          status_before_suspension?: string | null
+          business_category_id?: string | null
+          is_registered_business?: boolean | null
+          business_license_path?: string | null
+          vehicle_type?: string | null
+          vehicle_model?: string | null
+          vehicle_year?: number | null
+          vehicle_color?: string | null
+          vehicle_registration?: string | null
+          id_document_type?: string | null
+          id_document_path?: string | null
+          rejection_reason?: string | null
+          suspension_reason?: string | null
+          submitted_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      business_categories: {
+        Row: {
+          id: string
+          name: string
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          profile_id: string
+          email_enabled: boolean
+          push_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          profile_id: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          profile_id?: string
+          email_enabled?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          profile_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          user_agent?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
+          push_sent_at: string | null
           created_at: string
           expires_at: string | null
           id: string
@@ -723,6 +871,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          push_sent_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -735,6 +884,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          push_sent_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -897,6 +1047,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          dispatch_priority: number
           base_rate: number | null
           cancel_reason: string | null
           cancelled_at: string | null
@@ -948,6 +1099,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -999,6 +1151,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
           cancelled_at?: string | null
@@ -2556,6 +2709,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      submit_vendor_onboarding: {
+        Args: { p_store_name: string; p_phone: string; p_category_id: string; p_is_registered: boolean; p_license_path?: string }
+        Returns: string
+      }
+      submit_rider_onboarding: {
+        Args: {
+          p_phone: string; p_vehicle_type: string; p_vehicle_model: string | null; p_vehicle_year: number | null
+          p_vehicle_color: string | null; p_vehicle_registration: string | null; p_id_document_type: string; p_id_document_path: string
+        }
+        Returns: string
+      }
+      admin_review_verification: {
+        Args: { p_profile_id: string; p_action: string; p_reason?: string }
+        Returns: string
+      }
+      admin_relieve_rider: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_reassign_order: {
+        Args: { p_order_id: string; p_rider_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_rider_candidates: {
+        Args: { p_order_id: string }
+        Returns: { rider_id: string; name: string | null; phone: string | null; online: boolean; distance_km: number | null; busy: boolean }[]
+      }
+      register_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string }
+        Returns: undefined
+      }
       rider_request_quote: {
         Args: { p_latitude: number; p_longitude: number }
         Returns: {

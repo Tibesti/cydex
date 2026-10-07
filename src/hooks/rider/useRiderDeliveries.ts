@@ -38,6 +38,8 @@ export interface DeliveryData {
     order_number?: string;
     status?: string;
     payment_status?: string;
+    /** Above 0 when an admin put the order back in the pool: shown first */
+    dispatch_priority?: number;
     delivery_address?: any;
     special_instructions?: string;
   };
@@ -89,6 +91,7 @@ export const useRiderDeliveries = () => {
               subtotal,
               status,
               payment_status,
+              dispatch_priority,
               delivery_address,
               special_instructions,
               customer_profile:profiles!customer_id(name, email, phone),

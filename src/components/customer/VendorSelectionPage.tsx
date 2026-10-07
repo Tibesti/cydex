@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, MapPin } from 'lucide-react';
+import { BadgeCheck, Search, MapPin } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const { vendors, defaultAddress, loading } = useVendorCards();
   const allCategories = useMemo(
@@ -35,7 +36,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
     const matchesCategory = !selectedCategory || 
                            vendor.categories.includes(selectedCategory);
     
-    return matchesSearch && matchesCategory;
+    return matchesSearch && matchesCategory && (!verifiedOnly || vendor.verified);
   });
 
   if (loading) {
@@ -90,6 +91,16 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
           >
             All Cuisines
           </Button>
+          <Button
+            variant={verifiedOnly ? "default" : "outline"}
+            size="sm"
+            onClick={() => setVerifiedOnly((v) => !v)}
+            className="text-xs"
+            aria-pressed={verifiedOnly}
+          >
+            <BadgeCheck className="mr-1 h-3.5 w-3.5" />
+            Verified only
+          </Button>
           {allCategories.map(category => (
             <Button
               key={category}
@@ -113,13 +124,14 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
           <Badge variant="outline">{filteredVendors.length}</Badge>
         </div>
         
-        {(searchQuery || selectedCategory) && (
+        {(searchQuery || selectedCategory || verifiedOnly) && (
           <Button
             variant="ghost"
             size="sm"
             onClick={() => {
               setSearchQuery('');
               setSelectedCategory(null);
+              setVerifiedOnly(false);
             }}
           >
             Clear Filters

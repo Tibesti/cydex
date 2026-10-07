@@ -210,6 +210,19 @@ Emails are queued in `email_outbox` by the database and sent by the `send-emails
 
 Deploying the migrations and functions, setting the Squad secrets and webhook, and setting up emails are listed in [APP_TODO.md → General](APP_TODO.md#general).
 
+## Admin tools
+
+Admin → Orders → an order's menu (or its details). Migration [`20261007200000_admin_order_tools.sql`](../supabase/migrations/20261007200000_admin_order_tools.sql).
+
+- **Relieve rider:** for orders that are `rider_assigned` or `picking_up`, before the rider collects them.
+  - The order goes back to `ready_for_pickup` and shows **first** in nearby riders' Available Orders (`orders.dispatch_priority`). Nearby riders are alerted again.
+  - The relieved rider is told the admin's reason.
+- **Reassign rider** (or **Assign a rider**): for orders that are `ready_for_pickup`, `rider_assigned` or `picking_up`.
+  - The admin picks from verified riders, listed online first and then nearest to the pickup. Riders already on a delivery can't be picked.
+  - The order is the new rider's straight away. The old rider (if any), the new rider and the customer are notified.
+- **Both:** need a reason, and **replace the pickup code**, so a previous rider's code stops working.
+- **Removed:** the screen's old buttons that set statuses directly ("Confirm", "Processing", "Mark delivered", "Cancel"). They skipped handover codes, refunds and settlement, and used status names the database no longer accepts.
+
 ## Known gaps
 
 - **Riders could read item prices** by querying the database directly; the app just doesn't show them. Hiding them fully needs a separate view for riders.

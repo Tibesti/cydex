@@ -1,6 +1,8 @@
 
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
+import VendorOnboarding from '../pages/onboarding/VendorOnboarding';
+import VerificationStatus from '../pages/onboarding/VerificationStatus';
 import Notifications from '../pages/vendor/Notifications';
 import Products from '../pages/vendor/Products';
 import RiderRequests from '../pages/vendor/rider-requests/RiderRequests';
@@ -18,6 +20,24 @@ import AddProduct from '../pages/vendor/AddProduct';
 const VendorRoutes = () => {
   return (
     <Routes>
+      <Route 
+        path="/onboarding" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']} skipVerification>
+            <VendorOnboarding />
+          </ProtectedRoute>
+        } 
+      />
+
+      <Route 
+        path="/verification" 
+        element={
+          <ProtectedRoute allowedRoles={['VENDOR']} skipVerification>
+            <VerificationStatus role="vendor" />
+          </ProtectedRoute>
+        } 
+      />
+
       <Route 
         path="/" 
         element={

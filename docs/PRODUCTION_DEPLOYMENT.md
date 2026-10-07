@@ -22,7 +22,7 @@ Feature work that isn't a launch blocker, such as rider verification and push no
     ```
     npx supabase link --project-ref <prod-ref>
     npx supabase db push --linked
-    npx supabase functions deploy squad-checkout squad-webhook squad-payout send-emails
+    npx supabase functions deploy squad-checkout squad-webhook squad-payout send-emails send-push
     ```
     Then update `project_id` in `supabase/config.toml`.
   - If you keep the current project, delete the test orders, wallets, transactions, payout requests and notifications, and remove test accounts under Authentication → Users.
@@ -44,6 +44,9 @@ Feature work that isn't a launch blocker, such as rider verification and push no
   - `vendor_commission_rate` 0.10
   - `rider_share_rate` 0.85
 - [ ] **Create the admin account(s).** Sign up normally, then set `profiles.role` to `admin` in the Table Editor.
+
+- [ ] **Push notifications** on the production project: generate production VAPID keys, set `VITE_VAPID_PUBLIC_KEY` in Vercel, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` as function secrets, deploy `send-push`, and update `app_config.functions_url` to the production project. See [NOTIFICATIONS.md → Setup](NOTIFICATIONS.md#setup-once-per-supabase-project).
+- [ ] **Review the verification queue** (Admin → Verifications) before launch, so the first vendors and riders aren't left waiting.
 
 ## 3. Squad (live)
 

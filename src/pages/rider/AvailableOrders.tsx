@@ -89,6 +89,8 @@ const AvailableOrdersPage = () => {
       default:
         break;
     }
+    // Orders an admin put back in the pool (rider relieved) always come first
+    filtered.sort((a, b) => (b.order?.dispatch_priority ?? 0) - (a.order?.dispatch_priority ?? 0));
 
     setFilteredOrders(filtered);
   }, [ordersToUse, searchQuery, sortBy, position]);

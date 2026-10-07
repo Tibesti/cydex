@@ -7,3 +7,7 @@ verify_jwt = false
 # Called by pg_cron with the x-cron-secret header
 [functions.send-emails]
 verify_jwt = false
+
+# Called by the database for each new notification; reads only the notification id
+[functions.send-push]
+verify_jwt = false

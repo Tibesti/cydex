@@ -14,6 +14,7 @@ import RiderLocationBar from '@/components/rider/location/RiderLocationBar';
 import RiderLocationGate from '@/components/rider/location/RiderLocationGate';
 import { useNotificationsRealtime } from '@/hooks/useNotifications';
 import RiderRatingPrompt from '@/components/customer/ratings/RiderRatingPrompt';
+import PushPrompt from '@/components/notifications/PushPrompt';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -103,6 +104,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, userRole })
       )}>
         {userRole === 'CUSTOMER' && <DeliveryAddressBar />}
         {userRole === 'RIDER' && <RiderLocationBar />}
+        {/* Vendors are asked to turn on push so they don't miss orders (a reminder, never a block) */}
+        {userRole === 'VENDOR' && <PushPrompt tone="warning" className="m-2 sm:m-4 md:mx-6" />}
         {children}
       </main>
 

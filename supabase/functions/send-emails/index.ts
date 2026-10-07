@@ -29,6 +29,15 @@ function body(template: string, d: Record<string, unknown>): string {
     case 'refund':
       return `${hi}<p><strong>${naira(d.amount)}</strong> for order <strong>#${escape(d.order_number)}</strong>
         has been refunded to your Cydex wallet.</p>`;
+    case 'verification_approved':
+      return `${hi}<p>Good news: your ${d.role === 'vendor' ? 'store' : 'rider account'} has been verified.
+        ${d.role === 'vendor' ? 'Customers now see your verified badge.' : 'You can now accept deliveries in the app.'}</p>`;
+    case 'verification_rejected':
+      return `${hi}<p>Your verification wasn't approved.</p><p><strong>Reason:</strong> ${escape(d.reason)}</p>
+        <p>Log in to update your details and resubmit.</p>`;
+    case 'account_suspended':
+      return `${hi}<p>Your Cydex account has been suspended.</p><p><strong>Reason:</strong> ${escape(d.reason)}</p>
+        <p>Reply to this email if you think this is a mistake.</p>`;
     default:
       throw new Error(`Unknown email template: ${template}`);
   }

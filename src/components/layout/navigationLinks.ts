@@ -47,6 +47,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
       return [
         { name: 'Overview', href: '/admin', icon: Home },
         { name: 'Users', href: '/admin/users', icon: Users },
+        { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
         { name: 'Orders', href: '/admin/orders', icon: Package },
         { name: 'Payments', href: '/admin/payments', icon: CreditCard },
         { name: 'Content', href: '/admin/content', icon: FileText },
