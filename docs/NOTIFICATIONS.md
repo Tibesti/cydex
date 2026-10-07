@@ -25,7 +25,7 @@ Every user has two switches. Customers find them in Profile → Preferences, ven
 
 ## How it works
 
-1. **Turning push on:** the browser asks permission. The app then registers `public/sw.js`, the service worker, and saves the device's subscription with `register_push_subscription`. The subscription is stored in `push_subscriptions`, one row per browser or device.
+1. **Turning push on:** the browser asks permission. The service worker `public/sw.js` is already registered on every visit (see `docs/INSTALLABLE_APP.md`), so the app just saves the device's subscription with `register_push_subscription`. The subscription is stored in `push_subscriptions`, one row per browser or device.
 2. **Sending:** every new row in `notifications` calls the `send-push` Edge Function through `pg_net`, for users with push on.
 3. **Delivery:** `send-push` reads the notification itself and sends it once (`notifications.push_sent_at`) to that user's devices. It removes subscriptions that browsers report as expired.
 4. **Tapping it:** opens the matching order page, or the Notifications page.
