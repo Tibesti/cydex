@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types/auth.types';
 import UnreadBadge from '@/components/notifications/UnreadBadge';
+import InstallAppMenuItem from '@/components/pwa/InstallAppMenuItem';
 import { useNotifications } from '@/hooks/useNotifications';
 
 interface SidebarLink {
@@ -84,6 +85,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                   </Link>
                 </li>
               ))}
+              <li>
+                <InstallAppMenuItem onDone={onClose} />
+              </li>
             </ul>
           </nav>
         </div>

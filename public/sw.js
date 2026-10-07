@@ -1,9 +1,62 @@
-// Cydex service worker: shows push notifications and opens the right page
-// when one is tapped. Registered by src/lib/push.ts when the user turns on
-// push notifications.
+// Cydex service worker (registered on every visit by src/lib/pwa.ts):
+//  - makes the app installable and gives it an offline page
+//  - caches the build's versioned files (/assets/*) for faster loads
+//  - shows push notifications and opens the right page when one is tapped
+// It never caches data (Supabase, Google, Squad): those always go to the network.
 
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+const VERSION = 'cydex-v1';
+const SHELL = [
+  '/offline.html',
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/apple-touch-icon.png',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(VERSION).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return; // data and third parties: straight to the network
+
+  // Pages: always the network; the offline page when there's no connection
+  if (req.mode === 'navigate') {
+    event.respondWith(fetch(req).catch(() => caches.match('/offline.html')));
+    return;
+  }
+
+  // Versioned build files and icons never change under the same name: cache first
+  if (url.pathname.startsWith('/assets/') || url.pathname.startsWith('/icons/')) {
+    event.respondWith(
+      caches.match(req).then(
+        (hit) =>
+          hit ||
+          fetch(req).then((res) => {
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(VERSION).then((cache) => cache.put(req, copy));
+            }
+            return res;
+          }),
+      ),
+    );
+  }
+});
 
 self.addEventListener('push', (event) => {
   let data = {};
@@ -15,8 +68,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'Cydex', {
       body: data.body || '',
-      icon: '/og-tab.png',
-      badge: '/og-tab.png',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-monochrome-512.png',
       tag: data.tag,
       data: { url: data.url || '/' },
     }),

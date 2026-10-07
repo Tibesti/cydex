@@ -119,6 +119,7 @@ Use three test accounts on phones (customer, vendor and rider) and go through th
 - [ ] Rider taps **Head to vendor**, shows the pickup code, and the vendor enters it. Then the rider enters the customer's delivery code, and the order becomes **Delivered**.
 - [ ] The vendor's and rider's wallets are credited with the amounts shown on their order screens.
 - [ ] Cancel a paid pending order as the customer, and reject a paid order as the vendor. Both refund to the customer's wallet with a notification and an email.
+- [ ] Install the app on an Android phone (**Install** banner) and an iPhone (**Share → Add to Home Screen**). Check it opens full-screen with the Cydex icon, and that push notifications arrive on both.
 - [ ] The vendor withdraws a small amount. The money arrives in the bank, and the request becomes completed.
 
 ## 7. After launch

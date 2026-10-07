@@ -35,7 +35,6 @@ Everything needed to go live (keys, Squad live mode, emails, hosting, launch tes
 ## Customers
 
 - [ ] **Push notifications:** order updates on the phone without keeping a browser tab open. In-app notifications already exist (see [ORDER_FLOW.md → Notifications](ORDER_FLOW.md#notifications)); this is about delivering them when the app is closed.
-- [ ] **Installable app:** a progressive web app (PWA) that sits on the phone's home screen, not a browser bookmark.
 - [ ] **Wallet top-up:** a way to add money to the wallet beyond card and bank transfer.
 - [ ] **Schedule pickup:** choose a later time for the order to be collected and delivered, instead of right away. An unused scheduler dialog already exists (`DeliveryScheduler.tsx`), but it still has a free-text address box and the old ₦500 fee.
 
@@ -107,6 +106,7 @@ These were on the original list and are now live, so they've been left out above
 - **Rider dashboard and profile:** delivery preferences and the weekly schedule are gone (Cydex sets the order radius). The dashboard shows Recent deliveries, with **See all** going to My Deliveries.
 - **Vendor and rider verification:** onboarding, review screens, admin approvals with reasons, verified badges and business categories ([VERIFICATION.md](VERIFICATION.md)).
 - **Notification settings and push notifications,** with a reminder banner for vendors ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
+- **Installable app (PWA):** install banner and menu item, app icons, splash screens, offline page ([INSTALLABLE_APP.md](INSTALLABLE_APP.md)).
 - **Admin order tools:** relieve a rider or reassign an order ([ORDER_FLOW.md → Admin tools](ORDER_FLOW.md#admin-tools)).
 - **Wallet balances are only changed by the database.** Users can read their wallet but not write it. Withdrawals go through `request_payout` (checks and deducts the balance) and the `squad-payout` Edge Function (sends the transfer, and puts the money back if it fails).
 
