@@ -73,7 +73,7 @@ Paid always equals Vendor got + Rider got + Cydex total. Refunded orders aren't 
 2. An admin opens **Money → Withdrawals**:
    - **Approve:** `squad-payout` (`action: 'approve'`) sends the Squad transfer. Two admins can't send the same one twice. If Squad rejects the transfer, the money goes back to the wallet.
    - **Reject** (with a reason): `admin_reject_payout`. The request becomes `cancelled`, the money goes back, and they're told why.
-   - **Check status:** asks Squad about a transfer that's still processing. You rarely need it:
+   - **Check status:** asks Squad about a transfer that's still processing. You rarely need it, because of the automatic check below.
 3. **Finishing is automatic.** If Squad confirms the transfer straight away, it's marked **Paid** on approval. Otherwise a scheduled job (`payout-status-sweep`, every 10 minutes) checks every withdrawal still "sent" with Squad. Each one becomes **Paid**, or **Failed** with the money returned, and the rider or vendor is notified. Only paid withdrawals count towards withdrawal-fee revenue.
 
 ### Pricing

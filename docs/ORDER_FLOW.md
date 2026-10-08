@@ -166,8 +166,8 @@ Wallet balances are only changed by the database; users can read their wallet bu
 - **Credits:** order settlement on delivery (vendor, rider) and refunds (customer).
 - **Withdrawals:**
   1. `request_payout(amount, bank account)` checks the balance and the bank account, deducts the amount, and creates a `pending` payout request, with a 1.5% fee taken from the amount sent. The user is told it's waiting for approval, and admins are notified.
-  2. **An admin approves it** (Admin → Money → Withdrawals). The `squad-payout` Edge Function then sends the Squad transfer and marks it `processing`. An admin can instead **reject** it with a reason: it becomes `cancelled` and the amount goes back to the wallet.
-  3. If Squad rejects the transfer, or a later status check says it failed, the request becomes `failed` and the amount goes back to the wallet, once, with a notification. A successful transfer becomes `completed`.
+  2. **An admin approves it** (Admin → Money → Withdrawals). The `squad-payout` Edge Function then sends the Squad transfer and marks it `completed` if Squad confirms straight away, otherwise `processing`. An admin can instead **reject** it with a reason: it becomes `cancelled` and the amount goes back to the wallet.
+  3. If Squad rejects the transfer, or a later status check (the admin's **Check status**, or the `payout-status-sweep` job that runs every 10 minutes) says it failed, the request becomes `failed` and the amount goes back to the wallet, once, with a notification. The same checks mark a successful transfer `completed`.
   
   See [ADMIN.md → Withdrawals need an admin](ADMIN.md#withdrawals-need-an-admin).
 - Users can view their payout requests but can't create or change them directly.
