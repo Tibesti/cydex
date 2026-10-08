@@ -65,12 +65,13 @@ Everything needed to go live (keys, Squad live mode, emails, hosting, launch tes
 
 ## Admin
 
-- [ ] **Payout approval:** approve rider and vendor payout requests in one place.
+- [x] **Payout approval:** done. Every withdrawal waits for an admin (Admin → Money → Withdrawals). See [ADMIN.md](ADMIN.md#withdrawals-need-an-admin).
 - [ ] **Hire-purchase ledger:** weekly deductions and weeks remaining to ownership for every financed bicycle.
 - [ ] **Manual order entry:** put WhatsApp and phone orders into the same records as app orders.
-- [ ] **Fare settings screen:** change the minimum fare, per-km rate, Service Charge, vendor commission and rider share without a developer. The values already live in the `pricing_config` table (see [PRICING_MODEL_IMPLEMENTATION_PLAN.md](PRICING_MODEL_IMPLEMENTATION_PLAN.md)), but they can only be changed in the database today.
-- [ ] **Delivery intervention:** reassign a stuck delivery and resolve disputes.
-- [ ] **Platform-wide reporting:** the combined view of orders and revenue that riders and vendors already get for their own accounts.
+- [x] **Fare settings screen:** done (Admin → Pricing, with history). See [ADMIN.md → Pricing](ADMIN.md#pricing).
+- [x] **Delivery intervention:** stuck orders are flagged on the Overview; admins can relieve or reassign the rider, unlock codes, and cancel and refund. Disputes still need a process (who decides, and what evidence).
+- [x] **Platform-wide reporting:** Overview (with period filter) and the Earnings breakdown with CSV export.
+- [ ] **Admin settings page:** the admin's own profile and password in one place (invites already work from Admin → Users).
 
 ## Eco-friendly deliveries
 
@@ -108,6 +109,7 @@ These were on the original list and are now live, so they've been left out above
 - **Notification settings and push notifications,** with a reminder banner for vendors ([NOTIFICATIONS.md](NOTIFICATIONS.md)).
 - **Installable app (PWA):** install banner and menu item, app icons, splash screens, offline page ([INSTALLABLE_APP.md](INSTALLABLE_APP.md)).
 - **Admin order tools:** relieve a rider or reassign an order ([ORDER_FLOW.md → Admin tools](ORDER_FLOW.md#admin-tools)).
+- **Admin update (8 Oct 2026):** Overview with real figures and a period filter, full order details, cancel and refund, withdrawal approval, earnings breakdown, pricing settings, customer suspension, review hiding, email retries, activity log and admin invites ([ADMIN.md](ADMIN.md)).
 - **Wallet balances are only changed by the database.** Users can read their wallet but not write it. Withdrawals go through `request_payout` (checks and deducts the balance) and the `squad-payout` Edge Function (sends the transfer, and puts the money back if it fails).
 
 

@@ -5,8 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import SimplePagination from '@/components/ui/simple-pagination';
 import { useRiderDeliveryHistory } from '@/hooks/rider/useRiderDeliveryHistory';
 import RiderDeliveryList from '@/components/rider/RiderDeliveryList';
+import { PAGE_SIZE } from '@/lib/pagination';
 
-const PAGE_SIZE = 10;
 
 // Every order the rider has taken, with its status
 const DeliveryHistory = () => {

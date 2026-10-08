@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 import { ID_TYPES, STATUS_LABELS, VEHICLE_TYPES, verificationDocUrl, type Verification } from '@/lib/verification';
@@ -27,6 +28,7 @@ const Field = ({ label, value }: { label: string; value?: string | number | null
 
 // One verification request: what was submitted, the document, and the decision
 const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationRow | null; onClose: () => void; onDone: () => void }) => {
+  const confirm = useConfirm();
   const [pending, setPending] = useState<Action | null>(null);
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,21 @@ const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationR
   };
 
   const decide = async (action: Action) => {
+    const who = row.profile?.name || `this ${row.role}`;
+    const ok = await confirm({
+      title: `Are you sure you want to ${action} ${who}?`,
+      description: {
+        verify: row.role === 'vendor' ? 'Their store gets the verified badge.' : 'They can start taking deliveries straight away.',
+        reject: `They'll see your reason and can submit again.`,
+        suspend: row.role === 'vendor'
+          ? 'Their store is hidden from customers and they can’t take orders until reinstated.'
+          : 'They can’t take deliveries until reinstated.',
+        reinstate: 'They go back to the status they had before the suspension.',
+      }[action],
+      confirmLabel: `Yes, ${action}`,
+      destructive: action === 'reject' || action === 'suspend',
+    });
+    if (!ok) return;
     setSaving(true);
     const { error } = await supabase.rpc('admin_review_verification', {
       p_profile_id: row.profile_id,

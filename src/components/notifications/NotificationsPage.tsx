@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  Bell, CheckCheck, CircleCheck, CreditCard, MapPin, Package, PartyPopper, Truck, Undo2, XCircle,
+  Bell, CheckCheck, CircleCheck, CreditCard, Landmark, MapPin, Package, PartyPopper, ShieldCheck, Truck, Undo2, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import SimplePagination from '@/components/ui/simple-pagination';
 import PushPrompt from './PushPrompt';
 import { useState } from 'react';
 
-type Role = 'customer' | 'vendor' | 'rider';
+type Role = 'customer' | 'vendor' | 'rider' | 'admin';
 
 const ICONS: Record<string, React.ElementType> = {
   welcome: PartyPopper,
@@ -30,11 +30,22 @@ const ICONS: Record<string, React.ElementType> = {
   cancelled: XCircle,
   rejected: XCircle,
   refund: Undo2,
+  payout_request: Landmark,
+  payout_requested: Landmark,
+  payout_rejected: Landmark,
+  verification_request: ShieldCheck,
+};
+
+// Admin notifications that aren't about one order
+const ADMIN_LINKS: Record<string, string> = {
+  payout_request: '/admin/payments?tab=payouts',
+  verification_request: '/admin/verifications',
 };
 
 // Where tapping an order notification goes, per role
 const orderLink = (role: Role, n: AppNotification): string | null => {
   const orderId = n.metadata?.order_id;
+  if (role === 'admin') return orderId ? `/admin/orders/${orderId}` : ADMIN_LINKS[n.type] ?? null;
   if (!orderId) return null;
   if (role === 'customer') return `/customer/orders/${orderId}`;
   if (role === 'vendor') return `/vendor/orders/${orderId}`;

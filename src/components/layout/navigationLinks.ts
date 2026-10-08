@@ -1,6 +1,7 @@
 
 import { 
-  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, BarChart, ShieldCheck, Navigation, CreditCard, FileText, Shield
+  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, ShieldCheck, Navigation, FileText,
+  Banknote, Mail, ScrollText, Shield, SlidersHorizontal, Star,
 } from 'lucide-react';
 
 interface SidebarLink {
@@ -46,10 +47,15 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
     case 'ADMIN':
       return [
         { name: 'Overview', href: '/admin', icon: Home },
+        { name: 'Orders', href: '/admin/orders', icon: Package },
+        { name: 'Money', href: '/admin/payments', icon: Banknote },
         { name: 'Users', href: '/admin/users', icon: Users },
         { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
-        { name: 'Orders', href: '/admin/orders', icon: Package },
-        { name: 'Payments', href: '/admin/payments', icon: CreditCard },
+        { name: 'Reviews', href: '/admin/reviews', icon: Star },
+        { name: 'Pricing', href: '/admin/pricing', icon: SlidersHorizontal },
+        { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+        { name: 'Emails', href: '/admin/emails', icon: Mail },
+        { name: 'Activity log', href: '/admin/activity', icon: ScrollText },
         { name: 'Content', href: '/admin/content', icon: FileText },
         { name: 'Security', href: '/admin/security', icon: Shield },
       ];

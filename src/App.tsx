@@ -11,6 +11,7 @@ import AppRoutes from "@/routes/AppRoutes";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import InstallBanner from "@/components/pwa/InstallBanner";
+import { ConfirmProvider } from "@/contexts/ConfirmContext";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ function App() {
           <AuthProvider>
             <CartProvider>
               <TooltipProvider>
+               <ConfirmProvider>
                 <Toaster />
                 <ShadcnToaster />
                 <BrowserRouter>
@@ -33,6 +35,7 @@ function App() {
                   </div>
                   <InstallBanner />
                 </BrowserRouter>
+               </ConfirmProvider>
               </TooltipProvider>
             </CartProvider>
           </AuthProvider>

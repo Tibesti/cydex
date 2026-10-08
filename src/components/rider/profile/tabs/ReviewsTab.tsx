@@ -3,6 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star, MessageSquare, User } from 'lucide-react';
+import PagedList from '@/components/ui/paged-list';
 
 interface ReviewsTabProps {
   profile: any;
@@ -40,8 +41,8 @@ const ReviewsTab = ({ profile, recentReviews }: ReviewsTabProps) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {recentReviews.map((review) => (
-                <div key={review.id} className="border rounded-lg p-4">
+              <PagedList items={recentReviews} getKey={(review) => review.id} render={(review) => (
+                <div className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                       <User className="h-8 w-8 text-gray-400 bg-gray-100 rounded-full p-1" />
@@ -90,7 +91,7 @@ const ReviewsTab = ({ profile, recentReviews }: ReviewsTabProps) => {
                     </div>
                   </div>
                 </div>
-              ))}
+              )} />
             </div>
           )}
         </CardContent>

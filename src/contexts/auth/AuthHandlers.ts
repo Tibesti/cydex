@@ -105,7 +105,7 @@ export const handleLogout = async () => {
 export const handleResetPassword = async (email: string) => {
   try {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${window.location.origin}/auth/set-password`,
     });
     if (error) throw error;
     toast.success('Password reset email sent!');

@@ -165,9 +165,11 @@ Wallet balances are only changed by the database; users can read their wallet bu
 - **Wallets are created automatically** when an account is created, and a new virtual account is linked to its wallet automatically.
 - **Credits:** order settlement on delivery (vendor, rider) and refunds (customer).
 - **Withdrawals:**
-  1. `request_payout(amount, bank account)` checks the balance and the bank account, deducts the amount, and creates a `pending` payout request, with a 1.5% fee taken from the amount sent.
-  2. The `squad-payout` Edge Function sends the Squad transfer and marks it `processing`.
+  1. `request_payout(amount, bank account)` checks the balance and the bank account, deducts the amount, and creates a `pending` payout request, with a 1.5% fee taken from the amount sent. The user is told it's waiting for approval, and admins are notified.
+  2. **An admin approves it** (Admin → Money → Withdrawals). The `squad-payout` Edge Function then sends the Squad transfer and marks it `processing`. An admin can instead **reject** it with a reason: it becomes `cancelled` and the amount goes back to the wallet.
   3. If Squad rejects the transfer, or a later status check says it failed, the request becomes `failed` and the amount goes back to the wallet, once, with a notification. A successful transfer becomes `completed`.
+  
+  See [ADMIN.md → Withdrawals need an admin](ADMIN.md#withdrawals-need-an-admin).
 - Users can view their payout requests but can't create or change them directly.
 
 ## When vendors and riders are paid
@@ -197,6 +199,7 @@ Created by the database (`notify_order_events` trigger, `welcome_new_user` trigg
 | `out_for_delivery` | Order on its way | Order picked up | |
 | `delivered` | Order delivered | Delivered, with the amount credited | Delivery complete, with the amount credited |
 | `cancelled` | Order cancelled | Order cancelled (only if it had been paid) | |
+| Cancelled by an admin | Order cancelled by Cydex, with the reason | Same | Delivery cancelled, with the reason |
 | `rejected` | Order rejected, with the vendor's reason | | |
 | Refund | Refund issued + **email** | | |
 
@@ -212,7 +215,7 @@ Deploying the migrations and functions, setting the Squad secrets and webhook, a
 
 ## Admin tools
 
-Admin → Orders → an order's menu (or its details). Migration [`20261007200000_admin_order_tools.sql`](../supabase/migrations/20261007200000_admin_order_tools.sql).
+Admin → Orders → open an order. Migration [`20261007200000_admin_order_tools.sql`](../supabase/migrations/20261007200000_admin_order_tools.sql). For cancelling and refunding, unlocking codes and everything else on the admin order page, see [ADMIN.md → Order details](ADMIN.md#order-details).
 
 - **Relieve rider:** for orders that are `rider_assigned` or `picking_up`, before the rider collects them.
   - The order goes back to `ready_for_pickup` and shows **first** in nearby riders' Available Orders (`orders.dispatch_priority`). Nearby riders are alerted again.
@@ -227,4 +230,4 @@ Admin → Orders → an order's menu (or its details). Migration [`2026100720000
 
 - **Riders could read item prices** by querying the database directly; the app just doesn't show them. Hiding them fully needs a separate view for riders.
 - **One rider per order at a time**, and one active delivery per rider. There's no reassignment if a rider drops an order; an admin has to step in.
-- **A locked code** (5 wrong tries) has no self-service reset yet.
+- **A locked code** (5 wrong tries) has no self-service reset; an admin unlocks it from the order page.

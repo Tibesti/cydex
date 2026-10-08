@@ -175,8 +175,8 @@ export const useVendorFinancials = () => {
       // Refresh related data to keep UI in sync
       await Promise.all([fetchPayoutRequests(), fetchWalletBalance(), fetchTransactions()]);
       toast({
-        title: "Payout initiated",
-        description: `Transfer of ₦${amount.toLocaleString()} is processing`
+        title: "Withdrawal submitted",
+        description: `₦${amount.toLocaleString()} is sent once Cydex approves it`
       });
       
       return payout;

@@ -1,42 +1,18 @@
-import React from 'react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useNavigate } from 'react-router-dom';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import { Shield } from 'lucide-react';
+import AdminPage from '@/components/admin/AdminPage';
 import { Security as SecurityComponent } from '@/components/admin/Security';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const AdminSecurity = () => {
-  const { user, loading, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-
-  React.useEffect(() => {
-    if (!loading && (!isAuthenticated || user?.role !== 'ADMIN')) {
-      navigate('/admin/login');
-      return;
-    }
-  }, [user, loading, isAuthenticated, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-gray-600 text-sm sm:text-base">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || user?.role !== 'ADMIN') {
-    return null;
-  }
-
-  return (
-    <DashboardLayout userRole="ADMIN">
-      <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <SecurityComponent />
-      </div>
-    </DashboardLayout>
-  );
-};
+// Placeholder kept for planning: the figures below are sample data, not live
+const AdminSecurity = () => (
+  <AdminPage title="Security" icon={Shield} description="Login and account security.">
+    <Alert>
+      <AlertDescription>
+        Preview only: this page shows sample data and isn't connected yet. Admin actions are recorded in the Activity log.
+      </AlertDescription>
+    </Alert>
+    <SecurityComponent />
+  </AdminPage>
+);
 
 export default AdminSecurity;

@@ -13,6 +13,7 @@ import { FileText, Plus, Edit, Trash2, Eye, Search, Globe, AlertCircle, CheckCir
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
 
 interface Announcement {
   id: string;
@@ -33,6 +34,7 @@ interface Announcement {
 }
 
 export function ContentControl() {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -70,7 +72,7 @@ export function ContentControl() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAnnouncements(data || []);
+      setAnnouncements((data ?? []) as Announcement[]);
     } catch (error) {
       console.error('Error fetching announcements:', error);
       toast.error('Failed to load announcements');
@@ -97,6 +99,7 @@ export function ContentControl() {
   };
 
   const handleCreateAnnouncement = async () => {
+    if (!(await confirm({ title: 'Are you sure you want to create this announcement?', confirmLabel: 'Yes, create' }))) return;
     if (!formData.title || !formData.content) {
       toast.error('Please fill in all required fields');
       return;
@@ -124,6 +127,7 @@ export function ContentControl() {
   };
 
   const handleUpdateAnnouncement = async () => {
+    if (!(await confirm({ title: 'Are you sure you want to save these changes?', confirmLabel: 'Yes, save' }))) return;
     if (!selectedAnnouncement) return;
 
     try {
@@ -153,7 +157,7 @@ export function ContentControl() {
   };
 
   const handleDeleteAnnouncement = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this announcement?')) return;
+    if (!(await confirm({ title: 'Are you sure you want to delete this announcement?', description: 'This can’t be undone.', confirmLabel: 'Yes, delete', destructive: true }))) return;
 
     try {
       const { error } = await supabase
@@ -172,6 +176,7 @@ export function ContentControl() {
   };
 
   const handlePublishAnnouncement = async (id: string) => {
+    if (!(await confirm({ title: 'Are you sure you want to publish this announcement?', description: 'Everyone in its audience will see it.', confirmLabel: 'Yes, publish' }))) return;
     try {
       const { error } = await supabase
         .from('announcements')
@@ -192,6 +197,7 @@ export function ContentControl() {
   };
 
   const handleArchiveAnnouncement = async (id: string) => {
+    if (!(await confirm({ title: 'Are you sure you want to archive this announcement?', description: 'It stops showing to users.', confirmLabel: 'Yes, archive', destructive: true }))) return;
     try {
       const { error } = await supabase
         .from('announcements')

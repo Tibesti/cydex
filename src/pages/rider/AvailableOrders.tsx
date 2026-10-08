@@ -13,6 +13,7 @@ import { OrderCard } from '@/components/rider/orders/OrderCard';
 import { OrdersTable } from '@/components/rider/orders/OrdersTable';
 import { useRiderLocation } from '@/hooks/useRiderLocation';
 import { pickupDistanceKm } from '@/lib/riderLocation';
+import PagedList from '@/components/ui/paged-list';
 
 const AvailableOrdersPage = () => {
   const { 
@@ -201,14 +202,13 @@ const AvailableOrdersPage = () => {
                   </CardContent>
                 </Card>
               ) : (
-                filteredOrders.map((order) => (
+                <PagedList items={filteredOrders} getKey={(order) => order.id} resetKey={searchQuery} render={(order) => (
                   <OrderCard
-                    key={order.id}
                     order={order}
                     onAcceptOrder={handleAcceptOrder}
                     loading={acceptingOrder === order.id}
                   />
-                ))
+                )} />
               )}
             </div>
 

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ interface AdminRiderActionDialogProps {
 // Admin: take an order off its rider (back to the pool, top priority) or give
 // it to a chosen verified rider. Both need a reason, which the old rider sees.
 const AdminRiderActionDialog = ({ action, order, onClose, onDone }: AdminRiderActionDialogProps) => {
+  const confirm = useConfirm();
   const [reason, setReason] = useState('');
   const [riderId, setRiderId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,17 @@ const AdminRiderActionDialog = ({ action, order, onClose, onDone }: AdminRiderAc
   };
 
   const submit = async () => {
+    const chosen = candidates.find((c) => c.rider_id === riderId);
+    if (!(await confirm({
+      title: action === 'relieve'
+        ? `Are you sure you want to take #${order.order_number} off ${order.rider?.name ?? 'the rider'}?`
+        : `Are you sure you want to give #${order.order_number} to ${chosen?.name ?? 'this rider'}?`,
+      description: action === 'relieve'
+        ? 'It goes back to nearby riders as top priority, with a new pickup code.'
+        : 'The current rider (if any) is told why, and the new rider gets a new pickup code.',
+      confirmLabel: action === 'relieve' ? 'Yes, relieve' : 'Yes, reassign',
+      destructive: action === 'relieve',
+    }))) return;
     setSaving(true);
     const { error } =
       action === 'relieve'

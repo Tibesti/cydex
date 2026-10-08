@@ -154,7 +154,7 @@ export const useRiderWallet = () => {
 
       // Refresh related data to keep UI in sync
       await Promise.all([fetchPayoutRequests(), fetchWalletBalance()]);
-      toast.success(`Payout of ₦${amount.toLocaleString()} is processing`);
+      toast.success(`Withdrawal of ₦${amount.toLocaleString()} submitted. It's sent once Cydex approves it.`);
       
       return payout;
     } catch (error) {

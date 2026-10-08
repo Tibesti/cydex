@@ -5,11 +5,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { useConfirm } from '@/contexts/ConfirmContext';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 
 // The categories vendors choose from at onboarding
 const BusinessCategories = () => {
+  const confirm = useConfirm();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const { data: categories = [] } = useQuery({
@@ -26,12 +28,23 @@ const BusinessCategories = () => {
   };
 
   const add = async () => {
+    if (!(await confirm({
+      title: `Are you sure you want to add “${name.trim()}”?`,
+      description: 'Vendors can pick it when they set up their store.',
+      confirmLabel: 'Yes, add it',
+    }))) return;
     const { error } = await supabase.from('business_categories').insert({ name: name.trim() });
     if (error) return toast.error(errorMessage(error, 'Could not add the category'));
     setName('');
     refresh();
   };
-  const toggle = async (id: string, isActive: boolean) => {
+  const toggle = async (id: string, label: string, isActive: boolean) => {
+    if (!(await confirm({
+      title: `Are you sure you want to ${isActive ? 'show' : 'hide'} “${label}”?`,
+      description: isActive ? 'Vendors can pick it again.' : 'New vendors can’t pick it. Stores already in it keep it.',
+      confirmLabel: isActive ? 'Yes, show it' : 'Yes, hide it',
+      destructive: !isActive,
+    }))) return;
     const { error } = await supabase.from('business_categories').update({ is_active: isActive }).eq('id', id);
     if (error) return toast.error(errorMessage(error, 'Could not update the category'));
     refresh();
@@ -52,7 +65,7 @@ const BusinessCategories = () => {
             <span className={c.is_active ? '' : 'text-muted-foreground line-through'}>{c.name}</span>
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               Offered
-              <Switch checked={c.is_active} onCheckedChange={(v) => toggle(c.id, v)} />
+              <Switch checked={c.is_active} onCheckedChange={(v) => toggle(c.id, c.name, v)} />
             </label>
           </li>
         ))}

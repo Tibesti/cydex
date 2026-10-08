@@ -32,7 +32,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
   const { theme, setTheme } = useTheme();
   const { unreadCount } = useNotifications();
   const role = userRole.toLowerCase();
-  const hasNotifications = role === 'customer' || role === 'vendor' || role === 'rider';
+  const hasNotifications = role === 'customer' || role === 'vendor' || role === 'rider' || role === 'admin';
 
   // Get role title for display
   const getRoleTitle = () => {

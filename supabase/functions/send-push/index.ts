@@ -11,6 +11,12 @@ const ORDER_LINKS: Record<string, (orderId: string, type: string) => string> = {
   customer: (id) => `/customer/orders/${id}`,
   vendor: (id) => `/vendor/orders/${id}`,
   rider: (id, type) => (type === 'order_nearby' ? '/rider/available' : `/rider/order/${id}`),
+  admin: (id) => `/admin/orders/${id}`,
+};
+// Admin notifications that aren't about one order
+const ADMIN_LINKS: Record<string, string> = {
+  payout_request: '/admin/payments?tab=payouts',
+  verification_request: '/admin/verifications',
 };
 
 Deno.serve(async (req) => {
@@ -50,7 +56,8 @@ Deno.serve(async (req) => {
 
   const role = String(profile?.role ?? '').toLowerCase();
   const orderId = (n.metadata as { order_id?: string } | null)?.order_id;
-  const url = orderId && ORDER_LINKS[role] ? ORDER_LINKS[role](orderId, n.type) : `/${role || 'customer'}/notifications`;
+  const url = orderId && ORDER_LINKS[role] ? ORDER_LINKS[role](orderId, n.type)
+    : (role === 'admin' && ADMIN_LINKS[n.type]) || `/${role || 'customer'}/notifications`;
   const payload = JSON.stringify({ title: n.title, body: n.message, url, tag: n.id });
 
   let sent = 0;

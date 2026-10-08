@@ -11,8 +11,8 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { formatNaira } from '@/lib/pricing';
+import { PAGE_SIZE } from '@/lib/pagination';
 
-const PAGE_SIZE = 10;
 
 // The vendor's requests for a rider to deliver their own customers' orders
 const RiderRequests = () => {

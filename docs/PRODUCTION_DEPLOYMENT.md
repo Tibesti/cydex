@@ -1,6 +1,6 @@
 # Production Deployment Checklist
 
-Everything to do before Cydex takes real orders and real money, as of September 2026. Work top to bottom and tick each item (`[x]`) as it's done.
+Everything to do before Cydex takes real orders and real money, as of October 2026. Work top to bottom and tick each item (`[x]`) as it's done.
 
 Feature work that isn't a launch blocker, such as rider verification and push notifications, stays in [APP_TODO.md](APP_TODO.md).
 
@@ -22,7 +22,7 @@ Feature work that isn't a launch blocker, such as rider verification and push no
     ```
     npx supabase link --project-ref <prod-ref>
     npx supabase db push --linked
-    npx supabase functions deploy squad-checkout squad-webhook squad-payout send-emails send-push
+    npx supabase functions deploy squad-checkout squad-webhook squad-payout send-emails send-push admin-team
     ```
     Then update `project_id` in `supabase/config.toml`.
   - If you keep the current project, delete the test orders, wallets, transactions, payout requests and notifications, and remove test accounts under Authentication → Users.
@@ -30,20 +30,18 @@ Feature work that isn't a launch blocker, such as rider verification and push no
   - Turn on backups, and point-in-time recovery if the budget allows.
 - [ ] **Auth URLs.** Go to Authentication → URL Configuration.
   - Set **Site URL** to the live domain.
-  - Add these redirect URLs: `https://<domain>/auth` (sign-up confirmation) and `https://<domain>/auth/reset-password` (password reset).
+  - Add these redirect URLs: `https://<domain>/auth` (sign-up confirmation) and `https://<domain>/auth/set-password` (password reset and admin invites).
 - [ ] **Auth emails through your own SMTP.** Supabase's built-in email only sends a few messages per hour.
   - Under Authentication → Emails → SMTP Settings, add the email provider's SMTP details. Resend offers SMTP too.
   - Customise the confirmation and reset email templates with Cydex branding.
 - [ ] **Run the Security Advisor and Performance Advisor** under Advisors in the dashboard, and fix anything marked error or warning. Also turn on leaked-password protection under Authentication.
 - [ ] **Check Realtime** under Database → Publications → `supabase_realtime`. It should include `notifications` (for the unread badges and toasts) and `orders` (for live order updates).
 - [ ] **Check the scheduled jobs** under Integrations → Cron. `mark-stale-riders-offline` should run every minute. The email job gets added in section 4.
-- [ ] **Check the prices** in the `pricing_config` table:
-  - `base_rate` 600
-  - `distance_rate_per_km` 200
-  - `service_charge_rate` 0.15
-  - `vendor_commission_rate` 0.10
-  - `rider_share_rate` 0.85
-- [ ] **Create the admin account(s).** Sign up normally, then set `profiles.role` to `admin` in the Table Editor.
+- [ ] **Check the prices** on Admin → Pricing (they can be changed there at any time):
+  - Minimum delivery fare ₦600, price per km ₦200
+  - Service Charge 15%, vendor commission 10%, rider-request commission 10%
+  - Rider share of the delivery fee 85%
+- [ ] **Create the first admin account.** Sign up normally, then set `profiles.role` to `admin` in the Table Editor. Invite the rest from Admin → Users → **Invite admin** ([ADMIN.md → Users](ADMIN.md#users)).
 
 - [ ] **Push notifications** on the production project: generate production VAPID keys, set `VITE_VAPID_PUBLIC_KEY` in Vercel, set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` as function secrets, deploy `send-push`, and update `app_config.functions_url` to the production project. See [NOTIFICATIONS.md → Setup](NOTIFICATIONS.md#setup-once-per-supabase-project).
 - [ ] **Review the verification queue** (Admin → Verifications) before launch, so the first vendors and riders aren't left waiting.
@@ -61,7 +59,7 @@ Feature work that isn't a launch blocker, such as rider verification and push no
   ```
   Type the key in directly. Don't wrap it in `< >`, because zsh reads that as a file.
 - [ ] **Set the live webhook URL** in the Squad live dashboard: `https://<prod-ref>.supabase.co/functions/v1/squad-webhook`
-- [ ] **Keep money in the Squad balance for withdrawals.** Vendor, rider and customer withdrawals are sent from Cydex's Squad balance. If it's empty, transfers fail and the money goes back to the user's wallet.
+- [ ] **Keep money in the Squad balance for withdrawals.** Vendor, rider and customer withdrawals are sent from Cydex's Squad balance when an admin approves them. If it's empty, transfers fail and the money goes back to the user's wallet.
 
 ## 4. Emails (welcome, payment confirmed, refund)
 
@@ -120,12 +118,12 @@ Use three test accounts on phones (customer, vendor and rider) and go through th
 - [ ] The vendor's and rider's wallets are credited with the amounts shown on their order screens.
 - [ ] Cancel a paid pending order as the customer, and reject a paid order as the vendor. Both refund to the customer's wallet with a notification and an email.
 - [ ] Install the app on an Android phone (**Install** banner) and an iPhone (**Share → Add to Home Screen**). Check it opens full-screen with the Cydex icon, and that push notifications arrive on both.
-- [ ] The vendor withdraws a small amount. The money arrives in the bank, and the request becomes completed.
+- [ ] The vendor withdraws a small amount. An admin approves it in Admin → Money → Withdrawals. The money arrives in the bank, and the request becomes completed.
+- [ ] As an admin, cancel and refund a paid order from its order page, and check the Overview and the Earnings breakdown add up.
 
 ## 7. After launch
 
 - [ ] **Check regularly:**
+  - The admin Overview's **To do** list: verifications, withdrawals, stuck orders and failed emails
   - Edge Function logs (dashboard → Edge Functions → Logs) for `squad-webhook` and `squad-payout` errors
-  - `email_outbox` rows with status `failed`
-  - payout requests stuck in `processing`
-- [ ] **Decide who handles support cases:** locked handover codes, stuck deliveries and failed payouts. The admin tools for these are still to do; see [APP_TODO.md → Admin](APP_TODO.md#admin).
+- [ ] **Decide who handles support cases:** withdrawals, locked handover codes, stuck deliveries and refunds. The tools are in the admin ([ADMIN.md](ADMIN.md)).

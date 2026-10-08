@@ -4,6 +4,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
+import PagedList from '@/components/ui/paged-list';
 import { IN_PROGRESS_STATUSES, type OrderStatus } from '@/lib/orderStatus';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -217,9 +218,7 @@ const OrdersPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              orders.map(order => (
-                <OrderCard key={order.id} order={order} showRatingButton={order.status === 'delivered'} />
-              ))
+              <PagedList items={orders} getKey={(order) => order.id} render={(order) => <OrderCard order={order} showRatingButton={order.status === 'delivered'} />} />
             )}
           </TabsContent>
 
@@ -242,9 +241,7 @@ const OrdersPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              activeOrders.map(order => (
-                <OrderCard key={order.id} order={order} />
-              ))
+              <PagedList items={activeOrders} getKey={(order) => order.id} render={(order) => <OrderCard order={order} />} />
             )}
           </TabsContent>
 
@@ -258,9 +255,7 @@ const OrdersPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              completedOrders.map(order => (
-                <OrderCard key={order.id} order={order} showRatingButton={true} />
-              ))
+              <PagedList items={completedOrders} getKey={(order) => order.id} render={(order) => <OrderCard order={order} showRatingButton={true} />} />
             )}
           </TabsContent>
 
@@ -274,9 +269,7 @@ const OrdersPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              cancelledOrders.map(order => (
-                <OrderCard key={order.id} order={order} />
-              ))
+              <PagedList items={cancelledOrders} getKey={(order) => order.id} render={(order) => <OrderCard order={order} />} />
             )}
           </TabsContent>
         </Tabs>

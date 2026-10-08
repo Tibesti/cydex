@@ -12,8 +12,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { STATUS_LABELS, type VerificationStatus } from '@/lib/verification';
 import VerificationReviewDialog, { type VerificationRow } from '@/components/admin/verifications/VerificationReviewDialog';
 import BusinessCategories from '@/components/admin/verifications/BusinessCategories';
+import { PAGE_SIZE } from '@/lib/pagination';
 
-const PAGE_SIZE = 20;
 const STATUSES: VerificationStatus[] = ['pending', 'unverified', 'verified', 'rejected', 'suspended'];
 
 // Admin: review vendor and rider verifications, and manage business categories

@@ -6,8 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import SimplePagination from '@/components/ui/simple-pagination';
 import { cn } from '@/lib/utils';
+import { PAGE_SIZE } from '@/lib/pagination';
 
-const PAGE_SIZE = 10;
 
 interface Review {
   id: string;

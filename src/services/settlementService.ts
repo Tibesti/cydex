@@ -288,8 +288,8 @@ class SettlementService {
 
   /**
    * Withdraw from the signed-in user's wallet to one of their bank accounts.
-   * The database checks and deducts the balance; the squad-payout Edge
-   * Function sends the transfer and restores the balance if it fails.
+   * The database checks and deducts the balance and records a pending request;
+   * the transfer is sent once an admin approves it (squad-payout 'approve').
    */
   private async requestPayout(amount: number, bankAccountId: string) {
     const { payout } = await invokeFunction<{ payout: unknown }>('squad-payout', {

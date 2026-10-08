@@ -15,8 +15,11 @@ import {
 import { useVendorProducts, type VendorProduct } from '@/hooks/useVendorProducts';
 import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
+import { useConfirm } from '@/contexts/ConfirmContext';
+import PagedList from '@/components/ui/paged-list';
 
 const ProductsManagement = () => {
+  const confirm = useConfirm();
   const { products, loading, toggleProductStatus, deleteProduct } = useVendorProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -52,9 +55,13 @@ const ProductsManagement = () => {
   };
 
   const handleDelete = async (productId: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      await deleteProduct(productId);
-    }
+    const ok = await confirm({
+      title: 'Are you sure you want to delete this product?',
+      description: 'Customers will no longer see it. This can’t be undone.',
+      confirmLabel: 'Yes, delete',
+      destructive: true,
+    });
+    if (ok) await deleteProduct(productId);
   };
 
   const filteredProducts = products.filter(product =>
@@ -150,9 +157,8 @@ const ProductsManagement = () => {
           </div>
         ) : (
           <div className="divide-y">
-            {filteredProducts.map((product) => (
+            <PagedList items={filteredProducts} getKey={(product) => product.id} resetKey={searchTerm} paginationClassName="px-3 pb-3" render={(product) => (
               <div
-                key={product.id}
                 className="flex items-start justify-between p-3 hover:bg-muted/60"
               >
                 <div className="flex-1 min-w-0 pr-2">
@@ -173,7 +179,7 @@ const ProductsManagement = () => {
                 </div>
                 <ProductActions product={product} />
               </div>
-            ))}
+            )} />
           </div>
         )}
       </CardContent>

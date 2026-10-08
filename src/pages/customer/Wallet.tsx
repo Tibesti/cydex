@@ -14,6 +14,7 @@ import {
 import { useCustomerWallet } from '@/hooks/useCustomerWallet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import PagedList from '@/components/ui/paged-list';
 
 const CustomerWalletPage = () => {
   const isMobile = useIsMobile();
@@ -268,9 +269,8 @@ const CustomerWalletPage = () => {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {filteredTransactions.map((transaction) => (
+                    <PagedList items={filteredTransactions} getKey={(t) => t.id} resetKey={`${activeTab}|${searchQuery}`} render={(transaction) => (
                       <div
-                        key={transaction.id}
                         className="flex items-center justify-between p-3 sm:p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                       >
                         <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
@@ -322,7 +322,7 @@ const CustomerWalletPage = () => {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    )} />
                   </div>
                 )}
               </TabsContent>

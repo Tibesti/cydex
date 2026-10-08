@@ -13,6 +13,7 @@ import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import HandoverCodeDialog from '@/components/orders/HandoverCodeDialog';
 import { orderActions } from '@/services/orderActions';
 import { IN_PROGRESS_STATUSES, type OrderStatus } from '@/lib/orderStatus';
+import PagedList from '@/components/ui/paged-list';
 
 const OrdersPageReal = () => {
   const { orders, loading, hasPhone, acceptOrder, markReady, refresh } = useVendorOrders();
@@ -138,7 +139,7 @@ const OrdersPageReal = () => {
     </div>
   );
 
-  const OrdersList = ({ orders, type }: { orders: VendorOrder[], type: string }) => {
+  const renderOrders = ({ orders, type }: { orders: VendorOrder[], type: string }) => {
     if (orders.length === 0) {
       return (
         <div className="text-center py-12">
@@ -158,9 +159,7 @@ const OrdersPageReal = () => {
 
     return (
       <div className="space-y-3">
-        {orders.map((order) => (
-          <OrderCard key={order.id} order={order} />
-        ))}
+        <PagedList items={orders} getKey={(order) => order.id} resetKey={`${searchQuery}|${statusFilter}`} render={(order) => <OrderCard order={order} />} />
       </div>
     );
   };
@@ -220,19 +219,19 @@ const OrdersPageReal = () => {
               </TabsList>
               
               <TabsContent value="all">
-                <OrdersList orders={getOrdersByTab('all')} type="all" />
+                {renderOrders({ orders: getOrdersByTab('all'), type: 'all' })}
               </TabsContent>
               
               <TabsContent value="today">
-                <OrdersList orders={getOrdersByTab('today')} type="today" />
+                {renderOrders({ orders: getOrdersByTab('today'), type: 'today' })}
               </TabsContent>
               
               <TabsContent value="pending">
-                <OrdersList orders={getOrdersByTab('pending')} type="new" />
+                {renderOrders({ orders: getOrdersByTab('pending'), type: 'new' })}
               </TabsContent>
 
               <TabsContent value="active">
-                <OrdersList orders={getOrdersByTab('active')} type="in-progress" />
+                {renderOrders({ orders: getOrdersByTab('active'), type: 'in-progress' })}
               </TabsContent>
             </Tabs>
           </CardContent>

@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useVendorFinancials } from '@/hooks/useVendorFinancials';
 import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/utils/nigerianBanks';
+import PagedList from '@/components/ui/paged-list';
 
 const WalletPage = () => {
   const isMobile = useIsMobile();
@@ -607,9 +608,8 @@ const WalletPage = () => {
               
               <div className="space-y-3 sm:space-y-4">
                 {filteredTransactions.length > 0 ? (
-                  filteredTransactions.map((transaction) => (
+                  <PagedList items={filteredTransactions} getKey={(t) => t.id} resetKey={activeTab} render={(transaction) => (
                     <TransactionCard 
-                      key={transaction.id}
                       transaction={transaction}
                       formatAmount={formatAmount}
                       formatDate={formatDate}
@@ -617,7 +617,7 @@ const WalletPage = () => {
                       getTransactionStatus={getTransactionStatus}
                       isMobile={isMobile}
                     />
-                  ))
+                  )} />
                 ) : (
                   <div className="text-center py-8 sm:py-10">
                     <DollarSign className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400 mx-auto mb-2" />

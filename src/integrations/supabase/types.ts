@@ -690,18 +690,27 @@ export type Database = {
       }
       vendor_customers: {
         Row: {
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_by: string | null
           id: string; vendor_id: string; name: string; phone: string; place_name: string | null
           formatted_address: string; street: string | null; city: string | null; state: string | null
           country: string | null; place_id: string | null; latitude: number; longitude: number
           directions: string | null; created_at: string; updated_at: string
         }
         Insert: {
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_by?: string | null
           id?: string; vendor_id: string; name: string; phone: string; place_name?: string | null
           formatted_address: string; street?: string | null; city?: string | null; state?: string | null
           country?: string | null; place_id?: string | null; latitude: number; longitude: number
           directions?: string | null; created_at?: string; updated_at?: string
         }
         Update: {
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_by?: string | null
           id?: string; vendor_id?: string; name?: string; phone?: string; place_name?: string | null
           formatted_address?: string; street?: string | null; city?: string | null; state?: string | null
           country?: string | null; place_id?: string | null; latitude?: number; longitude?: number
@@ -1047,6 +1056,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          cancelled_by: string | null
           dispatch_priority: number
           base_rate: number | null
           cancel_reason: string | null
@@ -1099,6 +1109,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          cancelled_by?: string | null
           dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
@@ -1151,6 +1162,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          cancelled_by?: string | null
           dispatch_priority?: number
           base_rate?: number | null
           cancel_reason?: string | null
@@ -1341,6 +1353,8 @@ export type Database = {
       }
       pricing_config: {
         Row: {
+          created_by: string | null
+          note: string | null
           base_rate: number | null
           created_at: string | null
           distance_rate_per_km: number | null
@@ -1356,6 +1370,8 @@ export type Database = {
           weight_rates: Json | null
         }
         Insert: {
+          created_by?: string | null
+          note?: string | null
           base_rate?: number | null
           created_at?: string | null
           distance_rate_per_km?: number | null
@@ -1371,6 +1387,8 @@ export type Database = {
           weight_rates?: Json | null
         }
         Update: {
+          created_by?: string | null
+          note?: string | null
           base_rate?: number | null
           created_at?: string | null
           distance_rate_per_km?: number | null
@@ -1448,6 +1466,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          suspension_reason: string | null
           avatar: string | null
           carbon_credits: number | null
           created_at: string | null
@@ -1468,6 +1487,7 @@ export type Database = {
           verified: boolean | null
         }
         Insert: {
+          suspension_reason?: string | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -1488,6 +1508,7 @@ export type Database = {
           verified?: boolean | null
         }
         Update: {
+          suspension_reason?: string | null
           avatar?: string | null
           carbon_credits?: number | null
           created_at?: string | null
@@ -2302,6 +2323,9 @@ export type Database = {
       }
       vendor_ratings: {
         Row: {
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_by: string | null
           created_at: string | null
           customer_id: string
           delivery_rating: number | null
@@ -2314,6 +2338,9 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_by?: string | null
           created_at?: string | null
           customer_id: string
           delivery_rating?: number | null
@@ -2326,6 +2353,9 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_by?: string | null
           created_at?: string | null
           customer_id?: string
           delivery_rating?: number | null
@@ -2709,6 +2739,97 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_dashboard_stats: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
+      admin_earnings: {
+        Args: { p_from?: string; p_to?: string; p_order_type?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          order_id: string; order_number: string; order_type: string; delivered_at: string; paid_by: string
+          payer_name: string | null; vendor_name: string | null; rider_name: string | null
+          amount_paid: number; vendor_got: number; rider_got: number
+          cydex_from_customer: number; cydex_from_vendor: number; cydex_from_rider: number; cydex_total: number
+          total_count: number
+          sum_amount_paid: number; sum_vendor_got: number; sum_rider_got: number
+          sum_cydex_from_customer: number; sum_cydex_from_vendor: number; sum_cydex_from_rider: number; sum_cydex_total: number
+        }[]
+      }
+      admin_orders_needing_attention: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          order_id: string; order_number: string; order_type: string; status: string; reason: string; since: string
+          vendor_name: string | null; rider_name: string | null
+        }[]
+      }
+      admin_orders: {
+        Args: { p_search?: string; p_status?: string; p_order_type?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string; order_number: string; order_type: string; status: string; payment_status: string; total_amount: number
+          created_at: string; delivered_at: string | null; customer_name: string | null; recipient_name: string | null
+          vendor_name: string | null; rider_id: string | null; rider_name: string | null; item_count: number; total_count: number
+        }[]
+      }
+      admin_order_detail: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
+      admin_cancel_order: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_unlock_handover_code: {
+        Args: { p_order_id: string; p_kind: string }
+        Returns: undefined
+      }
+      admin_reject_payout: {
+        Args: { p_role: string; p_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_payouts: {
+        Args: { p_status?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          role: string; id: string; owner_id: string; owner_name: string | null; owner_email: string | null
+          bank_name: string | null; account_number: string | null; account_name: string | null
+          amount: number; fee: number | null; net_amount: number | null; status: string; failure_reason: string | null
+          transfer_reference: string | null; created_at: string; processed_at: string | null; total_count: number
+        }[]
+      }
+      admin_wallets: {
+        Args: { p_role?: string; p_search?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          role: string; profile_id: string; name: string | null; email: string | null; available_balance: number | null
+          total_earned: number | null; total_withdrawn: number | null; updated_at: string | null; total_count: number
+        }[]
+      }
+      admin_update_pricing: {
+        Args: {
+          p_base_rate: number; p_distance_rate_per_km: number; p_service_charge_rate: number
+          p_vendor_commission_rate: number; p_rider_share_rate: number; p_rider_request_commission_rate: number
+          p_note?: string
+        }
+        Returns: undefined
+      }
+      admin_users: {
+        Args: { p_search?: string; p_role?: string; p_limit?: number; p_offset?: number }
+        Returns: {
+          id: string; name: string | null; email: string | null; phone: string | null; role: string; status: string
+          suspension_reason: string | null; verification_status: string | null; created_at: string
+          last_login_at: string | null; joined: boolean; total_count: number
+        }[]
+      }
+      admin_set_customer_suspended: {
+        Args: { p_profile_id: string; p_suspended: boolean; p_reason?: string }
+        Returns: undefined
+      }
+      admin_set_review_hidden: {
+        Args: { p_kind: string; p_id: string; p_hidden: boolean; p_reason?: string }
+        Returns: undefined
+      }
+      admin_retry_email: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
       submit_vendor_onboarding: {
         Args: { p_store_name: string; p_phone: string; p_category_id: string; p_is_registered: boolean; p_license_path?: string }
         Returns: string

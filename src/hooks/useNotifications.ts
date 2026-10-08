@@ -14,7 +14,7 @@ export interface AppNotification {
   created_at: string;
 }
 
-export const NOTIFICATIONS_PAGE_SIZE = 15;
+export const NOTIFICATIONS_PAGE_SIZE = 10;
 const queryKeyFor = (userId?: string) => ['notifications', userId];
 
 // Unread count (for the badges) and mark-as-read actions
