@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { playNotificationSound, unlockNotificationSound } from '@/lib/notificationSound';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -89,11 +90,19 @@ export const useNotificationsPage = (page: number) => {
   };
 };
 
-// Keeps the list live and pops a toast for each new notification.
+// Keeps the list live and pops a toast (with a chime) for each new notification.
 // Mount once per session (DashboardLayout).
 export const useNotificationsRealtime = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const wake = unlockNotificationSound();
+    return () => {
+      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener('keydown', wake);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -105,6 +114,7 @@ export const useNotificationsRealtime = () => {
         (payload) => {
           const n = payload.new as AppNotification;
           toast(n.title, { description: n.message });
+          playNotificationSound(n.type);
           queryClient.invalidateQueries({ queryKey: queryKeyFor(user.id) });
         },
       )

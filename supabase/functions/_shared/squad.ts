@@ -44,7 +44,10 @@ export async function confirmPayment(ref: string): Promise<ConfirmResult> {
   if (!res.ok || body?.status !== 200 || !tx) {
     throw new Error(body?.message || `Squad verify failed (${res.status})`);
   }
-  if (tx.transaction_status !== 'Success' || (tx.transaction_currency_id ?? 'NGN') !== 'NGN') {
+  // Squad's docs say "Success" but the API returns "success": compare without case
+  const status = String(tx.transaction_status ?? '').toLowerCase();
+  const currency = String(tx.transaction_currency_id ?? 'NGN').toUpperCase();
+  if (status !== 'success' || currency !== 'NGN') {
     return 'not_successful';
   }
 

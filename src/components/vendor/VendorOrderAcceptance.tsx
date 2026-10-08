@@ -51,7 +51,7 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
             <Package className="h-5 w-5 text-orange-500" />
             New Order Request
           </CardTitle>
-          <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+          <Badge variant="outline" className="border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300">
             Pending Approval
           </Badge>
         </div>
@@ -62,14 +62,14 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
           {/* Order Details */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
                 Order placed: {formatDate(order.created_at)}
               </span>
             </div>
             
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-500" />
+              <User className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">
                 <span className="font-medium">{order.customer?.name}</span>
                 {order.customer?.phone && <span className="text-muted-foreground"> • {order.customer.phone}</span>}
@@ -77,10 +77,10 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
             </div>
             
             <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+              <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div className="text-sm">
                 <div className="font-medium">Delivery Address:</div>
-                <div className="text-gray-600">
+                <div className="text-muted-foreground">
                   {order.delivery_address?.street}, {order.delivery_address?.city}
                   {order.delivery_address?.state && `, ${order.delivery_address.state}`}
                 </div>
@@ -107,24 +107,34 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
 
         {/* Order Items */}
         <div className="space-y-2">
-          <div className="font-medium text-sm">Order Items:</div>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
-            {order.order_items?.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
-                <div>
-                  <span className="font-medium">{item.product_name}</span>
-                  <span className="text-gray-600 ml-2">× {item.quantity}</span>
-                </div>
-                <span>{formatCurrency(item.total_price)}</span>
-              </div>
-            ))}
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="font-medium">Order items</span>
+            <span className="text-xs text-muted-foreground">
+              {order.order_items?.length || 0} {order.order_items?.length === 1 ? 'item' : 'items'}
+            </span>
           </div>
+          <ul className="max-h-48 divide-y overflow-y-auto rounded-lg border bg-muted/40">
+            {order.order_items?.map((item, index) => (
+              <li key={index} className="flex items-center gap-3 px-3 py-2 text-sm">
+                <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 px-1.5 text-xs font-semibold text-foreground">
+                  {item.quantity}×
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-foreground">{item.product_name}</p>
+                  {item.quantity > 1 && (
+                    <p className="text-xs text-muted-foreground">{formatCurrency(item.unit_price)} each</p>
+                  )}
+                </div>
+                <span className="shrink-0 font-medium text-foreground">{formatCurrency(item.total_price)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {order.special_instructions && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="font-medium text-blue-900 text-sm mb-1">Special Instructions:</div>
-            <div className="text-blue-700 text-sm">{order.special_instructions}</div>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-500/30 dark:bg-blue-500/10">
+            <div className="mb-1 text-sm font-medium text-blue-900 dark:text-blue-200">Special Instructions:</div>
+            <div className="text-sm text-blue-700 dark:text-blue-300">{order.special_instructions}</div>
           </div>
         )}
 
@@ -143,7 +153,7 @@ export const VendorOrderAcceptance: React.FC<VendorOrderAcceptanceProps> = ({
             onClick={() => onReject(order.id, 'Order rejected by vendor')}
             disabled={loading}
             variant="outline"
-            className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+            className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-400 dark:hover:bg-red-500/10"
           >
             <X className="h-4 w-4 mr-2" />
             Reject Order

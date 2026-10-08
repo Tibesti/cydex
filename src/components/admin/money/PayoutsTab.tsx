@@ -49,6 +49,16 @@ const PayoutsTab = () => {
     },
   });
   const total = Number(rows[0]?.total_count ?? 0);
+  // Fees kept on paid withdrawals, all time (they cover Squad's per-transfer charge)
+  const { data: feeStats } = useQuery({
+    queryKey: ['admin-dashboard', 'withdrawal-fees'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('admin_dashboard_stats', {});
+      if (error) throw error;
+      const r = (data as unknown as { revenue: { from_withdrawals: number; withdrawals_paid: number } }).revenue;
+      return { fees: Number(r.from_withdrawals ?? 0), count: Number(r.withdrawals_paid ?? 0) };
+    },
+  });
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['admin-payouts'] });
     queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
@@ -83,6 +93,13 @@ const PayoutsTab = () => {
 
   return (
     <div className="space-y-3">
+      {feeStats && (
+        <p className="text-sm text-muted-foreground">
+          Withdrawal fees earned (1.5%, all time):{' '}
+          <span className="font-semibold text-foreground">{formatNaira(feeStats.fees)}</span> from {feeStats.count} paid
+          withdrawal{feeStats.count === 1 ? '' : 's'}. Squad's own transfer charge (₦8–₦40 each) comes out of this.
+        </p>
+      )}
       <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
         <SelectTrigger className="xs:w-60" aria-label="Status"><SelectValue /></SelectTrigger>
         <SelectContent>
@@ -120,7 +137,11 @@ const PayoutsTab = () => {
                   <div className="flex items-center justify-between gap-3 md:flex-col md:items-end">
                     <div className="text-right">
                       <p className="text-lg font-bold">{formatNaira(Number(p.amount))}</p>
-                      {Number(p.fee) > 0 && <p className="text-xs text-muted-foreground">{formatNaira(Number(p.net_amount))} after fee</p>}
+                      {Number(p.fee) > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Fee {formatNaira(Number(p.fee))} · they receive {formatNaira(Number(p.net_amount))}
+                        </p>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       {p.status === 'pending' && (

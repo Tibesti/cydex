@@ -8,7 +8,11 @@
 //     { action: 'approve', role, payout_id } -> { payout }
 //       Sends the transfer. If Squad rejects it, the money goes back (settle_payout).
 //     { action: 'requery', role, payout_id } -> { payout }
-//       Asks Squad for the transfer's status and records it.
+//       Asks Squad for the transfer's status and records it ("Check status").
+//   Scheduled job (pg_cron, every 10 minutes; see 20261009400000_payout_status_sweep.sql):
+//     { action: 'sweep' } with header x-cron-secret = app_config.payout_sweep_secret
+//       Checks every withdrawal still 'processing' with Squad and marks it
+//       completed, or failed (money back). The owner is notified either way.
 //   Rejecting is done in the database (admin_reject_payout).
 // Secrets: SQUAD_SECRET_KEY, SQUAD_API_URL, SQUAD_MERCHANT_ID (reference prefix, default CYDEX)
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -32,10 +36,77 @@ async function squad(path: string, body: unknown) {
   return { ok: res.ok && data?.status === 200, data };
 }
 
+// Squad's transfer status -> our payout status (null = still in progress)
+const statusFromSquad = (data: Record<string, unknown> | undefined): 'completed' | 'failed' | null => {
+  const s = String(data?.transaction_status ?? data?.status ?? '').toLowerCase();
+  if (['success', 'successful', 'completed'].includes(s)) return 'completed';
+  if (['failed', 'reversed'].includes(s)) return 'failed';
+  return null;
+};
+
+// Same reference approve uses, so a transfer can be checked even if saving it failed
+const referenceFor = (id: string) => `${Deno.env.get('SQUAD_MERCHANT_ID') || 'CYDEX'}_${id.replace(/-/g, '')}`;
+
+type Db = ReturnType<typeof adminClient>;
+
+const settlePayout = (db: Db, role: Role, id: string, status: string, extra: { reference?: string; metadata?: unknown; reason?: string } = {}) =>
+  db.rpc('settle_payout', {
+    p_role: role, p_id: id, p_status: status,
+    p_reference: extra.reference ?? null, p_metadata: extra.metadata ?? null, p_reason: extra.reason ?? null,
+  });
+
+// Asks Squad about one 'processing' withdrawal and records the answer
+async function checkWithSquad(db: Db, role: Role, payout: { id: string; transfer_reference: string | null }) {
+  const result = await squad('/payout/requery', { transaction_reference: payout.transfer_reference || referenceFor(payout.id) });
+  const next = statusFromSquad(result.data?.data);
+  if (next) {
+    const raw = String(result.data?.data?.transaction_status ?? result.data?.data?.status ?? '').toLowerCase();
+    await settlePayout(db, role, payout.id, next, { metadata: result.data?.data, reason: next === 'failed' ? `Transfer ${raw}` : undefined });
+  }
+  return next;
+}
+
+const sameText = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
+    const body = await req.json().catch(() => ({}));
+
+    if (body.action === 'sweep') {
+      const db = adminClient();
+      const { data: secret } = await db.from('app_config').select('value').eq('key', 'payout_sweep_secret').maybeSingle();
+      const given = req.headers.get('x-cron-secret') ?? '';
+      if (!secret?.value || !given || !sameText(given, secret.value)) return json({ error: 'Not allowed' }, 401);
+
+      // Give Squad a couple of minutes after sending before checking
+      const before = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const summary = { checked: 0, completed: 0, failed: 0 };
+      for (const role of Object.keys(TABLES) as Role[]) {
+        const { data: rows } = await db.from(TABLES[role].payouts)
+          .select('id, transfer_reference')
+          .eq('status', 'processing').lt('updated_at', before)
+          .order('updated_at', { ascending: true }).limit(25);
+        for (const payout of rows ?? []) {
+          try {
+            const next = await checkWithSquad(db, role, payout);
+            summary.checked++;
+            if (next) summary[next]++;
+          } catch (e) {
+            console.error('payout sweep', role, payout.id, e);
+          }
+        }
+      }
+      console.log('payout sweep', summary);
+      return json(summary);
+    }
+
     const authHeader = req.headers.get('Authorization') ?? '';
     const userClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
@@ -48,7 +119,6 @@ Deno.serve(async (req) => {
     const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).single();
     const myRole = String(profile?.role ?? '').toLowerCase();
     const isAdmin = myRole === 'admin';
-    const body = await req.json().catch(() => ({}));
 
     // Admins act on anyone's withdrawal (role given); everyone else on their own
     const role = (isAdmin ? String(body.role ?? '') : myRole) as Role;
@@ -58,10 +128,7 @@ Deno.serve(async (req) => {
     const t = TABLES[role];
 
     const settle = (id: string, status: string, extra: { reference?: string; metadata?: unknown; reason?: string } = {}) =>
-      db.rpc('settle_payout', {
-        p_role: role, p_id: id, p_status: status,
-        p_reference: extra.reference ?? null, p_metadata: extra.metadata ?? null, p_reason: extra.reason ?? null,
-      });
+      settlePayout(db, role, id, status, extra);
     const load = async (id: string) => {
       let q = db.from(t.payouts).select('*').eq('id', id);
       if (!isAdmin) q = q.eq(t.owner, user.id);
@@ -90,9 +157,8 @@ Deno.serve(async (req) => {
       if (!claimed) return json({ error: 'This withdrawal is no longer waiting for approval' }, 409);
 
       const { data: bank } = await db.from(t.banks).select('*').eq('id', claimed.bank_account_id).maybeSingle();
-      const merchant = Deno.env.get('SQUAD_MERCHANT_ID') || 'CYDEX';
       // Derived from the request id, so a retry can't send a second transfer
-      const reference = `${merchant}_${id.replace(/-/g, '')}`;
+      const reference = referenceFor(id);
       if (!bank?.bank_code || !bank?.account_number) {
         await settle(id, 'failed', { reference, reason: 'Bank account is missing or incomplete' });
         await audit('approve_payout', id, { result: 'failed', reason: 'Bank account is missing or incomplete' });
@@ -119,24 +185,18 @@ Deno.serve(async (req) => {
         await audit('approve_payout', id, { result: 'failed', reason, amount: claimed.amount });
         return json({ error: `${reason}. The money was returned to their wallet.` }, 502);
       }
-      await settle(id, 'processing', { reference, metadata: transfer.data?.data ?? {} });
-      await audit('approve_payout', id, { result: 'sent', amount: claimed.amount, reference });
+      // Usually confirmed straight away; otherwise the scheduled sweep finishes it
+      const now = statusFromSquad(transfer.data?.data) === 'completed' ? 'completed' : 'processing';
+      await settle(id, now, { reference, metadata: transfer.data?.data ?? {} });
+      await audit('approve_payout', id, { result: now === 'completed' ? 'paid' : 'sent', amount: claimed.amount, reference });
       return json({ payout: await load(id) });
     }
 
     if (body.action === 'requery') {
       const payout = await load(String(body.payout_id ?? ''));
       if (!payout) return json({ error: 'Payout not found' }, 404);
-      if (!payout.transfer_reference || payout.status !== 'processing') return json({ payout });
-
-      const result = await squad('/payout/requery', { transaction_reference: payout.transfer_reference });
-      const status = String(result.data?.data?.transaction_status ?? result.data?.data?.status ?? '').toLowerCase();
-      const next = ['success', 'successful', 'completed'].includes(status) ? 'completed'
-        : ['failed', 'reversed'].includes(status) ? 'failed'
-          : null;
-      if (next) {
-        await settle(payout.id, next, { metadata: result.data?.data, reason: next === 'failed' ? `Transfer ${status}` : undefined });
-      }
+      if (payout.status !== 'processing') return json({ payout });
+      await checkWithSquad(db, role, payout);
       return json({ payout: await load(payout.id) });
     }
 

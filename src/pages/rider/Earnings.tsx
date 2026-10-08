@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/utils/nigerianBanks';
+import RecentTransactions from '@/components/rider/earnings/RecentTransactions';
+import WithdrawalBreakdown from '@/components/wallet/WithdrawalBreakdown';
 
 const EarningsPage = () => {
   const { 
@@ -264,7 +266,7 @@ const EarningsPage = () => {
                   <DialogHeader>
                     <DialogTitle>Request Withdrawal</DialogTitle>
                     <DialogDescription>
-                      Withdraw your earnings to your bank account. A 1.5% processing fee will be applied.
+                      Withdraw your earnings to your bank account. Cydex approves withdrawals before they're sent.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
@@ -277,9 +279,12 @@ const EarningsPage = () => {
                         value={withdrawAmount}
                         onChange={(e) => setWithdrawAmount(e.target.value)}
                       />
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         Available: {formatCurrency(walletBalance.available_balance)}
                       </p>
+                      <div className="mt-3">
+                        <WithdrawalBreakdown amount={withdrawAmount} available={walletBalance.available_balance} />
+                      </div>
                       {bankAccounts.length > 0 && (
                         <p className="text-xs text-gray-400 mt-2">
                           Withdrawal will be sent to: {bankAccounts.find(acc => acc.is_default)?.bank_name || bankAccounts[0]?.bank_name} - **** {bankAccounts.find(acc => acc.is_default)?.account_number.slice(-4) || bankAccounts[0]?.account_number.slice(-4)}
@@ -468,44 +473,8 @@ const EarningsPage = () => {
           </CardContent>
         </Card>
 
-        {/* Recent Transactions - Compact */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center justify-between">
-              Recent Transactions
-              <Badge variant="outline" className="text-xs">
-                {todaysEarnings.length} today
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {todaysEarnings.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No transactions today
-              </p>
-            ) : (
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {todaysEarnings.slice(0, 5).map((earning, index) => (
-                  <div key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium truncate">
-                        Delivery #{String(index + 1).padStart(3, '0')}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(earning.earnings_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium">
-                        {formatCurrency(earning.delivery_fee + earning.tip_amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Recent Transactions: delivery earnings and withdrawals */}
+        <RecentTransactions payoutRequests={payoutRequests} />
 
         {/* Bank Accounts Section */}
         <Card>

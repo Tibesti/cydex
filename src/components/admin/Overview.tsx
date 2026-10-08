@@ -23,7 +23,8 @@ interface DashboardStats {
   transactions: { count: number; amount: number; refunded_count: number; refunded_amount: number; rider_requests: number };
   delivered_orders: number;
   revenue: {
-    from_customers: number; from_vendors: number; from_riders: number; total: number;
+    from_customers: number; from_vendors: number; from_riders: number; from_withdrawals: number;
+    withdrawals_paid: number; total: number;
     paid_to_vendors: number; paid_to_riders: number;
   };
   orders_today: number;
@@ -189,7 +190,7 @@ const Overview = () => {
           icon={Banknote}
           highlight
           value={dash ?? nairaWhole(revenue)}
-          hint={s && `From ${s.delivered_orders} delivered orders`}
+          hint={s && `From ${s.delivered_orders} delivered orders${s.revenue.withdrawals_paid ? ` and ${s.revenue.withdrawals_paid} withdrawals` : ''}`}
           to="/admin/payments?tab=earnings"
         />
         <Stat label="Paid to vendors" icon={Store} value={dash ?? nairaWhole(s?.revenue.paid_to_vendors)} />
@@ -245,13 +246,18 @@ const Overview = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Where revenue came from</CardTitle>
-            <CardDescription>Cydex's cut on delivered orders</CardDescription>
+            <CardDescription>Cydex's cut on delivered orders, plus withdrawal fees</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {[
               { label: 'From customers', hint: 'Service Charge', value: Number(s?.revenue.from_customers ?? 0) },
               { label: 'From vendors', hint: 'Commission on items and rider requests', value: Number(s?.revenue.from_vendors ?? 0) },
               { label: 'From riders', hint: 'Cydex share of delivery fees', value: Number(s?.revenue.from_riders ?? 0) },
+              {
+                label: 'From withdrawal fees',
+                hint: `1.5% on ${s?.revenue.withdrawals_paid ?? 0} paid withdrawal${s?.revenue.withdrawals_paid === 1 ? '' : 's'}, before Squad's transfer charge`,
+                value: Number(s?.revenue.from_withdrawals ?? 0),
+              },
             ].map((r) => (
               <div key={r.label} className="space-y-1">
                 <div className="flex items-baseline justify-between gap-2 text-sm">

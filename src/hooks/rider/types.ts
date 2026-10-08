@@ -41,8 +41,6 @@ export interface ReviewData {
   customer_name: string;
   rating: number;
   comment: string;
-  delivery_rating: number;
-  communication_rating: number;
   created_at: string;
 }
 

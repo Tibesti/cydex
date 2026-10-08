@@ -111,6 +111,18 @@ const VendorOnboarding = () => {
           <p className="text-sm text-muted-foreground">Tell us about your business. This is what customers will see.</p>
         </div>
 
+        {verification?.status === 'verified' && (
+          <Alert className="border-amber-500/40 bg-amber-500/10">
+            <AlertDescription className="space-y-2">
+              <p>
+                You're verified. Submitting changes sends your account back to Cydex for review, and{' '}
+                <strong>you won't have access to your dashboard until it's approved again</strong> (you can't take orders meanwhile).
+              </p>
+              <Button variant="outline" size="sm" onClick={() => navigate('/vendor/settings')}>Keep my current details</Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {verification?.status === 'rejected' && verification.rejection_reason && (
           <Alert variant="destructive">
             <AlertDescription>

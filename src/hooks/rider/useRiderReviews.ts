@@ -1,34 +1,30 @@
-
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ReviewData } from './types';
 
 export const useRiderReviews = () => {
+  // Customers rate their rider after delivery (rider_ratings). Reviews an admin
+  // has hidden are left out by the database.
   const fetchRecentReviews = useCallback(async (userId: string): Promise<ReviewData[]> => {
     try {
-      const { data: reviewsData, error } = await supabase
-        .from('rider_reviews')
-        .select(`
-          *,
-          customer:profiles!customer_id(name)
-        `)
+      const { data, error } = await supabase
+        .from('rider_ratings')
+        .select('id, rating, feedback, created_at, customer:profiles!rider_ratings_customer_id_fkey(name)')
         .eq('rider_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(200);
 
       if (error) throw error;
 
-      const formattedReviews: ReviewData[] = (reviewsData || []).map(review => ({
+      return ((data ?? []) as unknown as {
+        id: string; rating: number; feedback: string | null; created_at: string; customer: { name: string | null } | null;
+      }[]).map((review) => ({
         id: review.id,
-        customer_name: review.customer?.name || 'Anonymous',
+        customer_name: review.customer?.name || 'Customer',
         rating: review.rating,
-        comment: review.comment || '',
-        delivery_rating: review.delivery_rating || review.rating,
-        communication_rating: review.communication_rating || review.rating,
-        created_at: new Date(review.created_at).toLocaleDateString()
+        comment: review.feedback || '',
+        created_at: new Date(review.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }),
       }));
-
-      return formattedReviews;
     } catch (error) {
       console.error('[RiderProfile] Error fetching reviews:', error);
       return [];

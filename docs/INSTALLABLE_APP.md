@@ -31,7 +31,7 @@ Orders, wallets, products and anything else from Supabase, Google or Squad are *
 
 | File | What it is |
 |---|---|
-| `public/manifest.webmanifest` | App name, colours, start page, icons, screenshots, shortcuts |
+| `public/manifest.webmanifest` | App name, colours, start page (`/auth`: the login page, which sends signed-in users to their dashboard), icons, screenshots, shortcuts |
 | `public/sw.js` | Service worker: offline page, caching of build files, push notifications |
 | `public/offline.html` | The offline page |
 | `public/icons/` | App icons (192/512, maskable versions for Android's shaped icons, monochrome, iPhone 180×180, favicons), made from `public/og-tab.png` on the brand green `#6CE000` |

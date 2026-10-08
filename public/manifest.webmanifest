@@ -3,7 +3,7 @@
   "name": "Cydex: Eco-Friendly Delivery",
   "short_name": "Cydex",
   "description": "Order from vendors near you and get it delivered by bike, on foot or e-bike.",
-  "start_url": "/?source=pwa",
+  "start_url": "/auth?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": [

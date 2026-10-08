@@ -33,19 +33,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-start space-x-3 flex-1 min-w-0">
-            <div className="flex-shrink-0 p-2 bg-blue-50 rounded-full">
-              <Package className="h-4 w-4 text-blue-600" />
+            <div className="flex-shrink-0 p-2 bg-blue-50 dark:bg-blue-500/15 rounded-full">
+              <Package className="h-4 w-4 text-blue-600 dark:text-blue-300" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-2">
-                <h3 className="font-medium text-sm text-gray-900 truncate">
+                <h3 className="font-medium text-sm text-foreground truncate">
                   {order.vendor_name}
                 </h3>
               </div>
-              <p className="text-sm text-gray-600 truncate">
+              <p className="text-sm text-muted-foreground truncate">
                 → {order.customer_name}
               </p>
-              <div className="flex items-center mt-1 text-xs text-gray-500">
+              <div className="flex items-center mt-1 text-xs text-muted-foreground">
                 <span>Order #{order.order_id.slice(0, 8)}</span>
                 <span className="mx-2">•</span>
                 <span>{order.items_count} item{order.items_count !== 1 ? 's' : ''}</span>
@@ -57,11 +57,11 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         {/* Delivery Details */}
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div className="space-y-2">
-            <div className="flex items-center text-xs text-gray-600">
+            <div className="flex items-center text-xs text-muted-foreground">
               <MapPin className="h-3 w-3 mr-1.5" />
               <span>{formatKm(pickupDistanceKm(order.pickup_location, position))}</span>
             </div>
-            <div className="flex items-center text-xs text-gray-600">
+            <div className="flex items-center text-xs text-muted-foreground">
               <Clock className="h-3 w-3 mr-1.5" />
               <span>
                 Pickup: {new Date(order.estimated_pickup_time).toLocaleTimeString([], {
@@ -73,7 +73,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
           
           <div className="text-right">
-            <div className="text-lg font-bold text-gray-900">
+            <div className="text-lg font-bold text-foreground">
               ₦{totalEarnings.toLocaleString('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -85,12 +85,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         {/* Additional Info */}
         <div className="flex flex-wrap gap-2 mb-3">
           {hasCarbonSavings && (
-            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+            <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-500/15 text-green-700 dark:text-green-300 border-green-200 dark:border-green-500/30">
               {Number(order.carbon_saved).toFixed(1)} kg CO₂ saved
             </Badge>
           )}
           {order.special_instructions && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+            <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-500/30">
               <AlertCircle className="h-3 w-3 mr-1" />
               Special instructions
             </Badge>
@@ -98,7 +98,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </div>
 
         {/* Delivery Time */}
-        <div className="text-xs text-gray-500 mb-3">
+        <div className="text-xs text-muted-foreground mb-3">
           Est. delivery: {new Date(order.estimated_delivery_time).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit'

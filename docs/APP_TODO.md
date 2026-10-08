@@ -4,7 +4,7 @@ Open work for the Cydex app, grouped by who it's for, as of September 2026. With
 
 Tick an item (`[x]`) when it ships, or remove it and note it in the relevant doc.
 
-Everything needed to go live (keys, Squad live mode, emails, hosting, launch test) is in [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md).
+Everything needed to go live (accounts, environment variables, Supabase settings, Squad live mode, emails, hosting, launch test) is in [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md).
 
 ## General
 

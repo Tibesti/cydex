@@ -43,7 +43,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-gray-500">Loading available orders...</p>
+          <p className="text-muted-foreground">Loading available orders...</p>
         </div>
       </div>
     );
@@ -53,10 +53,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+          <AlertCircle className="h-12 w-12 text-red-500 dark:text-red-400 mx-auto" />
           <div>
-            <h3 className="font-medium text-gray-900 mb-1">Error Loading Orders</h3>
-            <p className="text-sm text-gray-500">{error}</p>
+            <h3 className="font-medium text-foreground mb-1">Error Loading Orders</h3>
+            <p className="text-sm text-muted-foreground">{error}</p>
           </div>
         </div>
       </div>
@@ -67,10 +67,10 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
     return (
       <div className="min-h-[400px] flex items-center justify-center">
         <div className="text-center space-y-3">
-          <Package className="h-12 w-12 mx-auto text-gray-400" />
+          <Package className="h-12 w-12 mx-auto text-muted-foreground" />
           <div>
-            <h3 className="font-medium text-gray-900 mb-1">No Available Orders</h3>
-            <p className="text-sm text-gray-500">Check back later for new delivery opportunities</p>
+            <h3 className="font-medium text-foreground mb-1">No Available Orders</h3>
+            <p className="text-sm text-muted-foreground">Check back later for new delivery opportunities</p>
           </div>
         </div>
       </div>
@@ -90,25 +90,25 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 Order Details
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 scope="col"
               >
                 Location & Distance
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 scope="col"
               >
                 Timing
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 scope="col"
               >
                 Earnings
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 scope="col"
               >
                 Action
@@ -125,14 +125,14 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {order.vendor_name}
                         </p>
                       </div>
-                      <p className="text-sm text-gray-500 truncate">
+                      <p className="text-sm text-muted-foreground truncate">
                         To: {order.customer_name}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-muted-foreground">
                         {order.items_count} item{order.items_count !== 1 ? 's' : ''}
                       </p>
                     </div>
@@ -141,8 +141,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-1">
-                    <MapPin className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-900">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">
                       {formatKm(pickupDistanceKm(order.pickup_location, position))}
                     </span>
                   </div>
@@ -155,8 +155,8 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="space-y-1">
-                    <div className="flex items-center space-x-1 text-sm text-gray-900">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                    <div className="flex items-center space-x-1 text-sm text-foreground">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                       <span>
                         {new Date(order.estimated_pickup_time).toLocaleTimeString([], {
                           hour: '2-digit',
@@ -164,7 +164,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                         })}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Est. delivery: {new Date(order.estimated_delivery_time).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit'
@@ -175,11 +175,11 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                 
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       {formatNaira(Number(order.rider_earning ?? 0))}
                     </p>
                     {Number(order.carbon_saved) > 0 && (
-                      <p className="text-xs text-green-500">
+                      <p className="text-xs text-green-500 dark:text-green-400">
                         {Number(order.carbon_saved).toFixed(1)} kg CO₂ saved
                       </p>
                     )}

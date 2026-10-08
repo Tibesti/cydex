@@ -11,3 +11,8 @@ verify_jwt = false
 # Called by the database for each new notification; reads only the notification id
 [functions.send-push]
 verify_jwt = false
+
+# Called by signed-in users (the function checks their login itself) and by
+# pg_cron for the 10-minute status sweep (checked with x-cron-secret)
+[functions.squad-payout]
+verify_jwt = false

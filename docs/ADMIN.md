@@ -34,6 +34,7 @@ Lists show 10 rows per page, here and across the app (`PAGE_SIZE` in [`src/lib/p
   - **From customers:** the Service Charge.
   - **From vendors:** the commission on items, plus the commission on rider requests.
   - **From riders:** the part of the delivery fee riders don't get (15% today).
+  - **From withdrawal fees:** the 1.5% fee on withdrawals that were actually paid out (failed or rejected ones are refunded in full). It covers Squad's per-transfer charge (₦8–₦40), so the real profit is a little lower. Riders and vendors see the fee and what they'll receive before they confirm a withdrawal.
 - **Chart:** transactions and revenue, or paid-order counts. It shows one bar per day for periods up to about 3 months, and one per month beyond that.
 - **Right now** (not tied to the period): orders today, active deliveries, orders waiting for a rider, riders online, verifications to review, withdrawals to approve, money held for active orders and failed emails.
 - **Orders needing attention:** paid orders stuck longer than usual (`admin_orders_needing_attention()`):
@@ -72,7 +73,8 @@ Paid always equals Vendor got + Rider got + Cydex total. Refunded orders aren't 
 2. An admin opens **Money → Withdrawals**:
    - **Approve:** `squad-payout` (`action: 'approve'`) sends the Squad transfer. Two admins can't send the same one twice. If Squad rejects the transfer, the money goes back to the wallet.
    - **Reject** (with a reason): `admin_reject_payout`. The request becomes `cancelled`, the money goes back, and they're told why.
-   - **Check status:** asks Squad about a transfer that's still processing.
+   - **Check status:** asks Squad about a transfer that's still processing. You rarely need it:
+3. **Finishing is automatic.** If Squad confirms the transfer straight away, it's marked **Paid** on approval. Otherwise a scheduled job (`payout-status-sweep`, every 10 minutes) checks every withdrawal still "sent" with Squad. Each one becomes **Paid**, or **Failed** with the money returned, and the rider or vendor is notified. Only paid withdrawals count towards withdrawal-fee revenue.
 
 ### Pricing
 

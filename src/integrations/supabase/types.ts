@@ -2739,6 +2739,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      vendor_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_dashboard_stats: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json

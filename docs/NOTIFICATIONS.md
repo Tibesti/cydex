@@ -32,6 +32,17 @@ Every user has two switches. Customers find them in Profile → Preferences, ven
 
 A push that can't be sent never blocks the notification itself.
 
+## Sound
+
+- **App open:** a short chime plays with the pop-up ([`src/lib/notificationSound.ts`](../src/lib/notificationSound.ts)). Urgent notifications get a longer chime:
+  - **Vendors:** new order
+  - **Riders:** order nearby, order assigned by an admin
+  - **Admins:** withdrawal to approve, verification to review
+
+  Browsers only allow sound after the person has tapped the page once, so there's no chime before then. The push notification shown at the same time is silent, so there's no double sound.
+- **App closed:** the phone plays its **own** notification sound. Browsers don't let a website choose the sound; a custom one needs a native app. Android also vibrates: a longer pattern for urgent ones, which stay on screen until tapped. iPhones ignore vibration and use their own settings.
+- **No sound?** Check the phone isn't on silent or Do Not Disturb, and that Cydex's notifications aren't muted in the phone's settings (Android: Settings → Apps → Cydex or Chrome → Notifications; iPhone: Settings → Notifications → Cydex).
+
 ## Setup (once per Supabase project)
 
 - **VAPID keys:** the standard Web Push signing keys, generated with `npx web-push generate-vapid-keys`.

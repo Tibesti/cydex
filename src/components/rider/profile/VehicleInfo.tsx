@@ -50,30 +50,30 @@ const VehicleInfo = ({ vehicle, onUpdateVehicle }: VehicleInfoProps) => {
       <CardContent className="p-3 sm:p-6 pt-0">
         <div className="space-y-2 sm:space-y-3">
           <div className="flex justify-between">
-            <span className="text-xs sm:text-sm text-gray-500">Type</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">Type</span>
             <span className="text-xs sm:text-sm font-medium capitalize">{getVehicleDisplayName()}</span>
           </div>
           
           {vehicle.type !== 'walking' && (
             <>
               <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-500">Model</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Model</span>
                 <span className="text-xs sm:text-sm font-medium">{vehicle.model}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-500">Year</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Year</span>
                 <span className="text-xs sm:text-sm font-medium">{vehicle.year}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-xs sm:text-sm text-gray-500">Color</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Color</span>
                 <span className="text-xs sm:text-sm font-medium">{vehicle.color}</span>
               </div>
             </>
           )}
           
           <div className="flex justify-between">
-            <span className="text-xs sm:text-sm text-gray-500">Status</span>
-            <Badge className="bg-yellow-500 text-xs">Pending Verification</Badge>
+            <span className="text-xs sm:text-sm text-muted-foreground">Status</span>
+            <Badge variant="secondary" className="text-xs">Coming soon</Badge>
           </div>
         </div>
         

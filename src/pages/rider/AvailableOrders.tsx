@@ -129,7 +129,7 @@ const AvailableOrdersPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Available Orders</h1>
-            <p className="text-sm sm:text-base text-gray-600">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Deliveries with pickups within 5 km of you
             </p>
           </div>
@@ -153,13 +153,13 @@ const AvailableOrdersPage = () => {
 
         {/* Error Display */}
         {error && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/15">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <AlertCircle className="h-5 w-5 text-red-500" />
+                <AlertCircle className="h-5 w-5 text-red-500 dark:text-red-400" />
                 <div>
-                  <h3 className="font-medium text-red-900">Error Loading Orders</h3>
-                  <p className="text-sm text-red-700">{error}</p>
+                  <h3 className="font-medium text-red-900 dark:text-red-200">Error Loading Orders</h3>
+                  <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
                 </div>
                 <Button
                   variant="outline"
@@ -191,14 +191,14 @@ const AvailableOrdersPage = () => {
                 <div className="space-y-3">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-32 bg-gray-200 rounded-lg"></div>
+                      <div className="h-32 bg-muted rounded-lg"></div>
                     </div>
                   ))}
                 </div>
               ) : filteredOrders.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-8">
-                    <p className="text-gray-500">No available orders found matching your filters.</p>
+                    <p className="text-muted-foreground">No available orders found matching your filters.</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -235,36 +235,36 @@ const AvailableOrdersPage = () => {
           <CardContent className="pt-0">
             <div className="space-y-3">
               <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 p-2 bg-blue-50 rounded-full">
-                  <Navigation className="h-4 w-4 text-blue-600" />
+                <div className="flex-shrink-0 p-2 bg-blue-50 dark:bg-blue-500/15 rounded-full">
+                  <Navigation className="h-4 w-4 text-blue-600 dark:text-blue-300" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-gray-900">Optimize Your Route</h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h3 className="text-sm font-medium text-foreground">Optimize Your Route</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Plan efficient routes to save time, fuel, and reduce emissions while maximizing deliveries.
                   </p>
                 </div>
               </div>
               
               <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 p-2 bg-green-50 rounded-full">
-                  <Phone className="h-4 w-4 text-green-600" />
+                <div className="flex-shrink-0 p-2 bg-green-50 dark:bg-green-500/15 rounded-full">
+                  <Phone className="h-4 w-4 text-green-600 dark:text-green-300" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-gray-900">Proactive Communication</h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h3 className="text-sm font-medium text-foreground">Proactive Communication</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
                     Keep customers informed about delivery status and any potential delays.
                   </p>
                 </div>
               </div>
               
               <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0 p-2 bg-amber-50 rounded-full">
-                  <TrendingUp className="h-4 w-4 text-amber-600" />
+                <div className="flex-shrink-0 p-2 bg-amber-50 dark:bg-amber-500/15 rounded-full">
+                  <TrendingUp className="h-4 w-4 text-amber-600 dark:text-amber-300" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-medium text-gray-900">Longer Trips Pay More</h3>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <h3 className="text-sm font-medium text-foreground">Longer Trips Pay More</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
                     The delivery fee rises with distance above the ₦600 minimum. Sort by highest pay to compare.
                   </p>
                 </div>

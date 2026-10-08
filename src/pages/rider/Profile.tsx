@@ -10,10 +10,9 @@ import LoadingDisplay from '@/components/ui/LoadingDisplay';
 import RiderProfileHeader from '@/components/rider/profile/RiderProfileHeader';
 import ProfileHeader from '@/components/rider/profile/ProfileHeader';
 import VehicleInfo from '@/components/rider/profile/VehicleInfo';
-import DocumentsVerification from '@/components/rider/profile/DocumentsVerification';
+import VerificationCard from '@/components/verification/VerificationCard';
 import ProfileTabs from '@/components/rider/profile/ProfileTabs';
 import VehicleDialog from '@/components/rider/profile/dialogs/VehicleDialog';
-import DocumentDialog from '@/components/rider/profile/dialogs/DocumentDialog';
 import { useRiderProfileData } from '@/hooks/rider/useRiderProfileData';
 import { toast } from 'sonner';
 
@@ -21,7 +20,6 @@ const RiderProfilePage = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
   const [showVehicleDialog, setShowVehicleDialog] = useState(false);
-  const [showIdVerificationDialog, setShowIdVerificationDialog] = useState(false);
   
   const { 
     riderProfile, 
@@ -90,11 +88,6 @@ const RiderProfilePage = () => {
     }
   };
 
-  const handleUploadId = () => {
-    setShowIdVerificationDialog(false);
-    toast.success('Document uploaded successfully');
-  };
-
   const handleAvatarUpdate = async (avatarUrl: string) => {
     console.log('[Profile] Avatar updated:', avatarUrl);
     // Refetch profile to get updated avatar
@@ -157,10 +150,7 @@ const RiderProfilePage = () => {
               onUpdateVehicle={() => setShowVehicleDialog(true)} 
             />
 
-            <DocumentsVerification 
-              documents={riderProfile.documents} 
-              onUpdateDocuments={() => setShowIdVerificationDialog(true)} 
-            />
+            <VerificationCard role="rider" />
           </div>
 
           {/* Right Column - Tabs */}
@@ -184,13 +174,7 @@ const RiderProfilePage = () => {
           vehicle={riderProfile.vehicle}
           onUpdate={handleUpdateVehicle}
         />
-        
-        {/* ID Verification Dialog */}
-        <DocumentDialog 
-          open={showIdVerificationDialog}
-          onOpenChange={setShowIdVerificationDialog}
-          onUpload={handleUploadId}
-        />
+
       </div>
     </DashboardLayout>
   );

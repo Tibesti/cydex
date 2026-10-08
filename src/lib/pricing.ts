@@ -17,3 +17,14 @@ export const quoteProblem = (status: QuoteStatus | undefined) => {
       return null;
   }
 };
+
+// Withdrawal fee taken from the amount withdrawn. Must match payout_fee_rate()
+// in the database (supabase/migrations/20260930100000_wallets_server_side.sql).
+// It covers the bank transfer charge (Squad charges Cydex per transfer).
+export const PAYOUT_FEE_RATE = 0.015;
+
+export const withdrawalBreakdown = (amount: number) => {
+  const gross = Math.round(amount * 100) / 100;
+  const fee = Math.round(gross * PAYOUT_FEE_RATE * 100) / 100;
+  return { amount: gross, fee, received: Math.round((gross - fee) * 100) / 100 };
+};

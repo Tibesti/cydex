@@ -58,6 +58,10 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+// Need attention straight away: stay on screen until tapped, longer buzz
+// (keep in step with src/lib/notificationSound.ts)
+const URGENT = ['new_order', 'order_nearby', 'assigned_by_admin', 'payout_request', 'verification_request'];
+
 self.addEventListener('push', (event) => {
   let data = {};
   try {
@@ -65,13 +69,23 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { title: 'Cydex', body: event.data ? event.data.text() : '' };
   }
+  const urgent = URGENT.includes(data.type);
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Cydex', {
-      body: data.body || '',
-      icon: '/icons/icon-192.png',
-      badge: '/icons/icon-monochrome-512.png',
-      tag: data.tag,
-      data: { url: data.url || '/' },
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      // The app is on screen: it plays its own chime, so the notification stays quiet.
+      // Otherwise the phone plays its normal notification sound.
+      const appOpen = windows.some((w) => w.visibilityState === 'visible');
+      return self.registration.showNotification(data.title || 'Cydex', {
+        body: data.body || '',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-monochrome-512.png',
+        tag: data.tag,
+        renotify: !!data.tag,
+        silent: appOpen,
+        vibrate: urgent ? [300, 120, 300, 120, 300] : [200, 100, 200],
+        requireInteraction: urgent,
+        data: { url: data.url || '/' },
+      });
     }),
   );
 });

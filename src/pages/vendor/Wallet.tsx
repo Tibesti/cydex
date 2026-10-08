@@ -20,6 +20,7 @@ import { useVendorFinancials } from '@/hooks/useVendorFinancials';
 import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/utils/nigerianBanks';
 import PagedList from '@/components/ui/paged-list';
+import WithdrawalBreakdown from '@/components/wallet/WithdrawalBreakdown';
 
 const WalletPage = () => {
   const isMobile = useIsMobile();
@@ -201,7 +202,7 @@ const WalletPage = () => {
                 <DialogHeader>
                   <DialogTitle>Request Payout</DialogTitle>
                   <DialogDescription>
-                    Request a payout to your bank account. A 1.5% processing fee will be applied.
+                    Request a payout to your bank account. Cydex approves payouts before they're sent.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -214,9 +215,12 @@ const WalletPage = () => {
                       value={payoutAmount}
                       onChange={(e) => setPayoutAmount(e.target.value)}
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       Available: {formatAmount(balances.availableForPayout)}
                     </p>
+                    <div className="mt-3">
+                      <WithdrawalBreakdown amount={payoutAmount} available={balances.availableForPayout} />
+                    </div>
                     {bankAccounts.length > 0 && (
                       <p className="text-xs text-gray-400 mt-2">
                         Payout will be sent to: {bankAccounts.find(acc => acc.is_default)?.bank_name || bankAccounts[0]?.bank_name} - **** {bankAccounts.find(acc => acc.is_default)?.account_number.slice(-4) || bankAccounts[0]?.account_number.slice(-4)}
@@ -368,7 +372,7 @@ const WalletPage = () => {
               <div className="space-y-3 sm:space-y-4">
                 {bankAccounts.length > 0 ? (
                   bankAccounts.map((account) => (
-                    <div key={account.id} className="p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+                    <div key={account.id} className="p-3 border rounded-lg hover:bg-muted/60 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Avatar className="h-6 w-6 sm:h-8 sm:w-8 mr-2 sm:mr-3">
@@ -544,7 +548,7 @@ const WalletPage = () => {
                     
                     return Object.entries(dailyEarnings).length > 0 ? (
                       Object.entries(dailyEarnings).map(([date, amount]) => (
-                        <div key={date} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                        <div key={date} className="flex justify-between items-center p-2 hover:bg-muted/60 rounded">
                           <span className="text-sm text-gray-600">{date}</span>
                           <span className="font-medium">{formatAmount(amount)}</span>
                         </div>
@@ -575,7 +579,7 @@ const WalletPage = () => {
                     
                     return Object.entries(dailyEarnings).length > 0 ? (
                       Object.entries(dailyEarnings).reverse().map(([date, amount]) => (
-                        <div key={date} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                        <div key={date} className="flex justify-between items-center p-2 hover:bg-muted/60 rounded">
                           <span className="text-sm text-gray-600">{date}</span>
                           <span className="font-medium">{formatAmount(amount)}</span>
                         </div>

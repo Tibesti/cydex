@@ -62,10 +62,10 @@ const VendorDashboardReal = () => {
         <div className="animate-pulse space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="h-24 bg-gray-200 rounded-lg"></div>
+              <div key={i} className="h-24 bg-muted rounded-lg"></div>
             ))}
           </div>
-          <div className="h-96 bg-gray-200 rounded-lg"></div>
+          <div className="h-96 bg-muted rounded-lg"></div>
         </div>
       </div>
     );
@@ -120,7 +120,7 @@ const VendorDashboardReal = () => {
               {formatCurrency(stats?.total_revenue || 0)}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              All time
+              Earned, all time
             </p>
           </CardContent>
         </Card>
@@ -140,7 +140,10 @@ const VendorDashboardReal = () => {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden">
+        <Card
+          className="cursor-pointer overflow-hidden transition-colors hover:bg-muted/60"
+          onClick={() => navigate('/vendor/settings?tab=ratings')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 py-2 px-3">
             <CardTitle className="text-xs sm:text-sm font-medium">Rating</CardTitle>
             <Star className="h-3 w-3 text-muted-foreground" />
@@ -150,7 +153,7 @@ const VendorDashboardReal = () => {
               {(stats?.rating || 0).toFixed(1)}
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Satisfaction
+              {stats?.rating_count ? `${stats.rating_count} ${stats.rating_count === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
             </p>
           </CardContent>
         </Card>
@@ -168,8 +171,8 @@ const VendorDashboardReal = () => {
         </CardHeader>
         <CardContent className="p-0">
           {recentOrders.length === 0 ? (
-            <div className="text-center py-6 px-3 text-gray-500">
-              <Package className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-6 px-3 text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
               <p className="text-sm font-medium mb-1">No orders yet</p>
               <p className="text-xs">Orders will appear here once customers place them.</p>
             </div>
@@ -178,7 +181,7 @@ const VendorDashboardReal = () => {
               {recentOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 hover:bg-gray-50 cursor-pointer"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 hover:bg-muted/60 transition-colors cursor-pointer"
                   onClick={() => navigate(`/vendor/orders/${order.id}`)}
                 >
                   <div className="flex-1 min-w-0 space-y-1">
@@ -186,10 +189,10 @@ const VendorDashboardReal = () => {
                       <span className="text-xs font-medium">#{order.order_number}</span>
                       {getStatusBadge(order.status)}
                     </div>
-                    <div className="text-xs text-gray-600 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {order.customer?.name || 'Unknown'}
                     </div>
-                    <div className="text-[10px] text-gray-500">
+                    <div className="text-[10px] text-muted-foreground">
                       {formatDate(order.created_at)}
                     </div>
                   </div>
@@ -197,7 +200,7 @@ const VendorDashboardReal = () => {
                     <div className="text-xs font-semibold">
                       {formatCurrency(order.subtotal)}
                     </div>
-                    <div className="text-[10px] text-gray-500">
+                    <div className="text-[10px] text-muted-foreground">
                       {order.order_items?.length || 0} items
                     </div>
                   </div>

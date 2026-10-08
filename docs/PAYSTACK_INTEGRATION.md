@@ -30,7 +30,6 @@ Paystack processed payments for Cydex delivery orders. The integration supports 
 | `src/utils/paystack.ts` | A third copy of the config, always using the test public key, plus a popup config builder |
 | `src/hooks/usePaystack.ts` | A React hook with its own copy of the keys; verifies transactions against the Paystack API |
 | `src/services/webhookHandler.ts` | `PaystackWebhookHandler` for processing webhook events |
-| `src/components/admin/PaystackTestPanel.tsx`, `src/components/admin/paystack/IntegrationStatus.tsx` | Admin test panel and status display |
 
 ## Configuration
 
@@ -40,7 +39,7 @@ The keys are **hardcoded** in `src/config/paystack.ts`. They aren't loaded from 
 
 `getPublicKey()` and `getSecretKey()` choose a key using `IS_PRODUCTION`. That flag is set to `import.meta.env.PROD`, so **any production build (`vite build`) reads the empty production keys** until they are filled in.
 
-The same test keys are also copied into `src/constants/paystack.ts`, `src/utils/paystack.ts`, `src/hooks/usePaystack.ts`, and `src/components/admin/PaystackTestPanel.tsx`. If you change a key, update every copy, or better, merge them into a single config first.
+The same test keys are also copied into `src/constants/paystack.ts`, `src/utils/paystack.ts`, and `src/hooks/usePaystack.ts`. If you change a key, update every copy, or better, merge them into a single config first.
 
 ### Environment Variables
 
