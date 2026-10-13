@@ -50,7 +50,7 @@ export const AvailableOrdersList: React.FC<AvailableOrdersListProps> = ({
                           Order from {order.vendor_name}
                         </h3>
                         <span className="mx-2 text-gray-300 hidden sm:inline">•</span>
-                        <span className="text-xs sm:text-sm text-gray-500">Deliver to {order.customer_name}</span>
+                        <span className="text-xs sm:text-sm text-gray-500">Deliver to {(order.batch_stops ?? 0) > 1 ? `${order.batch_stops} drop-offs, first: ${order.customer_name}` : order.customer_name}</span>
                       </div>
                       <div className="flex items-center mt-1 flex-wrap gap-2">
                         <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 text-xs">

@@ -43,7 +43,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                 </h3>
               </div>
               <p className="text-sm text-muted-foreground truncate">
-                → {order.customer_name}
+                → {(order.batch_stops ?? 0) > 1 ? `${order.batch_stops} drop-offs, first: ${order.customer_name}` : order.customer_name}
               </p>
               <div className="flex items-center mt-1 text-xs text-muted-foreground">
                 <span>Order #{order.order_id.slice(0, 8)}</span>

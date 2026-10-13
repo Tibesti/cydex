@@ -12,11 +12,14 @@ Every vendor and rider, new or existing, goes through onboarding before using th
 |---|---|
 | **Store name** (what customers see; saved as their profile name) | **Phone number** |
 | **Phone number** | **Home address** (pin-drop) |
-| **Store logo and banner** (also editable in Settings → Account) | **Vehicle:** on foot, bicycle, electric bike, motorcycle or car. **Model, year and colour** for motor vehicles; **registration** if it has one |
-| **Business category** (from the admin's list; currently Restaurant) | **Government ID:** National ID, passport, voter's card or driver's licence, plus a photo or scan |
+| **Store logo and banner** (also editable in Settings → Account) | **Vehicle type**, from the admin's list (walking, bicycle, petrol bike, electric bike). Walking needs nothing else. The others need the **colour** and a **photo of the vehicle**, and, where the admin requires it, the **registration number** and a **registration document** |
+| **Business category** (from the admin's list: Restaurant or Shop) | **Government ID:** National ID, passport, voter's card or driver's licence, plus a photo or scan |
+| **Opening hours** for each day and **preparation time** (also in Settings → Hours) | |
 | **Registered business?** If yes, a **business licence** upload | |
 
 Documents go to the private `verification-docs` storage bucket. Only the user and admins can open them. Uploads are limited to PDF, PNG, JPG or WebP files of up to 5 MB.
+
+Riders see their vehicle details and documents in **Profile**, and can update them there. Changing them sends the account back for review, with a warning first.
 
 ## Statuses
 
@@ -34,6 +37,20 @@ Documents go to the private `verification-docs` storage bucket. Only the user an
 - Only `verified` riders see available orders, get "order nearby" alerts, or can accept deliveries.
 
 Customers see **Verified** or **Unverified** on every vendor card and store page, and can filter the vendor list with **Verified only**.
+
+## Emails
+
+Vendors and riders are emailed at each step (migration [`20261013500000_verification_emails.sql`](../supabase/migrations/20261013500000_verification_emails.sql)), unless they've turned email notifications off:
+
+| When | Email |
+|---|---|
+| They submit documents for review | "We're reviewing your details" |
+| An admin verifies them | "You're verified" |
+| An admin rejects the request | "Your verification wasn't approved", with the reason and how to resubmit |
+| An admin suspends them | "Your account is suspended", with the reason |
+| An admin reinstates them | "Your account is active again" |
+
+A vendor who registers without a licence goes live as unverified straight away and gets no review email.
 
 ## Admin review
 

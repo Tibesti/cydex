@@ -16,14 +16,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useMyVerification } from '@/hooks/useMyVerification';
-import { ID_TYPES, MOTOR_VEHICLES, VEHICLE_TYPES } from '@/lib/verification';
+import { ID_TYPES } from '@/lib/verification';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import { isValidPhone } from '@/lib/phone';
 import { errorMessage } from '@/lib/address';
 
-const THIS_YEAR = new Date().getFullYear();
-
-// Rider onboarding: phone, address, vehicle and a government ID. Riders wait
-// for an admin to verify them before they can use the dashboard.
+// Rider onboarding: phone, address, vehicle (type from the admin's list; its
+// colour, photo and registration where that type needs them) and a government
+// ID. Riders wait for an admin to verify them before they can use the dashboard.
 const RiderOnboarding = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -32,10 +32,11 @@ const RiderOnboarding = () => {
   const { defaultAddress } = useAddresses();
   const [phone, setPhone] = useState('');
   const [vehicleType, setVehicleType] = useState('');
-  const [model, setModel] = useState('');
-  const [year, setYear] = useState('');
   const [color, setColor] = useState('');
+  const [vehiclePhoto, setVehiclePhoto] = useState<string | null>(null);
   const [registration, setRegistration] = useState('');
+  const [registrationDoc, setRegistrationDoc] = useState<string | null>(null);
+  const { types: vehicleTypes, byKey } = useVehicleTypes(true);
   const [idType, setIdType] = useState('');
   const [idPath, setIdPath] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -52,22 +53,26 @@ const RiderOnboarding = () => {
     setPhone(phoneRow?.phone && isValidPhone(phoneRow.phone) ? phoneRow.phone : '');
     if (verification) {
       setVehicleType(verification.vehicle_type ?? '');
-      setModel(verification.vehicle_model ?? '');
-      setYear(verification.vehicle_year ? String(verification.vehicle_year) : '');
       setColor(verification.vehicle_color ?? '');
+      setVehiclePhoto(verification.vehicle_photo_path);
       setRegistration(verification.vehicle_registration ?? '');
+      setRegistrationDoc(verification.vehicle_registration_doc_path);
       setIdType(verification.id_document_type ?? '');
       setIdPath(verification.id_document_path);
     }
     setPrefilled(true);
   }, [phoneRow, verification, prefilled]);
 
-  const motorised = MOTOR_VEHICLES.includes(vehicleType);
-  const yearNum = Number(year);
-  const yearOk = !motorised || (Number.isInteger(yearNum) && yearNum >= 1980 && yearNum <= THIS_YEAR + 1);
+  const type = byKey(vehicleType);
+  const needsDetails = !!type?.needs_details;
+  const needsRegistration = !!type?.needs_registration;
+  // Types that are switched off stay available only to riders who already have them
+  const choices = vehicleTypes.filter((t) => t.is_active || t.key === verification?.vehicle_type);
   const canSubmit =
-    isValidPhone(phone) && !!defaultAddress && !!vehicleType &&
-    (!motorised || (model.trim() && color.trim() && yearOk)) && !!idType && !!idPath && !submitting;
+    isValidPhone(phone) && !!defaultAddress && !!type &&
+    (!needsDetails || (!!color.trim() && !!vehiclePhoto)) &&
+    (!needsRegistration || (!!registration.trim() && !!registrationDoc)) &&
+    !!idType && !!idPath && !submitting;
 
   const submit = async () => {
     setSubmitting(true);
@@ -75,10 +80,11 @@ const RiderOnboarding = () => {
       const { error } = await supabase.rpc('submit_rider_onboarding', {
         p_phone: phone.trim(),
         p_vehicle_type: vehicleType,
-        p_vehicle_model: motorised ? model.trim() : null,
-        p_vehicle_year: motorised ? yearNum : null,
-        p_vehicle_color: motorised ? color.trim() : null,
-        p_vehicle_registration: registration.trim() || null,
+        // null (not left out) when the vehicle type doesn't need them
+        p_vehicle_color: needsDetails ? color.trim() : null,
+        p_vehicle_photo_path: needsDetails ? vehiclePhoto ?? null : null,
+        p_vehicle_registration: needsRegistration ? registration.trim() : null,
+        p_registration_doc_path: needsRegistration ? registrationDoc ?? null : null,
         p_id_document_type: idType,
         p_id_document_path: idPath!,
       });
@@ -151,32 +157,27 @@ const RiderOnboarding = () => {
               <Select value={vehicleType} onValueChange={setVehicleType}>
                 <SelectTrigger><SelectValue placeholder="Choose" /></SelectTrigger>
                 <SelectContent>
-                  {VEHICLE_TYPES.map((v) => <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>)}
+                  {choices.map((v) => <SelectItem key={v.key} value={v.key}>{v.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-            {motorised && (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="v-model">Model*</Label>
-                  <Input id="v-model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. Bajaj Boxer" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="v-year">Year*</Label>
-                  <Input id="v-year" inputMode="numeric" value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="e.g. 2021" />
-                  {year && !yearOk && <p className="text-xs text-destructive">Enter a valid year.</p>}
-                </div>
+            {needsDetails && (
+              <>
                 <div className="space-y-1.5">
                   <Label htmlFor="v-color">Colour*</Label>
                   <Input id="v-color" value={color} onChange={(e) => setColor(e.target.value)} placeholder="e.g. Red" />
                 </div>
-              </div>
+                <DocumentUpload kind="vehicle" value={vehiclePhoto} onChange={setVehiclePhoto} label="Photo of your vehicle*" />
+              </>
             )}
-            {vehicleType && vehicleType !== 'walking' && (
-              <div className="space-y-1.5">
-                <Label htmlFor="v-reg">Registration number (if it has one)</Label>
-                <Input id="v-reg" value={registration} onChange={(e) => setRegistration(e.target.value)} placeholder="e.g. LSD-123-AB" />
-              </div>
+            {needsRegistration && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="v-reg">Registration number*</Label>
+                  <Input id="v-reg" value={registration} onChange={(e) => setRegistration(e.target.value)} placeholder="e.g. LSD-123-AB" />
+                </div>
+                <DocumentUpload kind="registration" value={registrationDoc} onChange={setRegistrationDoc} label="Vehicle registration document*" />
+              </>
             )}
           </CardContent>
         </Card>

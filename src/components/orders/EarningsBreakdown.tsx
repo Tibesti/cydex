@@ -31,8 +31,8 @@ const creditNote = (status: string, paymentStatus: string, who: string) => {
     : `Added to your wallet once the ${who} is delivered.`;
 };
 
-// Vendor's view of an order's money: items total, Cydex's commission, and what
-// they get. Never shows the customer's Service Charge or delivery fee.
+// Vendor's view of an order's money: items total, any promotion discount they
+// fund, Cydex's commission, and what they get. Never shows the customer's Service Charge or delivery fee.
 export const VendorEarningsBreakdown = ({ order }: {
   order: { id: string; subtotal: number; status: string; payment_status: string };
 }) => {
@@ -56,10 +56,15 @@ export const VendorEarningsBreakdown = ({ order }: {
     return <p className="text-sm text-muted-foreground">Items total: {formatNaira(items)}</p>;
   }
 
+  // A discount on their items that this business pays for (a promotion the
+  // admin set up with them): it comes off before the commission is worked out
+  const promotion = Math.round((items - commission - yours) * 100) / 100;
+
   return (
     <Breakdown
       lines={[
         { label: 'Items total', amount: items },
+        ...(promotion > 0 ? [{ label: 'Your promotion discount', amount: promotion, negative: true }] : []),
         { label: 'Cydex commission', amount: commission, negative: true },
       ]}
       total={{ label: order.status === 'delivered' ? 'Credited to you' : 'You’ll receive', amount: yours }}

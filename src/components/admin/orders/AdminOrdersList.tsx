@@ -93,6 +93,7 @@ const AdminOrdersList = () => {
               <SelectItem value="all">All types</SelectItem>
               <SelectItem value="customer">Customer orders</SelectItem>
               <SelectItem value="rider_request">Rider requests</SelectItem>
+              <SelectItem value="express">Cydex Express</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -117,12 +118,13 @@ const AdminOrdersList = () => {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">#{o.order_number}</span>
                           {isRequest && <Badge variant="outline">Rider request</Badge>}
+                          {o.order_type === 'express' && <Badge variant="outline">Cydex Express</Badge>}
                           <OrderStatusBadge status={o.status} />
                           <PaymentStatusBadge status={o.payment_status} />
                         </div>
                         <p className="truncate text-xs text-muted-foreground">
-                          {isRequest
-                            ? `${o.vendor_name ?? 'Vendor'} → ${o.recipient_name ?? 'recipient'}`
+                          {isRequest || o.order_type === 'express'
+                            ? `${(isRequest ? o.vendor_name : o.customer_name) ?? 'Sender'} → ${o.recipient_name ?? 'recipient'}`
                             : `${o.customer_name ?? 'Customer'} · ${o.vendor_name ?? 'Vendor'} · ${o.item_count} item${Number(o.item_count) === 1 ? '' : 's'}`}
                           {o.rider_name ? ` · Rider: ${o.rider_name}` : ''}
                         </p>

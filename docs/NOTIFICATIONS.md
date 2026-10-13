@@ -32,9 +32,16 @@ Every user has two switches. Customers find them in Profile → Preferences, ven
 
 A push that can't be sent never blocks the notification itself.
 
+**Announcements:** admins can send their own notifications and emails to customers, vendors or riders, everywhere or near a place, from **Admin → Broadcasts** ([ADMIN.md → Broadcasts](ADMIN.md#broadcasts)). They arrive like any other notification and respect the same two switches.
+
+### Badge on the app icon
+
+The installed app's icon shows the number of unread notifications. It's set while the app is open and again by the service worker whenever a push arrives. Phones only show numbers, so it stops at **9** (the app itself shows "9+"). It clears when everything is read. It works where the browser supports app badges: installed apps on Android, Windows and Mac, and on iPhone once added to the Home Screen with notifications allowed.
+
 ## Sound
 
 - **App open:** a short chime plays with the pop-up ([`src/lib/notificationSound.ts`](../src/lib/notificationSound.ts)). Urgent notifications get a longer chime:
+  - **Customers:** your rider is around
   - **Vendors:** new order
   - **Riders:** order nearby, order assigned by an admin
   - **Admins:** withdrawal to approve, verification to review

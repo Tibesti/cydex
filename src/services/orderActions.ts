@@ -28,10 +28,16 @@ export const orderActions = {
   cancel: (orderId: string, reason?: string) =>
     run(supabase.rpc('customer_cancel_order', { p_order_id: orderId, p_reason: reason })),
 
+  /** Cydex Express: the sender enters the rider's pickup code. Resolves false if the code is wrong. */
+  senderConfirmPickup: (orderId: string, code: string) =>
+    run(supabase.rpc('sender_confirm_pickup', { p_order_id: orderId, p_code: code })),
+
   // Rider
   riderAccept: (orderId: string) => run(supabase.rpc('rider_accept_order', { p_order_id: orderId })),
   startPickup: (orderId: string) => run(supabase.rpc('rider_start_pickup', { p_order_id: orderId })),
   /** The customer's delivery code. Resolves false if the code is wrong. */
   confirmDelivery: (orderId: string, code: string) =>
     run(supabase.rpc('rider_confirm_delivery', { p_order_id: orderId, p_code: code })),
+  /** "I've arrived": tells the customer their rider is around */
+  markArrived: (orderId: string) => run(supabase.rpc('rider_mark_arrived', { p_order_id: orderId })),
 };

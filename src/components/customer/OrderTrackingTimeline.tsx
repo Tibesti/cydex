@@ -47,7 +47,7 @@ const OrderTrackingTimeline = ({
           ))}
         </div>
         
-        {(status === 'out_for_delivery' || status === 'ready_for_pickup') && eta && (
+        {eta && (
           <div className="mt-3 sm:mt-4">
             <p className="text-xs sm:text-sm text-muted-foreground mb-2">Estimated Time of Arrival</p>
             <div className="flex items-center">

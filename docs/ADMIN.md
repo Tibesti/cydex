@@ -16,11 +16,13 @@ Before an action runs, the admin is asked **"Are you sure…?"**. Actions that a
 | **Users** | Everyone, with their role, status and verification. Edit a name or phone, suspend or reinstate customers, and invite or remove admins. |
 | **Verifications** | Review vendors and riders, and manage business categories. See [VERIFICATION.md](VERIFICATION.md). |
 | **Reviews** | Vendor and rider reviews. Hide fake or abusive ones. |
-| **Pricing** | Delivery fees, Service Charge and commissions, with the change history. |
+| **Pricing** | The delivery charge, Service Charge and commissions, with the change history. |
+| **Riders & vehicles** | The vehicle types riders can register, each with its own price per km, and how long an idle rider stays online. |
+| **Promotions** | Discounts and coupon codes for customers, vendors and riders, with limits. |
+| **Broadcasts** | Announcements to customers, vendors or riders, as a notification, an email or both. |
 | **Notifications** | The admin's own notifications (withdrawals to approve, verifications to review), with a bell on mobile. |
 | **Emails** | Emails the app sends. Retry failed ones. |
 | **Activity log** | Who did what, newest first. |
-| **Content** | Announcements. |
 | **Security** | Placeholder with sample data, kept for planning. Not connected yet. |
 
 Lists show 10 rows per page, here and across the app (`PAGE_SIZE` in [`src/lib/pagination.ts`](../src/lib/pagination.ts)).
@@ -69,6 +71,8 @@ Paid always equals Vendor got + Rider got + Cydex total. Refunded orders aren't 
 
 ### Withdrawals need an admin
 
+Vendors and riders can't request less than **₦3,000** at a time (`app_config.min_payout_amount`).
+
 1. A vendor, rider or customer asks to withdraw. `request_payout` takes the money out of their wallet and records a **pending** request. They're told it's waiting for approval, and all admins get a notification.
 2. An admin opens **Money → Withdrawals**:
    - **Approve:** `squad-payout` (`action: 'approve'`) sends the Squad transfer. Two admins can't send the same one twice. If Squad rejects the transfer, the money goes back to the wallet.
@@ -82,9 +86,71 @@ Each save adds a new `pricing_config` row (`admin_update_pricing`), with who cha
 
 | Setting | Allowed |
 |---|---|
-| Minimum delivery fare, price per km | ₦0 – ₦100,000 |
+| Delivery charge (added to every delivery; ₦500) | ₦0 – ₦100,000 |
 | Service Charge, vendor commission, rider-request commission | 0 – 50% |
 | Rider share of the delivery fee | 50 – 100% |
+
+**Delivery fee = distance × the vehicle type's price per km + the delivery charge.** The price per km is set for each vehicle type on **Riders & vehicles**; there's no minimum fare.
+
+### Riders & vehicles
+
+Migration [`20261013000000_vehicles_categories_hours.sql`](../supabase/migrations/20261013000000_vehicles_categories_hours.sql).
+
+- **Vehicle types:** Walking (customers see "Cydex Dashers"), Bicycle, Petrol bike and Electric bike to start with. Add more or edit them. For each one:
+  - **Price per km**, used for the delivery fee.
+  - **Longest trip**, pickup to drop-off, in km (5 to start with). Riders with this vehicle only see deliveries up to this distance, customers can only pick it for trips this short, and customers see vendors as far away as the longest trip of any active type. See [ORDER_FLOW.md → How far each mode goes](ORDER_FLOW.md#how-far-each-mode-goes).
+  - **Average speed**, used for delivery time estimates until the type has 5 real deliveries.
+  - **What riders must give:** nothing (walking); colour and a photo of the vehicle; or also the registration number and registration document.
+  - **Name customers see**, if different.
+  - **Active:** riders can register with it and customers can pick it as their preferred delivery mode.
+- **Idle riders:** the number of minutes a rider can show as available without taking an order before they're set offline (30 to start with; 0 switches it off). They come back online when they open the app again.
+
+### Promotions
+
+Migration [`20261013400000_promotions.sql`](../supabase/migrations/20261013400000_promotions.sql). **Admin → Promotions → New promotion.**
+
+Audiences and limits: migration [`20261014100000_promotion_audience_limits.sql`](../supabase/migrations/20261014100000_promotion_audience_limits.sql).
+
+| Field | Choices |
+|---|---|
+| **Who it's for** | Customers, vendors, riders or everyone. This decides what it can take money off. |
+| **What it takes money off** | **Customers:** the Service Charge, the delivery fee, or the items of one business. **Vendors:** the Request Rider delivery fee, the Request Rider commission, or the commission on their sales. **Riders:** the commission on their deliveries. |
+| **Discount** | A percentage, or a flat amount in naira |
+| **Who pays for it** | Cydex, or the business (items only) |
+| **Limits** | **Only the first … people**, and **Uses for each person**. Leave either empty for no limit. |
+| **Coupon code** | Leave empty for a promotion that applies by itself; enter a code to make people type it. Commission promotions can't have a code. |
+| **Conditions** | Maximum distance in km; one or more delivery modes (rider groups) |
+| **Dates** | Start and end |
+| **Show in "Offers for you"** | On to start with. Off: it isn't listed on home pages or among the codes at checkout. A hidden coupon still works for anyone given the code; a hidden automatic promotion still applies by itself. |
+
+- An order gets one discount on what's paid: a valid coupon first, otherwise the promotion that saves the most. A commission promotion for the vendor or rider can apply on top.
+- **Limits count paid orders that aren't cancelled.** Cancelling or refunding an order gives the use back.
+- The list shows each promotion's state (scheduled, running, fully claimed, ended, off), who it's for, and how many times and by how many people it's been used.
+- People see every promotion they can still use under **Offers for you** on their home page, with the uses and places left. Coupons are listed with their code, and offered at checkout, one tap to apply. For a code meant only for particular people, switch **Show in "Offers for you"** off (migration [`20261015100000_promotion_show_in_offers.sql`](../supabase/migrations/20261015100000_promotion_show_in_offers.sql)); the list marks it **Not in offers**.
+- **Earnings** has a **Promo cost** column and the Overview shows what promotions cost Cydex in the period, commission promotions included. The row still adds up: customer paid = vendor + rider + Cydex.
+- Batches of rider requests aren't discounted.
+
+### Broadcasts
+
+Migration [`20261014200000_broadcasts.sql`](../supabase/migrations/20261014200000_broadcasts.sql). **Admin → Broadcasts → New broadcast.**
+
+| Field | Choices |
+|---|---|
+| **Title** and **Message** | Up to 80 and 2,000 characters. A phone notification shows about the first 180 characters of the message. |
+| **Send as** | A notification in the app (which also goes out as a push to people who have push on), an email, or both |
+| **Send to** | Customers, vendors, riders, or any mix |
+| **Where** | Everyone in those groups, or only people near a place: pick the point on the map or search for an address, then set the radius in km |
+| **When** | Now, or at a set time |
+
+- **"Near a place"** means the person has a saved address inside the circle (a customer's delivery addresses, a vendor's store, a rider's home), or, for riders, their last known location is inside it.
+- **The form shows how many people it reaches** before you send.
+- **Scheduled broadcasts** are sent by a job that runs every minute (`send-due-broadcasts`), and can be cancelled until then. A sent broadcast can't be taken back.
+- **Emails** use the Cydex email template (the "announcement" layout) and go only to people who haven't turned email notifications off. Suspended accounts are skipped.
+- The list shows when each went out and to how many people.
+
+### Business and product categories
+
+**Admin → Verifications → Business categories.** A business category (Restaurant, Shop) has its own list of **product categories** that its vendors choose from when adding a product. A new business category needs at least one product category, and the last one can't be removed.
 
 ## Order details
 

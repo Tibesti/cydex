@@ -8,6 +8,7 @@ export const ORDER_STATUSES = [
   'rider_assigned',
   'picking_up',
   'out_for_delivery',
+  'arrived',
   'delivered',
   'cancelled',
   'rejected',
@@ -22,6 +23,7 @@ const LABELS: Record<OrderStatus, string> = {
   rider_assigned: 'Rider assigned',
   picking_up: 'Rider heading to vendor',
   out_for_delivery: 'Out for delivery',
+  arrived: 'Rider is around',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
   rejected: 'Rejected',
@@ -32,10 +34,12 @@ export const orderStatusLabel = (status: string) =>
 
 // Between the vendor accepting and delivery
 export const IN_PROGRESS_STATUSES: OrderStatus[] = [
-  'accepted', 'ready_for_pickup', 'rider_assigned', 'picking_up', 'out_for_delivery',
+  'accepted', 'ready_for_pickup', 'rider_assigned', 'picking_up', 'out_for_delivery', 'arrived',
 ];
 // A rider has the order (or is on the way to collect it)
-export const RIDER_ACTIVE_STATUSES: OrderStatus[] = ['rider_assigned', 'picking_up', 'out_for_delivery'];
+export const RIDER_ACTIVE_STATUSES: OrderStatus[] = ['rider_assigned', 'picking_up', 'out_for_delivery', 'arrived'];
+// The rider has the package (pickup done, not yet handed over)
+export const ON_THE_WAY_STATUSES: OrderStatus[] = ['out_for_delivery', 'arrived'];
 export const CLOSED_STATUSES: OrderStatus[] = ['delivered', 'cancelled', 'rejected'];
 
 export type StatusTone = 'waiting' | 'active' | 'done' | 'stopped';
@@ -47,8 +51,12 @@ export const orderStatusTone = (status: string): StatusTone => {
   return 'active';
 };
 
-// Customers can cancel until the vendor accepts
-export const customerCanCancel = (status: string) => status === 'pending';
+// Customers can cancel until the vendor accepts; a Cydex Express delivery
+// until a rider accepts it
+export const customerCanCancel = (status: string, order?: { order_type?: string | null; rider_id?: string | null }) =>
+  order?.order_type === 'express'
+    ? ['pending', 'ready_for_pickup'].includes(status) && !order.rider_id
+    : status === 'pending';
 // Vendors can reject until a rider accepts
 export const vendorCanReject = (order: { status: string; rider_id?: string | null }) =>
   ['pending', 'accepted', 'ready_for_pickup'].includes(order.status) && !order.rider_id;

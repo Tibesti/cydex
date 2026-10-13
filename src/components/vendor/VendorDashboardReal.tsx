@@ -1,3 +1,4 @@
+import OffersStrip from '@/components/promotions/OffersStrip';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -94,6 +95,8 @@ const VendorDashboardReal = () => {
           </Button>
         </div>
       </div>
+
+      <OffersStrip role="vendor" />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

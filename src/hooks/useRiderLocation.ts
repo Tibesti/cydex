@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
   getRiderLocation,
   requestRiderLocation,
+  resumeRiderOnline,
   startRiderLocation,
   subscribeRiderLocation,
 } from '@/lib/riderLocation';
@@ -21,7 +22,9 @@ export const useRiderLocation = () => {
   return {
     ...location,
     // Riders are online while their live location is coming through
-    isOnline: location.permission === 'granted' && !!location.position,
+    isOnline: location.permission === 'granted' && !!location.position && !location.idleOffline,
     requestLocation: requestRiderLocation,
+    /** After being set offline for being idle */
+    goOnline: () => resumeRiderOnline(false),
   };
 };

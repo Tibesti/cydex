@@ -25,6 +25,10 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   amount: number;
+  /** Already taken from their wallet for this order; `amount` is what's left */
+  walletAmount?: number;
+  /** Promotion or coupon already taken off this order */
+  discountAmount?: number;
   onSuccess: (reference: string) => void;
   onError: (error: Error) => void;
   orderNumber: string;
@@ -38,6 +42,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   isOpen,
   onClose,
   amount,
+  walletAmount = 0,
+  discountAmount = 0,
   onSuccess,
   onError,
   orderNumber,
@@ -128,8 +134,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 <span className="text-sm text-muted-foreground">Order Number:</span>
                 <span className="font-medium">#{orderNumber}</span>
               </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-700 dark:text-green-400">
+                  <span className="text-sm">Discount applied:</span>
+                  <span className="font-medium">−₦{discountAmount.toLocaleString()}</span>
+                </div>
+              )}
+              {walletAmount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Paid from your wallet:</span>
+                  <span className="font-medium">₦{walletAmount.toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Total Amount:</span>
+                <span className="text-sm text-muted-foreground">{walletAmount > 0 ? 'Left to pay:' : 'Total Amount:'}</span>
                 <span className="text-lg font-bold">₦{amount.toLocaleString()}</span>
               </div>
             </div>

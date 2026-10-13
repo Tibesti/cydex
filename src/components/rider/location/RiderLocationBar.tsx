@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { APIProvider, useMapsLibrary } from '@vis.gl/react-google-maps';
-import { Loader2, MapPin, MapPinOff } from 'lucide-react';
+import { Loader2, MapPin, MapPinOff, PowerOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRiderLocation } from '@/hooks/useRiderLocation';
 import { GOOGLE_MAPS_API_KEY, metersBetween } from '@/lib/googleMaps';
@@ -38,7 +38,7 @@ const PlaceLabeler = ({ position }: { position: RiderPosition }) => {
 
 // Rider nav bar: live location status and the place they're near
 const RiderLocationBar = () => {
-  const { permission, position, label, error, requestLocation } = useRiderLocation();
+  const { permission, position, label, error, idleOffline, requestLocation, goOnline } = useRiderLocation();
 
   return (
     <div className="bg-background px-3 sm:px-4 md:px-6 py-2 text-sm">
@@ -50,6 +50,15 @@ const RiderLocationBar = () => {
 
       {permission === 'checking' ? (
         <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+      ) : permission === 'granted' && idleOffline ? (
+        // Set offline for not taking an order in a while (the admin sets how long)
+        <div className="flex flex-wrap items-center gap-2">
+          <PowerOff className="h-4 w-4 shrink-0 text-amber-600" />
+          <span className="text-amber-700 dark:text-amber-400">
+            You're offline because you haven't taken an order in a while.
+          </span>
+          <Button size="sm" variant="outline" className="h-7" onClick={goOnline}>Go online</Button>
+        </div>
       ) : permission === 'granted' ? (
         position ? (
           <div className="flex min-w-0 items-center gap-2">

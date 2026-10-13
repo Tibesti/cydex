@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Package, ArrowLeft, Upload, Leaf, Store } from 'lucide-react';
 import { useVendorProducts } from '@/hooks/useVendorProducts';
+import { useProductCategories } from '@/hooks/useProductCategories';
 import { supabase } from '@/integrations/supabase/client';
 import { checkUploadSize, MAX_UPLOAD_LABEL } from '@/lib/uploads';
 
@@ -42,24 +43,14 @@ const productSchema = z
 
 type ProductFormValues = z.infer<typeof productSchema>;
 
-const categoryOptions = [
-  'Groceries',
-  'Organic Food',
-  'Health & Wellness',
-  'Home Goods',
-  'Eco-friendly Products',
-  'Clothes & Apparel',
-  'Beauty & Personal Care',
-  'Electronics',
-  'Others',
-];
-
 // Add a product, or edit one at /vendor/edit-product/:productId
 const AddProduct = () => {
   const navigate = useNavigate();
   const { productId } = useParams<{ productId: string }>();
   const isEditing = !!productId;
   const { addProduct, updateProduct } = useVendorProducts();
+  // Categories for this vendor's kind of business (set by admins)
+  const { categories, business } = useProductCategories();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProduct, setLoadingProduct] = useState(isEditing);
@@ -257,11 +248,16 @@ const AddProduct = () => {
                               {...field}
                             >
                               <option value="" disabled>Select a category</option>
-                              {categoryOptions.map((category) => (
+                              {categories.map((category) => (
                                 <option key={category} value={category}>{category}</option>
                               ))}
+                              {/* A product saved under a category that has since been removed keeps it */}
+                              {field.value && !categories.includes(field.value) && (
+                                <option value={field.value}>{field.value}</option>
+                              )}
                             </select>
                           </FormControl>
+                          {business && <FormDescription>Categories for {business} stores.</FormDescription>}
                           <FormMessage />
                         </FormItem>
                       )}

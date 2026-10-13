@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/utils/nigerianBanks';
 import RecentTransactions from '@/components/rider/earnings/RecentTransactions';
 import WithdrawalBreakdown from '@/components/wallet/WithdrawalBreakdown';
+import { belowMinimumPayout, MIN_PAYOUT_AMOUNT } from '@/lib/pricing';
 
 const EarningsPage = () => {
   const { 
@@ -108,6 +109,10 @@ const EarningsPage = () => {
   const handleRequestWithdrawal = async () => {
     if (!withdrawAmount) {
       toast.error('Please enter an amount');
+      return;
+    }
+    if (belowMinimumPayout(withdrawAmount)) {
+      toast.error(`The smallest amount you can withdraw is ₦${MIN_PAYOUT_AMOUNT.toLocaleString()}`);
       return;
     }
 
@@ -310,7 +315,7 @@ const EarningsPage = () => {
                     <Button variant="outline" onClick={() => setShowWithdrawDialog(false)}>
                       Cancel
                     </Button>
-                    <Button onClick={handleRequestWithdrawal} disabled={!withdrawAmount || bankAccounts.length === 0}>
+                    <Button onClick={handleRequestWithdrawal} disabled={!withdrawAmount || bankAccounts.length === 0 || belowMinimumPayout(withdrawAmount)}>
                       Request Withdrawal
                     </Button>
                   </DialogFooter>

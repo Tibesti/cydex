@@ -30,6 +30,14 @@ export interface DeliveryData {
   delivery_address?: any;
   items_count?: number;
   order_items?: any[];
+  /** 'customer' (from a vendor), 'rider_request' (a vendor's own delivery) or 'express' (a customer's own item) */
+  order_kind?: string;
+  /** Several drop-offs collected together from one vendor: accepting one takes them all */
+  batch_id?: string | null;
+  /** This drop-off's place in the batch (1 = first) */
+  batch_seq?: number | null;
+  /** How many drop-offs of the batch are in this list */
+  batch_stops?: number;
   order?: {
     customer_profile?: { name: string; email: string; phone: string };
     vendor_profile?: { name: string; phone?: string | null };
@@ -42,8 +50,55 @@ export interface DeliveryData {
     dispatch_priority?: number;
     delivery_address?: any;
     special_instructions?: string;
+    order_type?: string | null;
+    batch_id?: string | null;
+    batch_seq?: number | null;
+    pickup_address?: any;
   };
 }
+
+// Who the rider collects from and delivers to. Vendor orders: the vendor and
+// the customer. Rider requests: the vendor and the recipient the vendor named.
+// Cydex Express: the sender (at the pickup point) and their recipient.
+type Party = { name?: string | null; email?: string | null; phone?: string | null } | null;
+const describeParties = (delivery: {
+  pickup_location?: unknown;
+  delivery_location?: unknown;
+  orders?: {
+    order_type?: string | null; batch_id?: string | null; batch_seq?: number | null;
+    pickup_address?: unknown; delivery_address?: unknown; customer_profile?: Party; vendor_profile?: Party;
+  } | null;
+}) => {
+  const order = delivery.orders ?? {};
+  const pickup = (delivery.pickup_location ?? order.pickup_address ?? {}) as Record<string, string | undefined>;
+  const dropoff = (order.delivery_address ?? delivery.delivery_location ?? {}) as Record<string, string | undefined>;
+  const express = order.order_type === 'express';
+  const named = order.order_type === 'express' || order.order_type === 'rider_request';
+  return {
+    order_kind: order.order_type ?? 'customer',
+    batch_id: order.batch_id ?? null,
+    batch_seq: order.batch_seq ?? null,
+    vendor_name: express ? `${pickup.name || order.customer_profile?.name || 'Sender'} (Cydex Express)` : order.vendor_profile?.name || 'Unknown Vendor',
+    vendor_phone: express ? pickup.phone || order.customer_profile?.phone || '' : order.vendor_profile?.phone || '',
+    customer_name: (named && dropoff.name) || order.customer_profile?.name || order.customer_profile?.email || 'Customer',
+    customer_phone: (named && dropoff.phone) || order.customer_profile?.phone || '',
+  };
+};
+
+// One card per batch in the available list: the first drop-off stands for all
+// of them, with the fees added up
+const collapseBatches = (deliveries: DeliveryData[]): DeliveryData[] => {
+  const groups = new Map<string, DeliveryData[]>();
+  for (const d of deliveries) if (d.batch_id) groups.set(d.batch_id, [...(groups.get(d.batch_id) ?? []), d]);
+  const sum = (stops: DeliveryData[], key: 'delivery_fee' | 'rider_earning') => stops.reduce((n, x) => n + Number(x[key] ?? 0), 0);
+  return deliveries.flatMap((d) => {
+    const stops = d.batch_id ? groups.get(d.batch_id)! : null;
+    if (!stops || stops.length === 1) return [d];
+    const first = [...stops].sort((a, b) => (a.batch_seq ?? 0) - (b.batch_seq ?? 0))[0];
+    if (d.id !== first.id) return [];
+    return [{ ...d, batch_stops: stops.length, delivery_fee: sum(stops, 'delivery_fee'), rider_earning: sum(stops, 'rider_earning') }];
+  });
+};
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
@@ -94,6 +149,10 @@ export const useRiderDeliveries = () => {
               dispatch_priority,
               delivery_address,
               special_instructions,
+              order_type,
+              batch_id,
+              batch_seq,
+              pickup_address,
               customer_profile:profiles!customer_id(name, email, phone),
               vendor_profile:profiles!vendor_id(name, phone),
               order_items(
@@ -122,11 +181,8 @@ export const useRiderDeliveries = () => {
         
         return {
           ...delivery,
-          vendor_name: delivery.orders?.vendor_profile?.name || 'Unknown Vendor',
-          vendor_phone: delivery.orders?.vendor_profile?.phone || '',
-          customer_name: delivery.orders?.customer_profile?.name || delivery.orders?.customer_profile?.email || 'Customer',
+          ...describeParties(delivery),
           customer_email: delivery.orders?.customer_profile?.email || '',
-          customer_phone: delivery.orders?.customer_profile?.phone || '',
           delivery_address: delivery.orders?.delivery_address || {},
           special_instructions: delivery.orders?.special_instructions || '',
           items_count: delivery.orders?.order_items?.length || 0,
@@ -144,7 +200,7 @@ export const useRiderDeliveries = () => {
       }) || [];
 
       console.log('[RiderDeliveries] Available deliveries loaded:', formattedDeliveries.length);
-      setAvailableDeliveries(formattedDeliveries);
+      setAvailableDeliveries(collapseBatches(formattedDeliveries as DeliveryData[]));
     } catch (error: any) {
       console.error('[RiderDeliveries] Error fetching available deliveries:', error);
       setError('Failed to load available deliveries');
@@ -178,6 +234,11 @@ export const useRiderDeliveries = () => {
               order_number,
               status,
               payment_status,
+              delivery_address,
+              order_type,
+              batch_id,
+              batch_seq,
+              pickup_address,
               customer_profile:profiles!customer_id(name),
               vendor_profile:profiles!vendor_id(name, phone),
               order_items(count)
@@ -195,9 +256,7 @@ export const useRiderDeliveries = () => {
 
       const formattedDeliveries = data?.map(delivery => ({
         ...delivery,
-        vendor_name: delivery.orders?.vendor_profile?.name || 'Unknown Vendor',
-        vendor_phone: delivery.orders?.vendor_profile?.phone || '',
-        customer_name: delivery.orders?.customer_profile?.name || 'Customer',
+        ...describeParties(delivery),
         items_count: delivery.orders?.order_items?.length || 0,
         // Ensure order.customer_profile satisfies the DeliveryData type (name, email, phone)
         order: {
@@ -209,6 +268,10 @@ export const useRiderDeliveries = () => {
           },
         }
       })) || [];
+      // A batch's drop-offs in the order the vendor set them
+      formattedDeliveries.sort((a, b) => (a.batch_seq ?? 0) - (b.batch_seq ?? 0));
+      const stopsIn = (batchId: string) => formattedDeliveries.filter((d) => d.batch_id === batchId).length;
+      formattedDeliveries.forEach((d) => { if (d.batch_id) (d as DeliveryData).batch_stops = stopsIn(d.batch_id); });
 
       console.log('[RiderDeliveries] Current deliveries loaded:', formattedDeliveries.length);
       setCurrentDeliveries(formattedDeliveries);
@@ -245,7 +308,7 @@ export const useRiderDeliveries = () => {
 
     try {
       await orderActions.riderAccept(orderId);
-      toast.success('Delivery accepted! Head to the vendor when you’re ready.');
+      toast.success('Delivery accepted! Head to the pickup point when you’re ready.');
       await Promise.all([fetchAvailableDeliveries(), fetchCurrentDeliveries()]);
       return { success: true, orderId };
     } catch (error) {
@@ -265,7 +328,7 @@ export const useRiderDeliveries = () => {
     }
     try {
       await orderActions.startPickup(orderId);
-      toast.success('The customer has been told you’re on the way to the vendor');
+      toast.success('They’ve been told you’re on the way to collect it');
       await fetchCurrentDeliveries();
       return true;
     } catch (error) {

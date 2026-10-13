@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MapPin, ShoppingCart, Star, Store } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Clock, MapPin, ShoppingCart, Star, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -8,6 +8,10 @@ import { useAddresses } from '@/hooks/useAddresses';
 import { formatKm } from '@/lib/riderLocation';
 import { VendorRatingModal } from '@/components/customer/VendorRatingModal';
 import { RatingBadge, VerifiedBadge } from './VendorBadges';
+import { OpenBadge, todayHoursText, WeeklyHours } from './VendorHours';
+import { useVendorHoursInfo } from '@/hooks/useVendorHours';
+import { etaText } from '@/lib/deliveryModes';
+import { cn } from '@/lib/utils';
 
 interface VendorStorefrontHeaderProps {
   vendorId: string;
@@ -18,13 +22,16 @@ interface VendorStorefrontHeaderProps {
 }
 
 // Top of a vendor's product page: banner, square logo, store name, verified,
-// rating, store address and distance, plus "Rate vendor" when the customer has
-// a delivered order from them they haven't rated yet.
+// rating, open or closed with the week's hours, estimated delivery time, store
+// address and distance, plus "Rate vendor" when the customer has a delivered
+// order from them they haven't rated yet.
 const VendorStorefrontHeader = ({ vendorId, fallbackName, cartCount, onBack, onOpenCart }: VendorStorefrontHeaderProps) => {
   const { user } = useAuth();
   const { defaultAddress } = useAddresses();
   const queryClient = useQueryClient();
   const [rating, setRating] = useState(false);
+  const [showHours, setShowHours] = useState(false);
+  const hours = useVendorHoursInfo([vendorId]).get(vendorId);
 
   const { data: store } = useQuery({
     queryKey: ['vendor-storefront', vendorId, defaultAddress?.id],
@@ -62,7 +69,25 @@ const VendorStorefrontHeader = ({ vendorId, fallbackName, cartCount, onBack, onO
     },
   });
 
+  // Preparation plus the ride, for the default delivery mode. Checkout shows
+  // it again for the mode they pick.
+  const distanceKm = store?.distance_km == null ? null : Number(store.distance_km);
+  const { data: eta } = useQuery({
+    queryKey: ['vendor-eta', vendorId, distanceKm, hours?.prep_time_minutes],
+    enabled: distanceKm !== null && !!hours,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data: mode } = await supabase.rpc('default_vehicle_type');
+      const { data, error } = await supabase.rpc('delivery_eta', {
+        p_vehicle_type: mode ?? 'bicycle', p_distance_km: distanceKm!, p_prep_minutes: hours!.prep_time_minutes,
+      });
+      if (error) throw error;
+      return data?.[0] ?? null;
+    },
+  });
+
   const name = store?.name || fallbackName || 'Vendor';
+  const today = todayHoursText(hours);
 
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
@@ -99,7 +124,34 @@ const VendorStorefrontHeader = ({ vendorId, fallbackName, cartCount, onBack, onO
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <RatingBadge rating={store?.average_rating == null ? null : Number(store.average_rating)} count={store?.rating_count ?? 0} />
             <VerifiedBadge verified={!!store?.verified} />
+            <OpenBadge info={hours} />
           </div>
+          {hours && (
+            <div className="space-y-1 text-xs text-muted-foreground sm:text-sm">
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <Clock className="h-3.5 w-3.5 shrink-0" />
+                {today && <span>Today: {today}</span>}
+                {today && <span aria-hidden>·</span>}
+                <span>
+                  {eta?.eta_min
+                    ? `Estimated delivery ${etaText(eta.eta_min, eta.eta_max).toLowerCase()}`
+                    : `Ready in about ${hours.prep_time_minutes} min`}
+                </span>
+                {hours.hours_set && (
+                  <button
+                    type="button"
+                    onClick={() => setShowHours((v) => !v)}
+                    aria-expanded={showHours}
+                    className="inline-flex items-center gap-0.5 font-medium text-foreground hover:underline"
+                  >
+                    Opening hours
+                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showHours && 'rotate-180')} />
+                  </button>
+                )}
+              </p>
+              {showHours && <WeeklyHours info={hours} />}
+            </div>
+          )}
           {store?.store_address && (
             <p className="flex items-start gap-1 text-xs text-muted-foreground sm:text-sm">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -118,6 +170,12 @@ const VendorStorefrontHeader = ({ vendorId, fallbackName, cartCount, onBack, onO
           </Button>
         )}
       </div>
+
+      {hours?.hours_set && !hours.is_open && (
+        <p role="status" className="border-t bg-destructive/10 px-3 py-2 text-sm text-destructive sm:px-4">
+          {name} is closed right now. You can look around, but you can only order during their opening hours.
+        </p>
+      )}
 
       {unrated && (
         <VendorRatingModal

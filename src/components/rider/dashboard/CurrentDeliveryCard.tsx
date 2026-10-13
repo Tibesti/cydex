@@ -42,17 +42,17 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
                             Order #{delivery.order?.order_number ?? delivery.order_id.slice(0, 8)}
                           </span>
                         </div>
-                        <OrderStatusBadge status={orderStatusForDelivery(delivery.status)} className="text-xs" />
+                        <OrderStatusBadge status={delivery.order?.status ?? orderStatusForDelivery(delivery.status)} className="text-xs" />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-500" />
-                          <span>Customer: {delivery.customer_name}</span>
+                          <span>Deliver to: {delivery.customer_name}{(delivery.batch_stops ?? 0) > 1 ? ` (drop-off ${delivery.batch_seq} of ${delivery.batch_stops})` : ''}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-gray-500" />
-                          <span>Vendor: {delivery.vendor_name}</span>
+                          <span>Pick up from: {delivery.vendor_name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-gray-500" />
@@ -79,7 +79,7 @@ export const CurrentDeliveryCard: React.FC<CurrentDeliveryCardProps> = ({
                       </div>
                       <RiderDeliveryActions
                         orderId={delivery.order_id}
-                        status={orderStatusForDelivery(delivery.status)}
+                        status={delivery.order?.status ?? orderStatusForDelivery(delivery.status)}
                         onChanged={onChanged}
                         compact
                       />

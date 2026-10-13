@@ -51,9 +51,9 @@ const PaymentSettings = () => {
           <div className="flex items-center">
             <div className="flex-1">
               <p className="font-medium">Minimum Withdrawal</p>
-              <p className="text-xs text-gray-500">Threshold for auto withdrawal</p>
+              <p className="text-xs text-gray-500">The smallest amount you can withdraw at once</p>
             </div>
-            <div className="font-bold">₦10,000</div>
+            <div className="font-bold">₦3,000</div>
           </div>
         </div>
         

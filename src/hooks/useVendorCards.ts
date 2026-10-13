@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAddresses } from '@/hooks/useAddresses';
+import { useVendorHoursInfo, type VendorHoursInfo } from '@/hooks/useVendorHours';
 
 export interface VendorCardData {
   vendor_id: string;
@@ -15,9 +16,11 @@ export interface VendorCardData {
   rating_count: number;
   /** Paid orders (not cancelled/rejected) in the last 30 days */
   recent_orders: number;
+  /** Open now, today's hours and preparation time (missing until loaded) */
+  hours?: VendorHoursInfo;
 }
 
-// Vendors within 5 km of the customer's default delivery address that have
+// Vendors within delivery range of the customer's default delivery address that have
 // something to sell, nearest first (vendor_cards_near_address)
 export const useVendorCards = () => {
   const { defaultAddress, hasLoaded } = useAddresses();
@@ -35,8 +38,10 @@ export const useVendorCards = () => {
     },
   });
 
+  const { byId } = useVendorHoursInfo(vendors.map((v) => v.vendor_id));
+
   return {
-    vendors,
+    vendors: vendors.map((v) => ({ ...v, hours: byId.get(v.vendor_id) })),
     defaultAddress,
     loading: !hasLoaded || (!!defaultAddress && isLoading),
   };

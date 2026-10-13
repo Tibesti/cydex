@@ -35,6 +35,7 @@ import {
 import { useVendorSettings } from '@/hooks/useVendorSettings';
 import SingleAddressField from '@/components/address/SingleAddressField';
 import { useSearchParams } from 'react-router-dom';
+import StoreHoursCard from '@/components/vendor/hours/StoreHoursCard';
 
 const VendorSettingsPage = () => {
   // e.g. /vendor/settings?tab=ratings (the dashboard's Rating card links here)
@@ -210,8 +211,9 @@ const VendorSettingsPage = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={tabParam ?? 'account'} className="w-full">
-              <TabsList className="mb-3 sm:mb-4 w-full grid grid-cols-4 sm:w-auto sm:flex">
+              <TabsList className="mb-3 sm:mb-4 w-full grid grid-cols-5 sm:w-auto sm:flex">
                 <TabsTrigger value="account" className="text-xs sm:text-sm">Account</TabsTrigger>
+                <TabsTrigger value="hours" className="text-xs sm:text-sm">Hours</TabsTrigger>
                 <TabsTrigger value="ratings" className="text-xs sm:text-sm">Ratings</TabsTrigger>
                 <TabsTrigger value="security" className="text-xs sm:text-sm">Security</TabsTrigger>
                 <TabsTrigger value="preferences" className="text-xs sm:text-sm">Preferences</TabsTrigger>
@@ -317,6 +319,10 @@ const VendorSettingsPage = () => {
                     </Button>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="hours" className="mt-3 sm:mt-4">
+                <StoreHoursCard />
               </TabsContent>
 
               <TabsContent value="ratings" className="mt-3 sm:mt-4">

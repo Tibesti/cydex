@@ -31,6 +31,11 @@ const ACTIONS: Record<string, string> = {
   invite_admin: 'Invited an admin',
   resend_admin_invite: 'Resent an admin invite',
   remove_admin: 'Removed an admin',
+  save_vehicle_type: 'Changed a vehicle type',
+  set_rider_idle_minutes: 'Changed the idle rider time',
+  create_business_category: 'Added a business category',
+  create_promotion: 'Created a promotion',
+  update_promotion: 'Changed a promotion',
 };
 
 const details = (v: Record<string, unknown> | null) => {

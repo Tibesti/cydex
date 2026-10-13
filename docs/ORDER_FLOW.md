@@ -1,8 +1,8 @@
 # Order Flow
 
-How an order moves from checkout to delivery: the statuses, who can change them, the handover codes, refunds, and the notifications each step sends. As of September 2026.
+How an order moves from checkout to delivery: the statuses, who can change them, the handover codes, refunds, and the notifications each step sends. As of October 2026.
 
-Everything here is enforced in the database, migration [`20260930000000_order_flow.sql`](../supabase/migrations/20260930000000_order_flow.sql). The app calls one database function per step ([`src/services/orderActions.ts`](../src/services/orderActions.ts)); nobody can write `orders.status`, `payment_status` or `rider_id` directly except admins.
+Everything here is enforced in the database. It started in migration [`20260930000000_order_flow.sql`](../supabase/migrations/20260930000000_order_flow.sql); the October 2026 update (delivery modes, the new delivery fee, opening hours, Cydex Express, batches, promotions, wallet-first payment, "Rider is around") is in the `20261013…` and `20261014…` migrations, each linked from its section below. The app calls one database function per step ([`src/services/orderActions.ts`](../src/services/orderActions.ts)); nobody can write `orders.status`, `payment_status` or `rider_id` directly except admins.
 
 ## Statuses
 
@@ -12,18 +12,20 @@ The same status names are used for customers, vendors and riders. Each screen ju
 |---|---|---|---|---|
 | 1 | `pending` | Pending | Order placed. Until it's paid, only the customer can see it. | Customer (checkout) |
 | 2 | `accepted` | Accepted | The vendor has accepted the paid order and is preparing it. **Both handover codes are created now.** | Vendor |
-| 3 | `ready_for_pickup` | Ready for pickup | Ready to collect. Online riders within 5 km are notified and it appears in their Available Orders. | Vendor |
+| 3 | `ready_for_pickup` | Ready for pickup | Ready to collect. Online riders within 5 km of the pickup whose vehicle covers the trip are notified, and it appears in their Available Orders. | Vendor |
 | 4 | `rider_assigned` | Rider assigned | A rider has accepted it. | Rider |
 | 5 | `picking_up` | Rider heading to vendor | The rider is on the way to the vendor. | Rider |
 | 6 | `out_for_delivery` | Out for delivery | The vendor handed it over, confirmed with the rider's **pickup code**. | Vendor (with code) |
-| 7 | `delivered` | Delivered | The rider handed it over, confirmed with the customer's **delivery code**. The vendor and rider are paid now. | Rider (with code) |
+| 7 | `arrived` | Rider is around | The rider tapped **I've arrived**. The customer gets a notification and a push telling them to meet the rider and share their delivery code. Optional: a rider can complete the delivery without it. | Rider |
+| 8 | `delivered` | Delivered | The rider handed it over, confirmed with the customer's **delivery code**. The vendor and rider are paid now. | Rider (with code) |
 | – | `cancelled` | Cancelled | Cancelled by the customer before the vendor accepted. | Customer |
 | – | `rejected` | Rejected | Rejected by the vendor before a rider accepted. | Vendor |
 
 ```
-pending ─► accepted ─► ready_for_pickup ─► rider_assigned ─► picking_up ─► out_for_delivery ─► delivered
+pending ─► accepted ─► ready_for_pickup ─► rider_assigned ─► picking_up ─► out_for_delivery ─► arrived ─► delivered
    │           │               │                 (rider_assigned can go straight to out_for_delivery
-   │           └───────────────┴─► rejected       if the vendor enters the pickup code first)
+   │           └───────────────┴─► rejected       if the vendor enters the pickup code first;
+   │                                              out_for_delivery can go straight to delivered)
    └─► cancelled
 ```
 
@@ -48,10 +50,11 @@ Vendors only see orders whose payment is `paid` or `refunded`. Unpaid orders sta
 | Mark ready | Vendor | `accepted` | `vendor_mark_ready` |
 | Reject (with an optional reason) | Vendor | `pending`, `accepted` or `ready_for_pickup`, and **no rider yet** | `vendor_reject_order` |
 | Cancel | Customer | `pending` only (before the vendor accepts) | `customer_cancel_order` |
-| Accept delivery | Rider | `ready_for_pickup`, no rider yet, pickup within 5 km of the rider, the rider has **no other active delivery**, and has a **phone number** on their profile | `rider_accept_order` |
+| Accept delivery | Rider | `ready_for_pickup`, no rider yet, pickup within 5 km of the rider, the trip within how far the rider's vehicle goes, the rider has **no other active delivery**, and has a **phone number** on their profile | `rider_accept_order` |
 | Head to vendor | Rider | `rider_assigned` | `rider_start_pickup` |
 | Confirm pickup (enter the rider's code) | Vendor | `rider_assigned` or `picking_up` | `vendor_confirm_pickup` |
-| Confirm delivery (enter the customer's code) | Rider | `out_for_delivery` | `rider_confirm_delivery` |
+| I've arrived | Rider | `out_for_delivery` | `rider_mark_arrived` |
+| Confirm delivery (enter the customer's code) | Rider | `out_for_delivery` or `arrived` | `rider_confirm_delivery` |
 
 **Phone numbers are required** so people can call each other during a delivery:
 - **Vendors** without one see a notice on their order screens linking to Settings, and their Accept buttons are disabled (migration [`20260930200000_vendor_phone_required.sql`](../supabase/migrations/20260930200000_vendor_phone_required.sql)).
@@ -63,6 +66,102 @@ What the rider sees:
 - **With the pickup code** (Current Deliveries, the dashboard and the order page): the vendor's name, full store address, directions and a tap-to-call phone number.
 
 Each function checks that the order belongs to the caller. If a step isn't allowed, it fails with a plain message such as "Orders can only be cancelled before the vendor accepts them", which the app shows as-is.
+
+## Checkout
+
+Migration [`20261013100000_ordering.sql`](../supabase/migrations/20261013100000_ordering.sql). Cart → **Deliver to** (the step before payment) → payment.
+
+- **The cart never opens by itself.** The order page always starts on the vendor list. While there's something in the cart, a large **Go to cart (₦6,600)** button stays at the bottom of the screen with the items total.
+- **The Deliver to step** shows, for the chosen address: the preferred delivery mode, the estimated delivery time, a coupon field, the price, and how it will be paid. One database function, `checkout_quote`, works all of it out; `place_order` prices the real order the same way.
+- **Blocked before payment** when:
+  - **No rider is free** within range of the store: "Our service is currently unavailable because all our riders are busy at the moment. Please check again later."
+  - **The vendor is closed** (see [Opening hours](#opening-hours-and-preparation-time)).
+  - The vendor is too far away for any delivery mode (see [How far each mode goes](#how-far-each-mode-goes)), or has no store location.
+
+### Delivery fee
+
+**Delivery fee = distance × the delivery mode's price per km + the delivery charge (₦500).** There's no minimum fare any more.
+
+- Each vehicle type has its own price per km, set in **Admin → Riders & vehicles**. The ₦500 charge is set in **Admin → Pricing**.
+- Example: 2.4 km by bicycle at ₦200 per km = ₦480 + ₦500 = **₦980**.
+- The rider's share (85%) is of the whole fee, including the charge.
+
+### How far each mode goes
+
+Migration [`20261014000000_delivery_distances.sql`](../supabase/migrations/20261014000000_delivery_distances.sql). Each vehicle type has its own **longest trip** (pickup to drop-off), set in **Admin → Riders & vehicles**. They all start at 5 km, which was the limit for everything before.
+
+- **Customers see vendors as far away as the longest active mode reaches.** If bicycles go 7 km and nothing goes further, vendors up to 7 km away are listed.
+- **A delivery mode can only be chosen when it covers the trip.** One that doesn't shows "only goes up to 1.5 km".
+- **Riders only see, are alerted about and can accept deliveries their vehicle covers,** even after an order is offered to every mode.
+- **Too far for every mode:** the order is refused with the real limit, for example "The longest delivery we do is 7 km".
+- The same limits apply to Request Rider (each leg of a batch) and Cydex Express.
+- **Unchanged:** a rider still has to be within 5 km of the pickup to see or accept an order.
+
+### Preferred delivery mode
+
+The customer picks a **Preferred delivery mode** from the active vehicle types. Walking shows as **Cydex Dashers**.
+
+- **Bicycle is the default.** A mode can only be picked while a rider using it is free nearby and it covers the trip; the others show "no rider free right now" or how far they go.
+- **Riders with that vehicle get the order first.** Only they see it in Available Orders and get the "order nearby" alert.
+- **After 10 minutes with no taker** (`app_config.preferred_mode_wait_minutes`), it's offered to every nearby rider, and the customer is told: "No … rider picked this up in time, so we've offered it to our other delivery partners too." The job `widen-preferred-orders` runs every minute. The price doesn't change.
+- An admin reassigning a rider isn't limited by the mode.
+
+### Estimated delivery time
+
+Worked out per delivery mode from real deliveries (`delivery_eta`): the average minutes per km over the last 90 days of delivered orders with that vehicle, times the distance, **rounded up to the nearest 5 minutes**. Until a mode has 5 tracked deliveries, the vehicle type's average speed (set by the admin) is used.
+
+- Shown as a range: the ride alone, up to the ride plus the vendor's preparation time. For example "20–35 min".
+- Shown on the vendor's page, at checkout for the chosen mode, and on the order page.
+
+### Paying: wallet first
+
+- **The customer's wallet pays first**, and Squad (card or transfer) is only asked for the rest. The step before payment shows the split.
+- If the wallet covers everything, the order is paid at once and no card step appears.
+- If the customer doesn't finish the card payment, the wallet part **goes back to their wallet after 30 minutes** and the order is cancelled (job `release-unpaid-wallet-orders`, every 5 minutes). Until then the order page shows **Pay ₦…** to finish.
+- Refunds return everything paid, wallet and card, to the wallet.
+
+### Promotions and coupons
+
+Migration [`20261013400000_promotions.sql`](../supabase/migrations/20261013400000_promotions.sql). Set up in **Admin → Promotions** ([ADMIN.md](ADMIN.md#promotions)).
+
+Limits and audiences were added in migration [`20261014100000_promotion_audience_limits.sql`](../supabase/migrations/20261014100000_promotion_audience_limits.sql).
+
+- **Automatic promotions** apply by themselves; **coupons** need the code entered when paying.
+- **Both show under Offers for you** on the home page of everyone who can still use them, coupons with their code and a copy button (migration [`20261015000000_offers_with_codes.sql`](../supabase/migrations/20261015000000_offers_with_codes.sql)). An admin can keep a promotion out of the list with its **Show in "Offers for you"** switch; it still works.
+- **At checkout** (orders, Cydex Express and single rider requests):
+  - an automatic promotion shows in a green **Offer applied** box with the saving, as well as on its own line in the price;
+  - the person's coupon codes are listed, and tapping one applies it;
+  - the payment step and the cart show the discount too.
+- **One discount per order** on what someone pays: a valid coupon first, otherwise whichever promotion saves the most.
+- **Who it's for** decides what it takes money off:
+
+  | For | Takes money off |
+  |---|---|
+  | **Customers** | The Service Charge, the delivery fee (orders and Cydex Express), or the items of one business |
+  | **Vendors** | Request Rider (the delivery fee or its commission), or the commission Cydex takes from their sales |
+  | **Riders** | The commission Cydex takes from the delivery fee, so they keep more of it |
+  | **Everyone** | The delivery fee, the Service Charge, or commission, for whoever it applies to |
+
+- **Limits (both optional):**
+  - **Only the first N people.** Once N different people have used it, nobody new gets it. Those N can keep using it.
+  - **N uses for each person.**
+  - A **use** is an order that's paid and not cancelled or rejected. An unpaid order holds a use for 30 minutes. Cancelling or refunding gives the use back.
+  - People see what's left: "2 uses left" in their offers and at checkout. A coupon that can't be used says why: "This coupon has been fully claimed" or "You've already used this coupon as many times as it allows".
+- **Commission promotions** have no coupon code.
+  - A vendor's is fixed when the order is placed; they see the lower commission on the order.
+  - A rider's is fixed when they accept the delivery, and taken off again if an admin relieves or replaces them.
+- **Who pays for it:** Cydex, or (for a business's items only) the business. A business-funded discount comes off the vendor's payout before commission; the vendor sees it as "Your promotion discount". Without a rider promotion, riders get their usual share of the full delivery fee whatever the customer's discount.
+- Conditions: a maximum distance, particular delivery modes, and start and end dates.
+- **Batches** of rider requests aren't discounted; single requests are.
+
+## Opening hours and preparation time
+
+Migration [`20261013000000_vehicles_categories_hours.sql`](../supabase/migrations/20261013000000_vehicles_categories_hours.sql).
+
+- Vendors set their **opening hours** for each day and their **preparation time** when they register, and can change them in **Settings → Hours**. Closing after midnight is supported. Times are Nigerian time.
+- **Customers** see Open or Closed, today's hours and the preparation time on vendor cards, and the full week on the vendor's page.
+- **Orders are only accepted during opening hours.** Customers can still browse a closed vendor, but checkout is disabled and the database refuses the order.
+- A vendor who hasn't set hours yet counts as always open.
 
 ## Products and stock
 
@@ -76,6 +175,7 @@ Stock is optional for each product (migration [`20261001000000_product_stock.sql
 
 - **Stock goes down when an order is paid for**, not when it's placed, so unpaid orders don't hold stock.
 - **Stock goes back up** if a paid order is cancelled by the customer or rejected by the vendor.
+- **Product categories** come from the vendor's business category (set by the admin). Restaurants get Main meals, Drinks, Sides & extras and so on; Shops get Groceries & staples, Snacks & biscuits and so on.
 - **Customers can't order more than is in stock.** Checkout fails with "Only 3 of Jollof left. Reduce the quantity in your cart."
 - **Unavailable products still show to customers**, greyed out and labelled "Out of stock" or "Unavailable", with Add to cart disabled. Available products are listed first.
 - **Two customers can both check out the last item** if neither has paid yet. Whoever pays second takes the stock to 0 (it never goes negative), and the vendor can reject that order to refund it.
@@ -95,7 +195,7 @@ Migration [`20261001100000_storefront_and_ratings.sql`](../supabase/migrations/2
 
 ## Customer home and vendor pages
 
-- **Home** shows three sections for the customer's delivery address (within 5 km): **Vendors nearby** (closest 4), **Popular vendors** (most paid orders in the last 30 days, top 4), and **Other vendors** (everyone else). It also has a **See all vendors** button to the full list.
+- **Home** shows three sections for the customer's delivery address (within delivery range, see [How far each mode goes](#how-far-each-mode-goes)): **Vendors nearby** (closest 4), **Popular vendors** (most paid orders in the last 30 days, top 4), and **Other vendors** (everyone else). It also has a **See all vendors** button to the full list.
 - **Vendor cards and the vendor's page** show the store banner and square logo, store name, Verified or Unverified, rating, distance, and the store address (as text; coordinates are never sent).
 - **Logo and banner:** vendors upload them in Settings → Account, into the public `store-images` storage bucket in their own folder. The logo is also their profile photo.
 - **One vendor per order:** adding an item from a different vendor than the one in the cart opens a dialog with **Keep current cart** or **Start new cart**. Browsing other vendors doesn't empty the cart, and checkout always uses the cart's vendor.
@@ -104,13 +204,13 @@ Migration [`20261001100000_storefront_and_ratings.sql`](../supabase/migrations/2
 
 For orders a vendor's customer placed with them directly (by phone, WhatsApp or in person), the vendor can ask Cydex for a rider: sidebar → **Request Rider**. Migration [`20261001200000_rider_requests.sql`](../supabase/migrations/20261001200000_rider_requests.sql).
 
-1. **The vendor enters the customer's details:** name, phone, delivery location (pin-drop map), optional directions, and what's being delivered. They can pick a **saved customer** or tick "Save this customer" (table `vendor_customers`).
-2. **Price:** the same delivery fee as customer orders (the higher of ₦600 or ₦200 × km from the store, up to 5 km), **plus a 10% commission on it**. The rate is `pricing_config.rider_request_commission_rate`.
+1. **The vendor enters the customer's details:** name, phone, **email** (required), delivery location (pin-drop map), optional directions, and what's being delivered. They can search their **saved customers** and pick one, or tick "Save this customer" (table `vendor_customers`). They also choose the preferred delivery mode.
+2. **Price:** the same delivery fee as customer orders (distance × the mode's price per km + ₦500, as far as the delivery mode goes), **plus a 10% commission on it**. The rate is `pricing_config.rider_request_commission_rate`. If no rider is free, the request is refused before payment. A vendor promotion or coupon comes off here.
 3. **Payment:** the vendor's **wallet** pays first.
    - If it covers the whole amount, the request goes live immediately.
    - Otherwise the rest is paid **by card** (the squad-checkout function charges only that part), and the request goes live when Squad confirms.
 4. **Live = `ready_for_pickup`.** Nearby riders are notified, and a rider accepts it like any order. They see "A package from the vendor" with the vendor's description instead of an item list, and the customer's phone and directions.
-5. **Delivery code:** the **vendor** sees the delivery code and sends it to their customer. The rider enters it on arrival to complete the delivery. Pickup works as normal, with the rider's pickup code entered by the vendor.
+5. **Delivery code:** the recipient is **emailed** the delivery code as soon as the request is paid, with a short introduction to Cydex and a link to usecydex.com. The **vendor** sees the code too and can pass it on. The rider enters it on arrival to complete the delivery. Pickup works as normal, with the rider's pickup code entered by the vendor.
 6. **Money:** on delivery, the rider gets the usual 85% of the delivery fee. Cydex keeps the other 15% plus the commission. Nothing is credited to the vendor.
 
 | Example (₦1,000 delivery fee) | |
@@ -120,7 +220,35 @@ For orders a vendor's customer placed with them directly (by phone, WhatsApp or 
 | Cydex keeps | ₦150 + ₦100 = ₦250 |
 
 - **Cancelling:** the vendor can cancel until a rider accepts. Everything they paid goes back to their wallet. A card payment that lands after cancelling is refunded too, without returning the wallet part twice.
-- **Where they appear:** requests are an order type (`orders.order_type = 'rider_request'`, no customer account). They're kept out of the vendor's Orders list and stats and only appear under Request Rider. Customers never see them.
+- **Where they appear:** requests are an order type (`orders.order_type = 'rider_request'`, no customer account). They show under Request Rider, and in the vendor's order history under the **Rider requests** tab. They're kept out of the vendor's sales stats. Customers never see them.
+
+### Batches
+
+Migration [`20261013300000_rider_batches.sql`](../supabase/migrations/20261013300000_rider_batches.sql). On Request Rider, the vendor chooses **Single** or **Batch**.
+
+- **A batch is several drop-offs collected in one trip** (up to 5, `app_config.batch_max_stops`). Each drop-off has its own customer, location, items and **its own delivery code**, emailed to that recipient.
+- **Each drop-off is priced separately:** the first from the store, each next one from the drop-off before it. Each leg has to be within how far the chosen delivery mode goes.
+- **Paid together**, wallet first and then card, under one batch number (`BAT-…`).
+- **One rider takes the whole batch.** Accepting any drop-off takes them all. There's one pickup code for the batch, and the rider delivers the drop-offs in order.
+- The vendor can cancel a batch until a rider accepts it.
+
+## Cydex Express
+
+Migration [`20261013200000_express_and_requests.sql`](../supabase/migrations/20261013200000_express_and_requests.sql). Customer sidebar → **Cydex Express**: send your own item from one place to another.
+
+1. **The customer chooses** the pickup point and the drop-off (saved addresses or the map, as far apart as the delivery mode goes), the recipient's name, phone and **email**, what they're sending, the preferred delivery mode and an optional coupon.
+2. **Price:** the delivery fee plus a **15% Service Charge on it**. Wallet first, then card. Refused before payment if no rider is free near the pickup.
+3. **Once paid it's live** (`ready_for_pickup`): there's no vendor step. It shows in the customer's Orders as "Cydex Express", with tracking.
+4. **Pickup:** the rider shows their pickup code and the **sender enters it** on the order page (`sender_confirm_pickup`).
+5. **Delivery:** the recipient is emailed the delivery code; the sender sees it too. The rider enters it at the drop-off.
+6. **Cancelling:** until a rider accepts. Everything paid goes back to the wallet.
+7. **Money:** the rider gets 85% of the delivery fee; Cydex keeps the rest and the Service Charge.
+
+| Example (₦1,000 delivery fee) | |
+|---|---|
+| Customer pays | ₦1,150 |
+| Rider gets | ₦850 |
+| Cydex keeps | ₦150 + ₦150 = ₦300 |
 
 ## Handover codes
 
@@ -164,6 +292,7 @@ Wallet balances are only changed by the database; users can read their wallet bu
 
 - **Wallets are created automatically** when an account is created, and a new virtual account is linked to its wallet automatically.
 - **Credits:** order settlement on delivery (vendor, rider) and refunds (customer).
+- **Minimum withdrawal:** vendors and riders can't withdraw less than **₦3,000** at a time (migration [`20261014300000_minimum_withdrawal.sql`](../supabase/migrations/20261014300000_minimum_withdrawal.sql)). The amount is `app_config.min_payout_amount`. Customers withdrawing a refund aren't limited.
 - **Withdrawals:**
   1. `request_payout(amount, bank account)` checks the balance and the bank account, deducts the amount, and creates a `pending` payout request, with a 1.5% fee taken from the amount sent. The user is told it's waiting for approval, and admins are notified.
   2. **An admin approves it** (Admin → Money → Withdrawals). The `squad-payout` Edge Function then sends the Squad transfer and marks it `completed` if Squad confirms straight away, otherwise `processing`. An admin can instead **reject** it with a reason: it becomes `cancelled` and the amount goes back to the wallet.
@@ -193,21 +322,27 @@ Created by the database (`notify_order_events` trigger, `welcome_new_user` trigg
 | Account created | Welcome + **email** | Welcome + **email** | Welcome + **email** |
 | Payment confirmed | Payment confirmed + **email** | New order | |
 | `accepted` | Order accepted | | |
-| `ready_for_pickup` | Order ready | | Order nearby (online riders within 5 km of the store) |
+| `ready_for_pickup` | Order ready | | Order nearby (online riders within 5 km of the pickup whose vehicle covers the trip) |
 | `rider_assigned` | Rider assigned | | |
 | `picking_up` | Rider heading to vendor | | |
 | `out_for_delivery` | Order on its way | Order picked up | |
+| `arrived` | **Your rider is around** (urgent: longer chime, stays on screen) | Rider is around (rider requests only) | |
+| Preferred mode not taken in 10 minutes | Finding another rider | Same (rider requests) | Order nearby, to every nearby rider |
+| Rider set offline for being idle | | | Shown in the app's location bar, with **Go online** |
 | `delivered` | Order delivered | Delivered, with the amount credited | Delivery complete, with the amount credited |
 | `cancelled` | Order cancelled | Order cancelled (only if it had been paid) | |
 | Cancelled by an admin | Order cancelled by Cydex, with the reason | Same | Delivery cancelled, with the reason |
 | `rejected` | Order rejected, with the vendor's reason | | |
 | Refund | Refund issued + **email** | | |
+| Broadcast from an admin | Announcement, and/or an **email** | Same | Same |
 
 "Welcome" is sent when the account is created, which is also the user's first login.
 
 ### Emails
 
-Emails are queued in `email_outbox` by the database and sent by the `send-emails` Edge Function using [Resend](https://resend.com). Until that's set up (see below), emails stay queued and nothing is lost; notifications in the app work regardless.
+Emails are queued in `email_outbox` by the database and sent by the `send-emails` Edge Function, through [Brevo](https://www.brevo.com) when `BREVO_API_KEY` is set and otherwise Resend. Until that's set up (see below), emails stay queued and nothing is lost; notifications in the app work regardless.
+
+Every email uses one Cydex template (logo header, heading, a highlighted box for codes and amounts, a button, and a footer with usecydex.com). Emails sent: welcome, payment confirmed, refund, **announcements** (admin broadcasts), **delivery code** (to the recipient of a rider request or Cydex Express delivery), and the verification emails in [VERIFICATION.md](VERIFICATION.md#emails).
 
 ## Setup still needed
 
@@ -229,5 +364,6 @@ Admin → Orders → open an order. Migration [`20261007200000_admin_order_tools
 ## Known gaps
 
 - **Riders could read item prices** by querying the database directly; the app just doesn't show them. Hiding them fully needs a separate view for riders.
-- **One rider per order at a time**, and one active delivery per rider. There's no reassignment if a rider drops an order; an admin has to step in.
+- **One rider per order at a time**, and one active delivery per rider (a batch counts as one). There's no reassignment if a rider drops an order; an admin has to step in.
+- **Idle riders:** a rider showing as available who hasn't taken an order for 30 minutes (set in Admin → Riders & vehicles) is set offline until they open the app again or tap **Go online**.
 - **A locked code** (5 wrong tries) has no self-service reset; an admin unlocks it from the order page.

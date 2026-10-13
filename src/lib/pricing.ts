@@ -12,7 +12,7 @@ export const quoteProblem = (status: QuoteStatus | undefined) => {
     case 'no_store':
       return "This vendor hasn't set a store location yet, so they can't deliver.";
     case 'out_of_range':
-      return 'This vendor is more than 5 km from your delivery address.';
+      return 'This vendor is too far from your delivery address for us to deliver.';
     default:
       return null;
   }
@@ -22,6 +22,15 @@ export const quoteProblem = (status: QuoteStatus | undefined) => {
 // in the database (supabase/migrations/20260930100000_wallets_server_side.sql).
 // It covers the bank transfer charge (Squad charges Cydex per transfer).
 export const PAYOUT_FEE_RATE = 0.015;
+
+// The smallest amount a vendor or rider can withdraw at once. Must match
+// min_payout_amount() in the database (app_config 'min_payout_amount'),
+// which refuses anything smaller.
+export const MIN_PAYOUT_AMOUNT = 3000;
+export const belowMinimumPayout = (amount: string | number) => {
+  const value = Number(amount);
+  return Number.isFinite(value) && value > 0 && value < MIN_PAYOUT_AMOUNT;
+};
 
 export const withdrawalBreakdown = (amount: number) => {
   const gross = Math.round(amount * 100) / 100;

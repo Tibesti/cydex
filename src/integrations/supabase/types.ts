@@ -690,6 +690,7 @@ export type Database = {
       }
       vendor_customers: {
         Row: {
+          email: string | null
           hidden_at: string | null
           hidden_reason: string | null
           hidden_by: string | null
@@ -699,6 +700,7 @@ export type Database = {
           directions: string | null; created_at: string; updated_at: string
         }
         Insert: {
+          email?: string | null
           hidden_at?: string | null
           hidden_reason?: string | null
           hidden_by?: string | null
@@ -708,6 +710,7 @@ export type Database = {
           directions?: string | null; created_at?: string; updated_at?: string
         }
         Update: {
+          email?: string | null
           hidden_at?: string | null
           hidden_reason?: string | null
           hidden_by?: string | null
@@ -720,6 +723,8 @@ export type Database = {
       }
       verifications: {
         Row: {
+          vehicle_photo_path: string | null
+          vehicle_registration_doc_path: string | null
           profile_id: string
           role: string
           status: string
@@ -744,6 +749,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          vehicle_photo_path?: string | null
+          vehicle_registration_doc_path?: string | null
           profile_id: string
           role: string
           status: string
@@ -768,6 +775,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          vehicle_photo_path?: string | null
+          vehicle_registration_doc_path?: string | null
           profile_id?: string
           role?: string
           status?: string
@@ -790,6 +799,210 @@ export type Database = {
           reviewed_by?: string | null
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      vehicle_types: {
+        Row: {
+          key: string
+          name: string
+          customer_label: string | null
+          needs_details: boolean
+          needs_registration: boolean
+          rate_per_km: number
+          avg_speed_kmh: number
+          max_distance_km: number
+          is_active: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          key: string
+          name: string
+          customer_label?: string | null
+          needs_details?: boolean
+          needs_registration?: boolean
+          rate_per_km?: number
+          avg_speed_kmh?: number
+          max_distance_km?: number
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          key?: string
+          name?: string
+          customer_label?: string | null
+          needs_details?: boolean
+          needs_registration?: boolean
+          rate_per_km?: number
+          avg_speed_kmh?: number
+          max_distance_km?: number
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      product_categories: {
+        Row: {
+          id: string
+          business_category_id: string
+          name: string
+          is_active: boolean
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_category_id: string
+          name: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_category_id?: string
+          name?: string
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      vendor_hours: {
+        Row: {
+          vendor_id: string
+          prep_time_minutes: number
+          opening_hours: Json
+          updated_at: string
+        }
+        Insert: {
+          vendor_id: string
+          prep_time_minutes?: number
+          opening_hours?: Json
+          updated_at?: string
+        }
+        Update: {
+          vendor_id?: string
+          prep_time_minutes?: number
+          opening_hours?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      broadcasts: {
+        Row: {
+          id: string
+          title: string
+          body: string
+          send_push: boolean
+          send_email: boolean
+          audience: string[]
+          area_address: string | null
+          area_latitude: number | null
+          area_longitude: number | null
+          radius_km: number | null
+          scheduled_at: string
+          status: string
+          sent_at: string | null
+          recipients: number | null
+          emails_queued: number | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: { [key: string]: never }
+        Update: { [key: string]: never }
+        Relationships: []
+      }
+      rider_request_batches: {
+        Row: {
+          id: string
+          batch_number: string
+          vendor_id: string
+          vehicle_type: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          batch_number: string
+          vendor_id: string
+          vehicle_type?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          batch_number?: string
+          vendor_id?: string
+          vehicle_type?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      promotions: {
+        Row: {
+          id: string
+          name: string
+          code: string | null
+          discount_type: string
+          discount_value: number
+          applies_to: string
+          vendor_id: string | null
+          cost_bearer: string
+          audience: string
+          show_in_offers: boolean
+          max_users: number | null
+          max_uses_per_user: number | null
+          max_distance_km: number | null
+          vehicle_types: string[] | null
+          starts_at: string
+          ends_at: string
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          code?: string | null
+          discount_type: string
+          discount_value: number
+          applies_to: string
+          vendor_id?: string | null
+          cost_bearer?: string
+          audience?: string
+          show_in_offers?: boolean
+          max_users?: number | null
+          max_uses_per_user?: number | null
+          max_distance_km?: number | null
+          vehicle_types?: string[] | null
+          starts_at: string
+          ends_at: string
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          code?: string | null
+          discount_type?: string
+          discount_value?: number
+          applies_to?: string
+          vendor_id?: string | null
+          cost_bearer?: string
+          audience?: string
+          show_in_offers?: boolean
+          max_users?: number | null
+          max_uses_per_user?: number | null
+          max_distance_km?: number | null
+          vehicle_types?: string[] | null
+          starts_at?: string
+          ends_at?: string
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
         }
         Relationships: []
       }
@@ -1056,6 +1269,23 @@ export type Database = {
       }
       orders: {
         Row: {
+          arrived_at: string | null
+          preferred_vehicle_type: string | null
+          vehicle_rate_per_km: number | null
+          mode_widened_at: string | null
+          rider_vehicle_type: string | null
+          pickup_address: Json | null
+          batch_id: string | null
+          batch_seq: number | null
+          promotion_id: string | null
+          coupon_code: string | null
+          discount_amount: number
+          discount_target: string | null
+          discount_bearer: string | null
+          vendor_promotion_id: string | null
+          vendor_commission_discount: number
+          rider_promotion_id: string | null
+          rider_commission_discount: number
           cancelled_by: string | null
           dispatch_priority: number
           base_rate: number | null
@@ -1109,6 +1339,23 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          arrived_at?: string | null
+          preferred_vehicle_type?: string | null
+          vehicle_rate_per_km?: number | null
+          mode_widened_at?: string | null
+          rider_vehicle_type?: string | null
+          pickup_address?: Json | null
+          batch_id?: string | null
+          batch_seq?: number | null
+          promotion_id?: string | null
+          coupon_code?: string | null
+          discount_amount?: number
+          discount_target?: string | null
+          discount_bearer?: string | null
+          vendor_promotion_id?: string | null
+          vendor_commission_discount?: number
+          rider_promotion_id?: string | null
+          rider_commission_discount?: number
           cancelled_by?: string | null
           dispatch_priority?: number
           base_rate?: number | null
@@ -1162,6 +1409,23 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          arrived_at?: string | null
+          preferred_vehicle_type?: string | null
+          vehicle_rate_per_km?: number | null
+          mode_widened_at?: string | null
+          rider_vehicle_type?: string | null
+          pickup_address?: Json | null
+          batch_id?: string | null
+          batch_seq?: number | null
+          promotion_id?: string | null
+          coupon_code?: string | null
+          discount_amount?: number
+          discount_target?: string | null
+          discount_bearer?: string | null
+          vendor_promotion_id?: string | null
+          vendor_commission_discount?: number
+          rider_promotion_id?: string | null
+          rider_commission_discount?: number
           cancelled_by?: string | null
           dispatch_priority?: number
           base_rate?: number | null
@@ -1807,6 +2071,8 @@ export type Database = {
       }
       rider_profiles: {
         Row: {
+          online_since: string | null
+          auto_offline_at: string | null
           bank_details: Json | null
           created_at: string | null
           current_location: Json | null
@@ -1825,6 +2091,8 @@ export type Database = {
           verification_status: string | null
         }
         Insert: {
+          online_since?: string | null
+          auto_offline_at?: string | null
           bank_details?: Json | null
           created_at?: string | null
           current_location?: Json | null
@@ -1843,6 +2111,8 @@ export type Database = {
           verification_status?: string | null
         }
         Update: {
+          online_since?: string | null
+          auto_offline_at?: string | null
           bank_details?: Json | null
           created_at?: string | null
           current_location?: Json | null
@@ -2739,13 +3009,158 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      vendor_dashboard_stats: {
+      submit_rider_onboarding: {
+        Args: {
+          p_phone: string; p_vehicle_type: string; p_vehicle_color: string | null; p_vehicle_photo_path: string | null
+          p_vehicle_registration: string | null; p_registration_doc_path: string | null; p_id_document_type: string; p_id_document_path: string
+        }
+        Returns: string
+      }
+      admin_save_vehicle_type: {
+        Args: {
+          p_name: string; p_rate_per_km: number; p_avg_speed_kmh: number; p_max_distance_km: number
+          p_key?: string; p_customer_label?: string; p_needs_details?: boolean; p_needs_registration?: boolean; p_is_active?: boolean
+        }
+        Returns: string
+      }
+      max_trip_km: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      min_payout_amount: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      admin_broadcast_reach: {
+        Args: { p_audience: string[]; p_latitude?: number; p_longitude?: number; p_radius_km?: number }
+        Returns: number
+      }
+      admin_save_broadcast: {
+        Args: {
+          p_title: string; p_body: string; p_audience: string[]; p_send_push?: boolean; p_send_email?: boolean
+          p_area_address?: string; p_latitude?: number; p_longitude?: number; p_radius_km?: number; p_scheduled_at?: string
+        }
+        Returns: string
+      }
+      admin_cancel_broadcast: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      my_promotions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string; name: string; code: string | null; discount_type: string; discount_value: number; applies_to: string
+          vendor_id: string | null; vendor_name: string | null; max_distance_km: number | null; vehicle_types: string[] | null
+          ends_at: string; uses_left: number | null; places_left: number | null
+        }[]
+      }
+      admin_create_business_category: {
+        Args: { p_name: string; p_product_categories: string[] }
+        Returns: string
+      }
+      set_vendor_hours: {
+        Args: { p_prep_time_minutes: number; p_opening_hours: Json }
+        Returns: undefined
+      }
+      delivery_eta: {
+        Args: { p_vehicle_type: string; p_distance_km: number; p_prep_minutes?: number }
+        Returns: { eta_min: number; eta_max: number }[]
+      }
+      default_vehicle_type: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      vendor_hours_info: {
+        Args: { p_vendor_ids: string[] }
+        Returns: {
+          vendor_id: string; is_open: boolean; hours_set: boolean; prep_time_minutes: number
+          today_open: string | null; today_close: string | null; opening_hours: Json
+        }[]
+      }
+      rider_app_opened: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      rider_idle_minutes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      admin_set_rider_idle_minutes: {
+        Args: { p_minutes: number }
+        Returns: undefined
+      }
+      checkout_quote: {
+        Args: { p_vendor_id: string; p_address_id: string; p_items: Json; p_vehicle_type?: string; p_coupon_code?: string }
         Returns: Json
       }
-      admin_dashboard_stats: {
-        Args: { p_from?: string; p_to?: string }
+      place_order: {
+        Args: {
+          p_vendor_id: string; p_address_id: string; p_items: Json; p_special_instructions?: string
+          p_vehicle_type?: string; p_coupon_code?: string
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      rider_mark_arrived: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      rider_request_quote: {
+        Args: { p_latitude: number; p_longitude: number; p_vehicle_type?: string; p_coupon_code?: string }
         Returns: Json
+      }
+      create_rider_request: {
+        Args: {
+          p_recipient_name: string; p_recipient_phone: string; p_recipient_email: string; p_location: Json
+          p_package_details?: string; p_save_customer?: boolean; p_vehicle_type?: string; p_coupon_code?: string
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      express_quote: {
+        Args: { p_pickup: Json; p_dropoff: Json; p_vehicle_type?: string; p_coupon_code?: string }
+        Returns: Json
+      }
+      create_express_order: {
+        Args: {
+          p_pickup: Json; p_dropoff: Json; p_recipient_name: string; p_recipient_phone: string; p_recipient_email: string
+          p_package_details: string; p_vehicle_type?: string; p_coupon_code?: string
+        }
+        Returns: Database["public"]["Tables"]["orders"]["Row"]
+      }
+      sender_confirm_pickup: {
+        Args: { p_order_id: string; p_code: string }
+        Returns: boolean
+      }
+      batch_quote: {
+        Args: { p_stops: Json; p_vehicle_type?: string }
+        Returns: Json
+      }
+      create_rider_batch: {
+        Args: { p_stops: Json; p_vehicle_type?: string }
+        Returns: Json
+      }
+      cancel_rider_batch: {
+        Args: { p_batch_id: string }
+        Returns: number
+      }
+      admin_save_promotion: {
+        Args: {
+          p_name: string; p_discount_type: string; p_discount_value: number; p_applies_to: string
+          p_starts_at: string; p_ends_at: string; p_audience?: string; p_id?: string; p_code?: string; p_vendor_id?: string
+          p_cost_bearer?: string; p_max_distance_km?: number; p_vehicle_types?: string[]
+          p_max_users?: number; p_max_uses_per_user?: number; p_is_active?: boolean; p_show_in_offers?: boolean
+        }
+        Returns: string
+      }
+      admin_promotions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string; name: string; code: string | null; discount_type: string; discount_value: number; applies_to: string
+          vendor_id: string | null; vendor_name: string | null; cost_bearer: string; max_distance_km: number | null
+          vehicle_types: string[] | null; starts_at: string; ends_at: string; is_active: boolean; created_at: string
+          state: string; uses: number; total_discount: number
+          audience: string; max_users: number | null; max_uses_per_user: number | null; users: number
+          show_in_offers: boolean
+        }[]
       }
       admin_earnings: {
         Args: { p_from?: string; p_to?: string; p_order_type?: string; p_limit?: number; p_offset?: number }
@@ -2753,11 +3168,20 @@ export type Database = {
           order_id: string; order_number: string; order_type: string; delivered_at: string; paid_by: string
           payer_name: string | null; vendor_name: string | null; rider_name: string | null
           amount_paid: number; vendor_got: number; rider_got: number
-          cydex_from_customer: number; cydex_from_vendor: number; cydex_from_rider: number; cydex_total: number
+          cydex_from_customer: number; cydex_from_vendor: number; cydex_from_rider: number; promo_cost: number; cydex_total: number
           total_count: number
           sum_amount_paid: number; sum_vendor_got: number; sum_rider_got: number
-          sum_cydex_from_customer: number; sum_cydex_from_vendor: number; sum_cydex_from_rider: number; sum_cydex_total: number
+          sum_cydex_from_customer: number; sum_cydex_from_vendor: number; sum_cydex_from_rider: number
+          sum_promo_cost: number; sum_cydex_total: number
         }[]
+      }
+      vendor_dashboard_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      admin_dashboard_stats: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
       }
       admin_orders_needing_attention: {
         Args: Record<PropertyKey, never>
@@ -2838,13 +3262,6 @@ export type Database = {
         Args: { p_store_name: string; p_phone: string; p_category_id: string; p_is_registered: boolean; p_license_path?: string }
         Returns: string
       }
-      submit_rider_onboarding: {
-        Args: {
-          p_phone: string; p_vehicle_type: string; p_vehicle_model: string | null; p_vehicle_year: number | null
-          p_vehicle_color: string | null; p_vehicle_registration: string | null; p_id_document_type: string; p_id_document_path: string
-        }
-        Returns: string
-      }
       admin_review_verification: {
         Args: { p_profile_id: string; p_action: string; p_reason?: string }
         Returns: string
@@ -2864,21 +3281,6 @@ export type Database = {
       register_push_subscription: {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string }
         Returns: undefined
-      }
-      rider_request_quote: {
-        Args: { p_latitude: number; p_longitude: number }
-        Returns: {
-          status: string; distance_km: number | null; base_rate: number | null; distance_fee: number | null
-          delivery_fee: number | null; commission: number | null; total_amount: number | null
-          wallet_balance: number; wallet_amount: number | null; card_amount: number | null
-        }[]
-      }
-      create_rider_request: {
-        Args: {
-          p_recipient_name: string; p_recipient_phone: string; p_location: Json
-          p_package_details?: string; p_save_customer?: boolean
-        }
-        Returns: Database["public"]["Tables"]["orders"]["Row"]
       }
       cancel_rider_request: {
         Args: { p_order_id: string }
@@ -2909,10 +3311,6 @@ export type Database = {
       address_snapshot: {
         Args: { a: Database["public"]["Tables"]["addresses"]["Row"] }
         Returns: Json
-      }
-      calculate_order_price: {
-        Args: { p_address_id: string; p_subtotal: number; p_vendor_id: string }
-        Returns: Record<string, unknown>
       }
       calculate_rider_rating: {
         Args: { rider_uuid: string }
@@ -3072,68 +3470,6 @@ export type Database = {
         Returns: boolean
       }
       payout_fee_rate: { Args: never; Returns: number }
-      place_order: {
-        Args: {
-          p_address_id: string
-          p_items: Json
-          p_special_instructions?: string
-          p_vendor_id: string
-        }
-        Returns: {
-          base_rate: number | null
-          cancel_reason: string | null
-          cancelled_at: string | null
-          carbon_credits_earned: number | null
-          created_at: string
-          customer_id: string
-          delivered_at: string | null
-          delivery_address: Json
-          delivery_address_id: string | null
-          delivery_fee: number | null
-          delivery_type: string
-          distance_fee: number | null
-          distance_km: number | null
-          estimated_delivery_time: string | null
-          green_fee: number | null
-          id: string
-          is_late_night: boolean | null
-          is_peak_hour: boolean | null
-          is_student_order: boolean | null
-          late_night_fee: number | null
-          order_number: string
-          payment_details: Json | null
-          payment_gateway: string | null
-          payment_method: string | null
-          payment_reference: string | null
-          payment_status: string
-          picked_up_at: string | null
-          pickup_started_at: string | null
-          ready_for_pickup_at: string | null
-          rider_assigned_at: string | null
-          rider_id: string | null
-          service_charge: number | null
-          special_instructions: string | null
-          status: string
-          student_discount: number | null
-          subscription_applied: boolean | null
-          subtotal: number
-          surge_fee: number | null
-          time_slot: string | null
-          total_amount: number
-          updated_at: string
-          vendor_accepted_at: string | null
-          vendor_id: string | null
-          verification_code: string | null
-          weight_fee: number | null
-          weight_kg: number | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "orders"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       queue_email: {
         Args: {
           p_data: Json
@@ -3142,19 +3478,6 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
-      }
-      quote_order: {
-        Args: { p_address_id: string; p_items: Json; p_vendor_id: string }
-        Returns: {
-          base_rate: number
-          delivery_fee: number
-          distance_fee: number
-          distance_km: number
-          service_charge: number
-          status: string
-          subtotal: number
-          total_amount: number
-        }[]
       }
       refund_order: { Args: { p_order_id: string }; Returns: undefined }
       request_payout: {

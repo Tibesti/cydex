@@ -18,6 +18,8 @@ export interface Verification {
   vehicle_year: number | null;
   vehicle_color: string | null;
   vehicle_registration: string | null;
+  vehicle_photo_path: string | null;
+  vehicle_registration_doc_path: string | null;
   id_document_type: string | null;
   id_document_path: string | null;
   rejection_reason: string | null;
@@ -46,15 +48,6 @@ export const STATUS_LABELS: Record<VerificationStatus, string> = {
   suspended: 'Suspended',
 };
 
-export const VEHICLE_TYPES = [
-  { value: 'walking', label: 'On foot' },
-  { value: 'bicycle', label: 'Bicycle' },
-  { value: 'electric_bike', label: 'Electric bike' },
-  { value: 'motorcycle', label: 'Motorcycle' },
-  { value: 'car', label: 'Car' },
-] as const;
-export const MOTOR_VEHICLES = ['electric_bike', 'motorcycle', 'car'];
-
 export const ID_TYPES = [
   { value: 'national_id', label: 'National ID (NIN slip or card)' },
   { value: 'passport', label: 'International passport' },
@@ -66,7 +59,9 @@ export const DOC_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/w
 
 // Uploads a licence or ID into the private verification-docs bucket, under
 // the user's own folder. Returns the storage path.
-export const uploadVerificationDoc = async (userId: string, kind: 'license' | 'id', file: File) => {
+export type VerificationDocKind = 'license' | 'id' | 'vehicle' | 'registration';
+
+export const uploadVerificationDoc = async (userId: string, kind: VerificationDocKind, file: File) => {
   if (!DOC_TYPES.includes(file.type)) throw new Error('Upload a PDF, PNG, JPG or WebP file');
   if (file.size > MAX_UPLOAD_BYTES) throw new Error(`Files must be ${MAX_UPLOAD_LABEL} or smaller`);
   const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';

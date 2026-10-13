@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 export interface Order {
   id: string;
   order_number: string;
+  /** 'customer' (from a vendor) or 'express' (Cydex Express: their own item, A to B) */
+  order_type?: string | null;
   customer_id: string;
   vendor_id: string;
   rider_id?: string;
@@ -16,6 +18,15 @@ export interface Order {
   delivery_type: string;
   time_slot?: string;
   delivery_address: any;
+  /** Cydex Express: where the rider collects the item, with the sender's name and phone */
+  pickup_address?: any;
+  arrived_at?: string | null;
+  preferred_vehicle_type?: string | null;
+  mode_widened_at?: string | null;
+  rider_vehicle_type?: string | null;
+  distance_km?: number | null;
+  discount_amount?: number | null;
+  wallet_amount?: number | null;
   subtotal: number;
   delivery_fee: number;
   service_charge?: number | null;

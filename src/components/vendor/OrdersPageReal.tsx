@@ -14,6 +14,7 @@ import HandoverCodeDialog from '@/components/orders/HandoverCodeDialog';
 import { orderActions } from '@/services/orderActions';
 import { IN_PROGRESS_STATUSES, type OrderStatus } from '@/lib/orderStatus';
 import PagedList from '@/components/ui/paged-list';
+import RiderRequestHistory from '@/components/vendor/rider-requests/RiderRequestHistory';
 
 const OrdersPageReal = () => {
   const { orders, loading, hasPhone, acceptOrder, markReady, refresh } = useVendorOrders();
@@ -211,11 +212,12 @@ const OrdersPageReal = () => {
           
           <CardContent>
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-4 sm:flex">
+              <TabsList className="mb-4 w-full sm:w-auto grid grid-cols-5 sm:flex">
                 <TabsTrigger value="all">All</TabsTrigger>
                 <TabsTrigger value="today">Today</TabsTrigger>
                 <TabsTrigger value="pending">New</TabsTrigger>
                 <TabsTrigger value="active">In progress</TabsTrigger>
+                <TabsTrigger value="requests">Rider requests</TabsTrigger>
               </TabsList>
               
               <TabsContent value="all">
@@ -232,6 +234,11 @@ const OrdersPageReal = () => {
 
               <TabsContent value="active">
                 {renderOrders({ orders: getOrdersByTab('active'), type: 'in-progress' })}
+              </TabsContent>
+
+              {/* Deliveries the vendor requested for their own customers */}
+              <TabsContent value="requests">
+                <RiderRequestHistory />
               </TabsContent>
             </Tabs>
           </CardContent>

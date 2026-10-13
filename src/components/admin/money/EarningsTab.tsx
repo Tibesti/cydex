@@ -35,6 +35,7 @@ const COLUMNS: { key: keyof Row; label: string; cydex?: boolean }[] = [
   { key: 'cydex_from_customer', label: 'Cydex from customer', cydex: true },
   { key: 'cydex_from_vendor', label: 'Cydex from vendor', cydex: true },
   { key: 'cydex_from_rider', label: 'Cydex from rider', cydex: true },
+  { key: 'promo_cost', label: 'Promotions cost', cydex: true },
   { key: 'cydex_total', label: 'Cydex total', cydex: true },
 ];
 
@@ -62,6 +63,7 @@ const EarningsTab = () => {
     cydex_from_customer: Number(first?.sum_cydex_from_customer ?? 0),
     cydex_from_vendor: Number(first?.sum_cydex_from_vendor ?? 0),
     cydex_from_rider: Number(first?.sum_cydex_from_rider ?? 0),
+    promo_cost: Number(first?.sum_promo_cost ?? 0),
     cydex_total: Number(first?.sum_cydex_total ?? 0),
   };
 
@@ -71,7 +73,7 @@ const EarningsTab = () => {
       const all = await fetchPage(from, to, type, 100000, 0);
       const head = ['Order', 'Type', 'Delivered', 'Paid by', 'Payer', 'Vendor', 'Rider', ...COLUMNS.map((c) => c.label)];
       const lines = all.map((r) => [
-        r.order_number, r.order_type === 'rider_request' ? 'Rider request' : 'Customer order',
+        r.order_number, r.order_type === 'rider_request' ? 'Rider request' : r.order_type === 'express' ? 'Cydex Express' : 'Customer order',
         format(new Date(r.delivered_at), 'yyyy-MM-dd HH:mm'), r.paid_by, r.payer_name ?? '', r.vendor_name ?? '', r.rider_name ?? '',
         ...COLUMNS.map((c) => Number(r[c.key]).toFixed(2)),
       ]);
@@ -100,6 +102,7 @@ const EarningsTab = () => {
               <SelectItem value="all">All orders</SelectItem>
               <SelectItem value="customer">Customer orders</SelectItem>
               <SelectItem value="rider_request">Rider requests</SelectItem>
+              <SelectItem value="express">Cydex Express</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -109,7 +112,7 @@ const EarningsTab = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
         {COLUMNS.map((c) => (
           <Card key={c.key} className={cn(c.key === 'cydex_total' && 'border-primary/50 bg-primary/5')}>
             <CardContent className="p-3">
@@ -123,7 +126,7 @@ const EarningsTab = () => {
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[960px] text-sm">
+            <table className="w-full min-w-[1080px] text-sm">
               <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 font-medium">Order</th>
@@ -133,16 +136,20 @@ const EarningsTab = () => {
               </thead>
               <tbody className="divide-y">
                 {isLoading && rows.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
+                  <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Loading…</td></tr>
                 ) : rows.length === 0 ? (
-                  <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">No delivered orders in this period.</td></tr>
+                  <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No delivered orders in this period.</td></tr>
                 ) : rows.map((r) => (
                   <tr key={r.order_id} className="hover:bg-muted/40">
                     <td className="px-3 py-2">
                       <Link to={`/admin/orders/${r.order_id}`} className="font-medium text-primary hover:underline">#{r.order_number}</Link>
                       <p className="text-xs text-muted-foreground">
                         {format(new Date(r.delivered_at), 'd MMM yyyy, HH:mm')}
-                        {r.order_type === 'rider_request' && <Badge variant="outline" className="ml-1.5 px-1 py-0 text-[10px]">Rider request</Badge>}
+                        {r.order_type !== 'customer' && (
+                          <Badge variant="outline" className="ml-1.5 px-1 py-0 text-[10px]">
+                            {r.order_type === 'express' ? 'Cydex Express' : 'Rider request'}
+                          </Badge>
+                        )}
                       </p>
                     </td>
                     <td className="px-3 py-2">

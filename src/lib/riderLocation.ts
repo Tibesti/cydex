@@ -4,6 +4,7 @@
 // foreground); updates pause in the background and resume on return. The
 // latest position is saved to rider_profiles.current_location, throttled so a
 // moving rider writes at most every WRITE_EVERY_MS unless they move far.
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { metersBetween } from '@/lib/googleMaps';
 
@@ -25,6 +26,10 @@ export interface RiderLocationState {
   label: string | null;
   // Temporary problem getting a fix (weak GPS), not a permission issue
   error: string | null;
+  // Set offline by the system for not taking an order in a while (the admin
+  // sets how long). Stays that way until the rider opens the app again or
+  // taps "Go online".
+  idleOffline: boolean;
 }
 
 const WRITE_EVERY_MS = 30_000;
@@ -35,7 +40,7 @@ const STOP_DELAY_MS = 5_000;
 // Re-save the location this often while the app is open (online heartbeat)
 const HEARTBEAT_MS = 60_000;
 
-let state: RiderLocationState = { permission: 'checking', position: null, label: null, error: null };
+let state: RiderLocationState = { permission: 'checking', position: null, label: null, error: null, idleOffline: false };
 const listeners = new Set<() => void>();
 let riderId: string | null = null;
 let watchId: number | null = null;
@@ -80,15 +85,45 @@ const save = async (position: RiderPosition, force = false) => {
   }
   lastSaved = { at: now, lat: position.latitude, lng: position.longitude };
 
-  const { error } = await supabase.from('rider_profiles').upsert(
+  const { data, error } = await supabase.from('rider_profiles').upsert(
     {
       id: riderId,
       rider_status: 'available',
       current_location: { ...position, label: state.label, updated_at: new Date(now).toISOString() },
     },
     { onConflict: 'id' }
-  );
-  if (error) console.error('[RiderLocation] Could not save location:', error);
+  ).select('auto_offline_at').maybeSingle();
+  if (error) return console.error('[RiderLocation] Could not save location:', error);
+  // The database keeps an idle rider offline whatever the app sends
+  const idle = !!data?.auto_offline_at;
+  if (idle !== state.idleOffline) setState({ idleOffline: idle });
+};
+
+// "Opening the app again" after being set offline for being idle: on launch,
+// on coming back to the app, or from the "Go online" button. Resolves true if
+// the rider had been set offline.
+export const resumeRiderOnline = async (announce = true) => {
+  if (!riderId) return false;
+  const { data, error } = await supabase.rpc('rider_app_opened');
+  if (error) {
+    console.error('[RiderLocation] Could not bring rider back online:', error);
+    return false;
+  }
+  setState({ idleOffline: false });
+  if (data) {
+    if (state.position) save(state.position, true);
+    if (announce) toast.info('You were set offline because you hadn’t taken an order in a while. You’re back online.');
+  }
+  return !!data;
+};
+
+let visibilityWatched = false;
+const watchVisibility = () => {
+  if (visibilityWatched) return;
+  visibilityWatched = true;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && riderId) resumeRiderOnline();
+  });
 };
 
 // Best effort: the database job catches anything this misses
@@ -182,8 +217,11 @@ export const startRiderLocation = (userId: string) => {
     stopWatching();
     riderId = userId;
     lastSaved = null;
-    setState({ position: null, label: null, error: null });
+    setState({ position: null, label: null, error: null, idleOffline: false });
+    // Opening the app clears an idle-offline
+    resumeRiderOnline();
   }
+  watchVisibility();
 
   if (!('geolocation' in navigator)) {
     setState({ permission: 'unsupported' });

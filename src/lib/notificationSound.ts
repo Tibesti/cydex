@@ -9,6 +9,7 @@ export const URGENT_NOTIFICATION_TYPES = new Set([
   'assigned_by_admin', // rider
   'payout_request', // admin
   'verification_request', // admin
+  'rider_arrived', // customer: the rider is at the door
 ]);
 
 let ctx: AudioContext | null = null;

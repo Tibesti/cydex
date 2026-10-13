@@ -18,6 +18,8 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useMyVerification } from '@/hooks/useMyVerification';
 import { isValidPhone } from '@/lib/phone';
 import { errorMessage } from '@/lib/address';
+import OpeningHoursEditor from '@/components/vendor/hours/OpeningHoursEditor';
+import { DEFAULT_HOURS, hoursProblem, type OpeningHours } from '@/lib/openingHours';
 
 // Vendor onboarding: store name (what customers see), phone, logo and banner,
 // business category, registered business (+ licence). With a licence the
@@ -32,6 +34,8 @@ const VendorOnboarding = () => {
   const [categoryId, setCategoryId] = useState('');
   const [registered, setRegistered] = useState<'yes' | 'no' | ''>('');
   const [licensePath, setLicensePath] = useState<string | null>(null);
+  const [prepMinutes, setPrepMinutes] = useState('15');
+  const [hours, setHours] = useState<OpeningHours>(DEFAULT_HOURS);
   const [submitting, setSubmitting] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
 
@@ -59,6 +63,17 @@ const VendorOnboarding = () => {
     },
   });
 
+  const { data: savedHours } = useQuery({
+    queryKey: ['my-vendor-hours', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => (await supabase.from('vendor_hours').select('prep_time_minutes, opening_hours').eq('vendor_id', user!.id).maybeSingle()).data,
+  });
+  useEffect(() => {
+    if (!savedHours) return;
+    setPrepMinutes(String(savedHours.prep_time_minutes));
+    if (savedHours.opening_hours && Object.keys(savedHours.opening_hours as object).length) setHours(savedHours.opening_hours as OpeningHours);
+  }, [savedHours]);
+
   // Start from what they entered before (e.g. resubmitting after a rejection)
   useEffect(() => {
     if (prefilled || !profile || phoneRow === undefined) return;
@@ -73,13 +88,19 @@ const VendorOnboarding = () => {
   }, [profile, phoneRow, verification, prefilled]);
 
   const imagesReady = !!profile?.avatar && !!profile?.store_banner_url;
+  const hoursError = hoursProblem(hours);
+  const prepOk = prepMinutes !== '' && Number(prepMinutes) >= 0 && Number(prepMinutes) <= 240;
   const canSubmit =
     storeName.trim().length > 1 && isValidPhone(phone) && !!categoryId && !!registered && imagesReady &&
-    (registered === 'no' || !!licensePath) && !submitting;
+    (registered === 'no' || !!licensePath) && prepOk && !hoursError && !submitting;
 
   const submit = async () => {
     setSubmitting(true);
     try {
+      const { error: hoursErr } = await supabase.rpc('set_vendor_hours', {
+        p_prep_time_minutes: Number(prepMinutes), p_opening_hours: hours,
+      });
+      if (hoursErr) throw hoursErr;
       const { data: status, error } = await supabase.rpc('submit_vendor_onboarding', {
         p_store_name: storeName.trim(),
         p_phone: phone.trim(),
@@ -165,6 +186,17 @@ const VendorOnboarding = () => {
           </CardHeader>
           <CardContent>
             <StoreImagesUpload />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Opening hours and preparation time</CardTitle>
+            <CardDescription>You can change these any time in Settings.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <OpeningHoursEditor prepMinutes={prepMinutes} onPrepChange={setPrepMinutes} hours={hours} onHoursChange={setHours} />
+            {hoursError && <p className="mt-2 text-xs text-destructive">{hoursError}</p>}
           </CardContent>
         </Card>
 

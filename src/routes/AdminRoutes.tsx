@@ -10,9 +10,11 @@ import AdminReviews from '../pages/admin/Reviews';
 import AdminEmails from '../pages/admin/Emails';
 import AdminNotifications from '../pages/admin/Notifications';
 import AdminActivity from '../pages/admin/Activity';
-import AdminContent from '../pages/admin/Content';
 import AdminVerifications from '../pages/admin/Verifications';
 import AdminSecurity from '../pages/admin/Security';
+import AdminVehicles from '../pages/admin/Vehicles';
+import AdminPromotions from '../pages/admin/Promotions';
+import AdminBroadcasts from '../pages/admin/Broadcasts';
 
 const PAGES: [string, JSX.Element][] = [
   ['/', <AdminDashboard />],
@@ -23,10 +25,12 @@ const PAGES: [string, JSX.Element][] = [
   ['/verifications', <AdminVerifications />],
   ['/reviews', <AdminReviews />],
   ['/pricing', <AdminPricing />],
+  ['/vehicles', <AdminVehicles />],
+  ['/promotions', <AdminPromotions />],
+  ['/broadcasts', <AdminBroadcasts />],
   ['/emails', <AdminEmails />],
   ['/notifications', <AdminNotifications />],
   ['/activity', <AdminActivity />],
-  ['/content', <AdminContent />],
   ['/security', <AdminSecurity />],
 ];
 
