@@ -10,7 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
-import { ID_TYPES, STATUS_LABELS, VEHICLE_TYPES, verificationDocUrl, type Verification } from '@/lib/verification';
+import { ID_TYPES, STATUS_LABELS, verificationDocUrl, type Verification } from '@/lib/verification';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 
 export interface VerificationRow extends Verification {
   profile: { name: string | null; email: string | null; phone: string | null; avatar: string | null; store_banner_url: string | null } | null;
@@ -28,6 +29,7 @@ const Field = ({ label, value }: { label: string; value?: string | number | null
 
 // One verification request: what was submitted, the document, and the decision
 const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationRow | null; onClose: () => void; onDone: () => void }) => {
+  const { nameOf } = useVehicleTypes(true);
   const confirm = useConfirm();
   const [pending, setPending] = useState<Action | null>(null);
   const [reason, setReason] = useState('');
@@ -46,9 +48,9 @@ const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationR
   const docPath = row.role === 'vendor' ? row.business_license_path : row.id_document_path;
   const needsReason = pending === 'reject' || pending === 'suspend';
 
-  const openDoc = async () => {
+  const openDoc = async (path: string = docPath!) => {
     try {
-      window.open(await verificationDocUrl(docPath!), '_blank', 'noopener');
+      window.open(await verificationDocUrl(path), '_blank', 'noopener');
     } catch (e) {
       toast.error(errorMessage(e, 'Could not open the document'));
     }
@@ -126,9 +128,9 @@ const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationR
             </>
           ) : (
             <>
-              <Field label="Vehicle" value={VEHICLE_TYPES.find((v) => v.value === row.vehicle_type)?.label ?? row.vehicle_type} />
-              {row.vehicle_model && <Field label="Model / year / colour" value={`${row.vehicle_model} · ${row.vehicle_year ?? '–'} · ${row.vehicle_color ?? '–'}`} />}
-              <Field label="Registration" value={row.vehicle_registration} />
+              <Field label="Vehicle" value={nameOf(row.vehicle_type)} />
+              {row.vehicle_color && <Field label="Colour" value={row.vehicle_color} />}
+              {row.vehicle_registration && <Field label="Registration number" value={row.vehicle_registration} />}
               <Field label="ID type" value={ID_TYPES.find((t) => t.value === row.id_document_type)?.label} />
             </>
           )}
@@ -136,12 +138,24 @@ const VerificationReviewDialog = ({ row, onClose, onDone }: { row: VerificationR
           {row.suspension_reason && <Field label="Suspended for" value={row.suspension_reason} />}
         </div>
 
-        {docPath && (
-          <Button variant="outline" onClick={openDoc}>
-            <ExternalLink className="mr-2 h-4 w-4" />
-            View {row.role === 'vendor' ? 'business licence' : 'ID document'}
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {docPath && (
+            <Button variant="outline" onClick={() => openDoc()}>
+              <ExternalLink className="mr-2 h-4 w-4" />
+              View {row.role === 'vendor' ? 'business licence' : 'ID document'}
+            </Button>
+          )}
+          {row.vehicle_photo_path && (
+            <Button variant="outline" onClick={() => openDoc(row.vehicle_photo_path!)}>
+              <ExternalLink className="mr-2 h-4 w-4" /> View vehicle photo
+            </Button>
+          )}
+          {row.vehicle_registration_doc_path && (
+            <Button variant="outline" onClick={() => openDoc(row.vehicle_registration_doc_path!)}>
+              <ExternalLink className="mr-2 h-4 w-4" /> View registration document
+            </Button>
+          )}
+        </div>
 
         {needsReason && (
           <div className="space-y-1.5">

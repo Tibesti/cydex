@@ -130,7 +130,7 @@ export const OrdersTable: React.FC<OrdersTableProps> = ({
                         </p>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">
-                        To: {order.customer_name}
+                        To: {(order.batch_stops ?? 0) > 1 ? `${order.batch_stops} drop-offs, first: ${order.customer_name}` : order.customer_name}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {order.items_count} item{order.items_count !== 1 ? 's' : ''}

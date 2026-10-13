@@ -3,9 +3,10 @@ import { Card } from '@/components/ui/card';
 import { formatKm } from '@/lib/riderLocation';
 import type { VendorCardData } from '@/hooks/useVendorCards';
 import { RatingBadge, VerifiedBadge } from './VendorBadges';
+import { OpenBadge, VendorHoursLine } from './VendorHours';
 
 // A vendor in the customer's lists: banner, square logo, name, verified,
-// rating, distance and what they sell
+// rating, open or closed, today's hours, distance and what they sell
 const VendorCard = ({ vendor, onSelect }: { vendor: VendorCardData; onSelect: (vendor: VendorCardData) => void }) => (
   <Card
     role="button"
@@ -18,6 +19,7 @@ const VendorCard = ({ vendor, onSelect }: { vendor: VendorCardData; onSelect: (v
       {vendor.banner_url && (
         <img src={vendor.banner_url} alt="" className="h-full w-full object-cover" loading="lazy" />
       )}
+      <OpenBadge info={vendor.hours} className="absolute right-2 top-2 bg-background/95 shadow-sm" />
       <div className="absolute -bottom-6 left-3 h-14 w-14 overflow-hidden rounded-lg border-2 border-background bg-muted shadow-sm">
         {vendor.logo_url ? (
           <img src={vendor.logo_url} alt={`${vendor.name} logo`} className="h-full w-full object-cover" loading="lazy" />
@@ -38,6 +40,7 @@ const VendorCard = ({ vendor, onSelect }: { vendor: VendorCardData; onSelect: (v
         <MapPin className="h-3.5 w-3.5" />
         {formatKm(vendor.distance_km)} away · {vendor.product_count} product{vendor.product_count === 1 ? '' : 's'}
       </div>
+      <VendorHoursLine info={vendor.hours} />
       {vendor.categories.length > 0 && (
         <p className="line-clamp-1 text-xs text-muted-foreground">{vendor.categories.join(' · ')}</p>
       )}

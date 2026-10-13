@@ -43,7 +43,7 @@ const RiderOrderDetail = () => {
         </div>
 
         {/* Next step */}
-        {['rider_assigned', 'picking_up', 'out_for_delivery'].includes(order.status) && (
+        {['rider_assigned', 'picking_up', 'out_for_delivery', 'arrived'].includes(order.status) && (
           <Card>
             <CardContent className="pt-6">
               <RiderDeliveryActions
@@ -95,6 +95,9 @@ const RiderOrderDetail = () => {
             <CardContent className="space-y-2 text-sm">
               {address ? (
                 <>
+                  {address.name && order.order_type !== 'customer' && (
+                    <p className="text-muted-foreground">Deliver to <span className="font-medium text-foreground">{address.name}</span></p>
+                  )}
                   <p className="font-medium">{address.street || address.formatted_address}</p>
                   {address.formatted_address && address.formatted_address !== address.street && (
                     <p className="text-muted-foreground">{address.formatted_address}</p>
@@ -112,13 +115,13 @@ const RiderOrderDetail = () => {
               ) : (
                 <p className="text-muted-foreground">{String(order.delivery_address || 'Address not available')}</p>
               )}
-              {order.special_instructions && (
+              {order.special_instructions && order.order_items?.length ? (
                 <p className="rounded-md bg-muted p-2">Note: {order.special_instructions}</p>
-              )}
+              ) : null}
             </CardContent>
           </Card>
 
-          {/* Items (no prices): what to check before leaving the vendor */}
+          {/* Items (no prices): what to check before leaving the pickup point */}
           <Card>
             <CardHeader>
               <CardTitle>Items to collect</CardTitle>
@@ -126,7 +129,8 @@ const RiderOrderDetail = () => {
             <CardContent>
               {!order.order_items?.length && (
                 <p className="rounded-lg bg-muted p-3 text-sm">
-                  A package from the vendor{order.special_instructions ? `: ${order.special_instructions}` : '.'}
+                  {order.order_type === 'express' ? 'An item from the sender' : 'A package from the vendor'}
+                  {order.special_instructions ? `: ${order.special_instructions}` : '.'}
                 </p>
               )}
               <ul className="space-y-2">

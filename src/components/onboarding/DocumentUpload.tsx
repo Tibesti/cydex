@@ -3,12 +3,12 @@ import { FileCheck2, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { DOC_TYPES, uploadVerificationDoc, verificationDocUrl } from '@/lib/verification';
+import { DOC_TYPES, uploadVerificationDoc, verificationDocUrl, type VerificationDocKind } from '@/lib/verification';
 import { MAX_UPLOAD_LABEL } from '@/lib/uploads';
 import { errorMessage } from '@/lib/address';
 
 interface DocumentUploadProps {
-  kind: 'license' | 'id';
+  kind: VerificationDocKind;
   /** Storage path of the uploaded file, if any */
   value: string | null;
   onChange: (path: string) => void;

@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConfirm } from '@/contexts/ConfirmContext';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 import { CLOSED_STATUSES, type OrderStatus } from '@/lib/orderStatus';
@@ -64,6 +65,7 @@ const OrderDetail = () => {
   const { id = '' } = useParams();
   const queryClient = useQueryClient();
   const confirm = useConfirm();
+  const { labelOf, nameOf } = useVehicleTypes(true);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [riderAction, setRiderAction] = useState<RiderAction | null>(null);
 
@@ -101,6 +103,11 @@ const OrderDetail = () => {
 
   const { order: o, customer, vendor, rider, pickup, items, hold, split, codes, delivery, transactions, ratings, admin_actions } = data;
   const isRequest = o.order_type === 'rider_request';
+  const isExpress = o.order_type === 'express';
+  // Deliveries with a named recipient (no items): rider requests and Cydex Express
+  const hasRecipient = isRequest || isExpress;
+  const discount = Number(o.discount_amount ?? 0);
+  const cydexDiscount = o.discount_bearer === 'vendor' ? 0 : discount;
   const closed = CLOSED_STATUSES.includes(o.status as OrderStatus);
   const recipient = (o.delivery_address ?? {}) as Record<string, string | undefined>;
   const serviceCharge = Number(o.service_charge ?? 0);
@@ -115,13 +122,13 @@ const OrderDetail = () => {
     cydex_from_customer: isRequest ? 0 : serviceCharge,
     cydex_from_vendor: Number(hold.platform_fee) + (isRequest ? serviceCharge : 0),
     cydex_from_rider: deliveryFee - Number(hold.rider_amount),
-    cydex_total: serviceCharge + Number(hold.platform_fee) + deliveryFee - Number(hold.rider_amount),
+    cydex_total: serviceCharge + Number(hold.platform_fee) + deliveryFee - Number(hold.rider_amount) - cydexDiscount,
   });
 
   const timeline = [
-    { at: o.created_at, label: isRequest ? 'Request created' : 'Order placed' },
+    { at: o.created_at, label: isRequest ? 'Request created' : isExpress ? 'Cydex Express created' : 'Order placed' },
     { at: hold?.created_at, label: isRequest ? 'Paid by vendor' : 'Paid' },
-    { at: isRequest ? null : o.vendor_accepted_at, label: 'Vendor accepted' },
+    { at: hasRecipient ? null : o.vendor_accepted_at, label: 'Vendor accepted' },
     { at: o.ready_for_pickup_at, label: 'Ready for pickup' },
     { at: o.rider_assigned_at, label: `Rider assigned${rider?.name ? ` (${rider.name})` : ''}` },
     { at: o.pickup_started_at, label: 'Rider heading to vendor' },
@@ -150,7 +157,7 @@ const OrderDetail = () => {
 
   return (
     <AdminPage
-      title={<span className="flex flex-wrap items-center gap-2">#{o.order_number}{isRequest && <Badge variant="outline">Rider request</Badge>}</span>}
+      title={<span className="flex flex-wrap items-center gap-2">#{o.order_number}{isRequest && <Badge variant="outline">{o.batch_id ? `Batch stop ${o.batch_seq}` : 'Rider request'}</Badge>}{isExpress && <Badge variant="outline">Cydex Express</Badge>}</span>}
       description={`${isRequest ? 'Requested' : 'Placed'} ${when(o.created_at)}`}
       icon={Package}
       actions={
@@ -174,6 +181,11 @@ const OrderDetail = () => {
         <OrderStatusBadge status={o.status} />
         <PaymentStatusBadge status={o.payment_status} />
         {o.dispatch_priority > 0 && <Badge variant="secondary">Top priority for riders</Badge>}
+        {o.preferred_vehicle_type && (
+          <Badge variant="outline">
+            Preferred: {labelOf(o.preferred_vehicle_type)}{o.mode_widened_at ? ' (opened to all riders)' : ''}
+          </Badge>
+        )}
         {o.cancelled_by === 'admin' && <Badge variant="secondary">Cancelled by Cydex</Badge>}
       </div>
       {o.cancel_reason && (
@@ -188,7 +200,9 @@ const OrderDetail = () => {
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base">People</CardTitle></CardHeader>
             <CardContent className="grid gap-5 sm:grid-cols-3">
-              {isRequest ? (
+              {isExpress && <Person title="Sender (paid)" icon={User} person={customer}
+                extra={customer?.status === 'suspended' && <Badge variant="destructive">Suspended</Badge>} />}
+              {hasRecipient ? (
                 <div className="space-y-1">
                   <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <User className="h-3.5 w-3.5" /> Recipient
@@ -199,18 +213,21 @@ const OrderDetail = () => {
                       <Phone className="h-3.5 w-3.5" /> {recipient.phone}
                     </a>
                   )}
-                  <p className="text-xs text-muted-foreground">The vendor's own customer (no Cydex account)</p>
+                  {recipient.email && <p className="break-all text-xs text-muted-foreground">{recipient.email}</p>}
+                  <p className="text-xs text-muted-foreground">
+                    {isExpress ? 'Receives the item (emailed the delivery code)' : "The vendor's own customer (emailed the delivery code)"}
+                  </p>
                 </div>
               ) : (
                 <Person title="Customer" icon={User} person={customer}
                   extra={customer?.status === 'suspended' && <Badge variant="destructive">Suspended</Badge>} />
               )}
-              <Person title={isRequest ? 'Vendor (paid)' : 'Vendor'} icon={Store} person={vendor}
-                extra={vendor?.verification_status && <Badge variant="outline" className="capitalize">{vendor.verification_status}</Badge>} />
+              {!isExpress && <Person title={isRequest ? 'Vendor (paid)' : 'Vendor'} icon={Store} person={vendor}
+                extra={vendor?.verification_status && <Badge variant="outline" className="capitalize">{vendor.verification_status}</Badge>} />}
               <Person title="Rider" icon={Bike} person={rider}
                 extra={rider && (
                   <p className="text-xs capitalize text-muted-foreground">
-                    {[rider.vehicle_type, rider.rating ? `★ ${Number(rider.rating).toFixed(1)}` : null, rider.rider_status].filter(Boolean).join(' · ')}
+                    {[nameOf(rider.vehicle_type), rider.rating ? `★ ${Number(rider.rating).toFixed(1)}` : null, rider.rider_status].filter(Boolean).join(' · ')}
                   </p>
                 )} />
             </CardContent>
@@ -223,8 +240,8 @@ const OrderDetail = () => {
               <div className="flex gap-2">
                 <Store className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">Pickup ({vendor?.name ?? 'vendor'})</p>
-                  <p className="break-words">{addressText(pickup) || 'No store address'}</p>
+                  <p className="text-xs text-muted-foreground">Pickup ({isExpress ? customer?.name ?? 'sender' : vendor?.name ?? 'vendor'})</p>
+                  <p className="break-words">{addressText(pickup) || 'No pickup address'}</p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -243,14 +260,14 @@ const OrderDetail = () => {
               </div>
               {o.special_instructions && (
                 <p className="rounded-md bg-muted p-2 text-sm">
-                  <span className="font-medium">{isRequest ? 'Package: ' : 'Note: '}</span>{o.special_instructions}
+                  <span className="font-medium">{hasRecipient ? 'Package: ' : 'Note: '}</span>{o.special_instructions}
                 </p>
               )}
             </CardContent>
           </Card>
 
           {/* Items */}
-          {!isRequest && (
+          {!hasRecipient && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Items ({items.length})</CardTitle></CardHeader>
               <CardContent className="p-0">
@@ -274,9 +291,20 @@ const OrderDetail = () => {
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   What the {isRequest ? 'vendor' : 'customer'} paid
                 </p>
-                {!isRequest && <Row label="Items" value={naira(o.subtotal)} />}
-                <Row label={`Delivery fee${o.distance_km != null ? ` (${Number(o.distance_km).toFixed(1)} km, minimum ₦${Number(o.base_rate ?? 0).toLocaleString()})` : ''}`} value={naira(deliveryFee)} />
+                {!hasRecipient && <Row label="Items" value={naira(o.subtotal)} />}
+                <Row
+                  label={`Delivery fee${o.distance_km != null
+                    ? ` (${Number(o.distance_km).toFixed(1)} km × ₦${Number(o.vehicle_rate_per_km ?? 0).toLocaleString()} + ₦${Number(o.base_rate ?? 0).toLocaleString()})`
+                    : ''}`}
+                  value={naira(deliveryFee)}
+                />
                 <Row label={isRequest ? 'Commission' : 'Service Charge'} value={naira(serviceCharge)} />
+                {discount > 0 && (
+                  <Row
+                    label={`Promotion${o.coupon_code ? ` (${o.coupon_code})` : ''} on ${{ service_charge: 'Service Charge', delivery_fee: 'delivery fee', items: 'items' }[o.discount_target ?? ''] ?? 'order'}, paid by ${o.discount_bearer === 'vendor' ? 'the vendor' : 'Cydex'}`}
+                    value={`−${naira(discount)}`}
+                  />
+                )}
                 <Row label="Total" value={naira(o.total_amount)} strong className="border-t pt-2" />
                 {Number(o.wallet_amount) > 0 && (
                   <Row label="From wallet / by card" value={`${naira(o.wallet_amount)} / ${naira(Number(o.total_amount) - Number(o.wallet_amount))}`} />
@@ -295,11 +323,12 @@ const OrderDetail = () => {
                 </p>
                 {money && o.payment_status !== 'refunded' ? (
                   <>
-                    {!isRequest && <Row label="Vendor gets" value={naira(money.vendor_got)} />}
+                    {!hasRecipient && <Row label="Vendor gets" value={naira(money.vendor_got)} />}
                     <Row label="Rider gets" value={naira(money.rider_got)} />
                     <Row label="Cydex from customer" value={naira(money.cydex_from_customer)} />
                     <Row label="Cydex from vendor" value={naira(money.cydex_from_vendor)} />
                     <Row label="Cydex from rider" value={naira(money.cydex_from_rider)} />
+                    {cydexDiscount > 0 && <Row label="Promotion cost" value={`−${naira(cydexDiscount)}`} />}
                     <Row label="Cydex total" value={naira(money.cydex_total)} strong className="border-t pt-2" />
                   </>
                 ) : (
@@ -353,7 +382,7 @@ const OrderDetail = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {codes.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Created when the {isRequest ? 'request is paid' : 'vendor accepts'}.</p>
+                <p className="text-sm text-muted-foreground">Created when the {hasRecipient ? 'delivery is paid for' : 'vendor accepts'}.</p>
               ) : codes.map((c) => (
                 <div key={c.kind} className="flex items-center justify-between gap-2">
                   <div>
@@ -370,7 +399,7 @@ const OrderDetail = () => {
                   ) : c.used_at ? <Badge variant="secondary">Used</Badge> : <Lock className="h-4 w-4 text-muted-foreground" aria-hidden />}
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">Admins can't see the digits. The vendor (pickup) and {isRequest ? 'vendor' : 'customer'} (delivery) see them in the app.</p>
+              <p className="text-xs text-muted-foreground">Admins can't see the digits. The rider shows the pickup code; the {isRequest ? 'vendor' : 'customer'} sees the delivery code in the app{hasRecipient ? ', and the recipient is emailed it' : ''}.</p>
             </CardContent>
           </Card>
 

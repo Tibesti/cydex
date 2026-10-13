@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import {
-  Bell, CheckCheck, CircleCheck, CreditCard, Landmark, MapPin, Package, PartyPopper, ShieldCheck, Truck, Undo2, XCircle,
+  Bell, BellRing, Bike, CheckCheck, CircleCheck, Megaphone, CreditCard, Landmark, MapPin, Package, PartyPopper, ShieldCheck, Truck, Undo2, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -26,6 +26,9 @@ const ICONS: Record<string, React.ElementType> = {
   rider_heading_to_vendor: Truck,
   out_for_delivery: Truck,
   picked_up: Truck,
+  rider_arrived: BellRing,
+  announcement: Megaphone,
+  mode_widened: Bike,
   delivered: CheckCheck,
   cancelled: XCircle,
   rejected: XCircle,

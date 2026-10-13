@@ -10,6 +10,7 @@ Cydex can be installed on phones and computers like an app: its own icon, no bro
 | **iPhone / iPad** (Safari) | Apple allows no install button. The banner and **Install app** menu item show the steps instead: **Share → Add to Home Screen**. This is also what unlocks push notifications on iPhone. |
 | **Computer** (Chrome, Edge) | The install icon in the address bar, or **Install app** in the side menu. |
 
+- **Landing page:** the home page has a **Get the Cydex app** section, and every page's footer has **Download App** under Quick Links. Both show the steps for Android, iPhone and computers (opening on the visitor's own device), with a one-tap **Install Cydex** button where the browser allows it.
 - **Banner timing:** the banner only shows on phone-sized screens and never once the app is installed. **Not now** hides it for two weeks; the menu item stays.
 - **Installed app:**
   - opens full-screen in portrait, with the Cydex icon and a white splash screen;

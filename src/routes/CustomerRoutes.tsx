@@ -10,6 +10,7 @@ import Wallet from '../pages/customer/Wallet';
 import Profile from '../pages/customer/Profile';
 import OrderConfirmation from '../pages/customer/OrderConfirmation';
 import ProductDetails from '../pages/customer/ProductDetails';
+import CydexExpress from '../pages/customer/CydexExpress';
 
 const CustomerRoutes = () => {
   return (
@@ -91,6 +92,14 @@ const CustomerRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['CUSTOMER']}>
             <OrderConfirmation />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/express" 
+        element={
+          <ProtectedRoute allowedRoles={['CUSTOMER']}>
+            <CydexExpress />
           </ProtectedRoute>
         } 
       />

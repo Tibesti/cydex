@@ -24,7 +24,7 @@ interface DashboardStats {
   delivered_orders: number;
   revenue: {
     from_customers: number; from_vendors: number; from_riders: number; from_withdrawals: number;
-    withdrawals_paid: number; total: number;
+    withdrawals_paid: number; promo_cost?: number; total: number;
     paid_to_vendors: number; paid_to_riders: number;
   };
   orders_today: number;
@@ -270,6 +270,12 @@ const Overview = () => {
                 <p className="text-xs text-muted-foreground">{r.hint} · {share(r.value)}%</p>
               </div>
             ))}
+            {Number(s?.revenue.promo_cost ?? 0) > 0 && (
+              <div className="flex items-baseline justify-between text-sm">
+                <span className="text-muted-foreground">Promotions paid for by Cydex</span>
+                <span className="font-semibold">−{nairaWhole(s?.revenue.promo_cost)}</span>
+              </div>
+            )}
             <div className="flex items-baseline justify-between border-t pt-3 text-sm">
               <span className="font-semibold">Total</span>
               <span className="text-lg font-bold">{nairaWhole(revenue)}</span>

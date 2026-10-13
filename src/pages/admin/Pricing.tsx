@@ -13,17 +13,22 @@ import { useConfirm } from '@/contexts/ConfirmContext';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 import { formatNaira } from '@/lib/pricing';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
+import { Link } from 'react-router-dom';
 
 // Rates are stored as fractions (0.15); the form shows percentages (15)
 const FIELDS = [
-  { key: 'base_rate', label: 'Minimum delivery fare', unit: '₦', hint: 'The delivery fee is never below this.', min: 0, max: 100000 },
-  { key: 'distance_rate_per_km', label: 'Price per km', unit: '₦', hint: 'Delivery fee = km × this, if that’s above the minimum.', min: 0, max: 100000 },
+  { key: 'base_rate', label: 'Delivery charge', unit: '₦', hint: 'Added to every delivery: fee = km × the vehicle’s price per km + this.', min: 0, max: 100000 },
+  // Kept in the pricing record but no longer used: each vehicle type has its own price per km
+  { key: 'distance_rate_per_km', label: 'Price per km', unit: '₦', hint: '', min: 0, max: 100000 },
   { key: 'service_charge_rate', label: 'Service Charge', unit: '%', hint: 'Added to the customer’s item total. Cydex keeps it.', min: 0, max: 50 },
   { key: 'vendor_commission_rate', label: 'Vendor commission', unit: '%', hint: 'Taken from the vendor’s item total.', min: 0, max: 50 },
   { key: 'rider_share_rate', label: 'Rider share of delivery fee', unit: '%', hint: 'Cydex keeps the rest of the delivery fee.', min: 50, max: 100 },
   { key: 'rider_request_commission_rate', label: 'Rider request commission', unit: '%', hint: 'Added to the delivery fee when a vendor requests a rider.', min: 0, max: 50 },
 ] as const;
 type Key = (typeof FIELDS)[number]['key'];
+// What the page shows (the per-km price is set per vehicle type, in Riders & vehicles)
+const SHOWN = FIELDS.filter((f) => f.key !== 'distance_rate_per_km');
 type PricingRow = Record<Key, number | null> & { id: string; created_at: string; created_by: string | null; note: string | null };
 
 const toForm = (row: PricingRow) =>
@@ -55,6 +60,8 @@ const AdminPricing = () => {
     },
   });
   const current = history[0];
+  const { byKey } = useVehicleTypes(true);
+  const bikeRate = Number(byKey('bicycle')?.rate_per_km ?? 200);
   useEffect(() => { if (current && !form) setForm(toForm(current)); }, [current, form]);
 
   const values = useMemo(() => {
@@ -69,9 +76,9 @@ const AdminPricing = () => {
   }, [form]);
   const changed = !!values && !!current && FIELDS.some((f) => Math.abs(values[f.key] - Number(current[f.key] ?? 0)) > 1e-9);
 
-  // Worked example with the new prices: ₦5,000 of items, 4 km away
+  // Worked example with the new prices: ₦5,000 of items, 4 km away, by bicycle
   const example = values && (() => {
-    const delivery = Math.max(values.base_rate, 4 * values.distance_rate_per_km);
+    const delivery = 4 * bikeRate + values.base_rate;
     const service = 5000 * values.service_charge_rate;
     const commission = 5000 * values.vendor_commission_rate;
     const riderGets = delivery * values.rider_share_rate;
@@ -101,7 +108,7 @@ const AdminPricing = () => {
   };
 
   return (
-    <AdminPage title="Pricing" icon={SlidersHorizontal} description="Delivery fees, Service Charge and commissions. Orders already placed keep the prices they were charged.">
+    <AdminPage title="Pricing" icon={SlidersHorizontal} description="The delivery charge, Service Charge and commissions. Orders already placed keep the prices they were charged.">
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <CardHeader>
@@ -112,7 +119,7 @@ const AdminPricing = () => {
             {!form ? <div className="h-64 animate-pulse rounded bg-muted" /> : (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {FIELDS.map((f) => {
+                  {SHOWN.map((f) => {
                     const n = Number(form[f.key]);
                     const bad = form[f.key] === '' || Number.isNaN(n) || n < f.min || n > f.max;
                     return (
@@ -132,6 +139,11 @@ const AdminPricing = () => {
                     );
                   })}
                 </div>
+                <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+                  The price per km is set for each vehicle type in{' '}
+                  <Link to="/admin/vehicles" className="font-medium text-primary hover:underline">Riders &amp; vehicles</Link>.
+                  There's no minimum fare any more.
+                </p>
                 <div className="space-y-1.5">
                   <Label htmlFor="pricing-note">Note (optional)</Label>
                   <Textarea id="pricing-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why the change, e.g. fuel price increase" />
@@ -150,7 +162,7 @@ const AdminPricing = () => {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="text-base">Example</CardTitle>
-            <CardDescription>₦5,000 of items delivered 4 km away{changed ? ', with your changes' : ''}</CardDescription>
+            <CardDescription>₦5,000 of items delivered 4 km away by bicycle ({formatNaira(bikeRate)}/km){changed ? ', with your changes' : ''}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
             {example ? (
@@ -181,7 +193,7 @@ const AdminPricing = () => {
               <thead className="bg-muted/50 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 font-medium">From</th>
-                  {FIELDS.map((f) => <th key={f.key} className="px-3 py-2 text-right font-medium">{f.label}</th>)}
+                  {SHOWN.map((f) => <th key={f.key} className="px-3 py-2 text-right font-medium">{f.label}</th>)}
                   <th className="px-3 py-2 font-medium">Changed by</th>
                 </tr>
               </thead>
@@ -189,7 +201,7 @@ const AdminPricing = () => {
                 {history.map((r, i) => (
                   <tr key={r.id} className={i === 0 ? 'bg-primary/5' : undefined}>
                     <td className="whitespace-nowrap px-3 py-2">{format(new Date(r.created_at), 'd MMM yyyy, HH:mm')}{i === 0 && <span className="ml-1 text-xs text-primary">(current)</span>}</td>
-                    {FIELDS.map((f) => <td key={f.key} className="whitespace-nowrap px-3 py-2 text-right">{show(f.key, r[f.key])}</td>)}
+                    {SHOWN.map((f) => <td key={f.key} className="whitespace-nowrap px-3 py-2 text-right">{show(f.key, r[f.key])}</td>)}
                     <td className="px-3 py-2">
                       <p>{r.created_by_name ?? 'Setup'}</p>
                       {r.note && <p className="text-xs text-muted-foreground">{r.note}</p>}

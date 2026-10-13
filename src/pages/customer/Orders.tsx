@@ -66,8 +66,10 @@ const OrdersPage = () => {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
               <Package className="h-3 w-3 sm:h-4 sm:w-4 text-gray-500 flex-shrink-0" />
-              <span className="text-xs sm:text-sm truncate">{order.vendor?.name || 'Unknown Vendor'}</span>
-              {vendorRating.total_ratings > 0 && (
+              <span className="text-xs sm:text-sm truncate">
+                {order.order_type === 'express' ? 'Cydex Express' : order.vendor?.name || 'Unknown Vendor'}
+              </span>
+              {order.order_type !== 'express' && vendorRating.total_ratings > 0 && (
                 <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                   <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-yellow-400 fill-yellow-400" />
                   <span className="text-xs text-gray-600 hidden sm:inline">
@@ -85,7 +87,8 @@ const OrdersPage = () => {
           <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-gray-600 hidden xs:flex">
             <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
             <span className="truncate">
-              {order.delivery_address?.street}, {order.delivery_address?.city}
+              {order.order_type === 'express' && order.delivery_address?.name ? `To ${order.delivery_address.name} · ` : ''}
+              {[order.delivery_address?.street, order.delivery_address?.city].filter(Boolean).join(', ')}
             </span>
           </div>
           
@@ -117,7 +120,7 @@ const OrdersPage = () => {
               <span className="xs:hidden">Details</span>
             </Button>
             
-            {showRatingButton && order.payment_status === 'paid' && (
+            {showRatingButton && order.payment_status === 'paid' && order.order_type !== 'express' && (
               <Button 
                 variant="default" 
                 size="sm"

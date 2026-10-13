@@ -1,8 +1,7 @@
 
 import { 
-  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, ShieldCheck, Navigation, FileText,
-  Banknote, Mail, ScrollText, Shield, SlidersHorizontal, Star,
-} from 'lucide-react';
+  Bell, Bike, Boxes, Home, Package, Wallet, Recycle, User, Settings, Users, ShieldCheck, Navigation,
+  Banknote, Mail, ScrollText, Shield, SlidersHorizontal, Star, TicketPercent, Zap, Megaphone } from 'lucide-react';
 
 interface SidebarLink {
   name: string;
@@ -20,6 +19,7 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
         { name: 'Home', href: '/customer', icon: Home },
         { name: 'Orders', href: '/customer/orders', icon: Package },
         { name: 'Notifications', href: '/customer/notifications', icon: Bell },
+        { name: 'Cydex Express', href: '/customer/express', icon: Zap },
         { name: 'Wallet', href: '/customer/wallet', icon: Wallet },
         // { name: 'Recycling', href: '/customer/recycling', icon: Recycle },
         { name: 'Profile', href: '/customer/profile', icon: User },
@@ -53,10 +53,12 @@ export const getNavLinks = (userRole: 'CUSTOMER' | 'RIDER' | 'VENDOR' | 'ADMIN')
         { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
         { name: 'Reviews', href: '/admin/reviews', icon: Star },
         { name: 'Pricing', href: '/admin/pricing', icon: SlidersHorizontal },
+        { name: 'Riders & vehicles', href: '/admin/vehicles', icon: Bike },
+        { name: 'Promotions', href: '/admin/promotions', icon: TicketPercent },
+        { name: 'Broadcasts', href: '/admin/broadcasts', icon: Megaphone },
         { name: 'Notifications', href: '/admin/notifications', icon: Bell },
         { name: 'Emails', href: '/admin/emails', icon: Mail },
         { name: 'Activity log', href: '/admin/activity', icon: ScrollText },
-        { name: 'Content', href: '/admin/content', icon: FileText },
         { name: 'Security', href: '/admin/security', icon: Shield },
       ];
     default:

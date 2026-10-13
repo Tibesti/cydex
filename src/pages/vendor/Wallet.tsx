@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { NIGERIAN_BANKS } from '@/utils/nigerianBanks';
 import PagedList from '@/components/ui/paged-list';
 import WithdrawalBreakdown from '@/components/wallet/WithdrawalBreakdown';
+import { belowMinimumPayout, MIN_PAYOUT_AMOUNT } from '@/lib/pricing';
 
 const WalletPage = () => {
   const isMobile = useIsMobile();
@@ -131,6 +132,10 @@ const WalletPage = () => {
   const handleRequestPayout = async () => {
     if (!payoutAmount) {
       toast.error('Please enter an amount');
+      return;
+    }
+    if (belowMinimumPayout(payoutAmount)) {
+      toast.error(`The smallest amount you can withdraw is ₦${MIN_PAYOUT_AMOUNT.toLocaleString()}`);
       return;
     }
 
@@ -263,7 +268,7 @@ const WalletPage = () => {
                   </h2>
                   <div className="flex items-center text-green-600 text-xs sm:text-sm">
                     <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                    <span>Real-time data from Supabase</span>
+                    <span>Real-time</span>
                   </div>
                 </div>
                 

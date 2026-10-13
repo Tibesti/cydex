@@ -9,17 +9,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import LoadingDisplay from '@/components/ui/LoadingDisplay';
 import RiderProfileHeader from '@/components/rider/profile/RiderProfileHeader';
 import ProfileHeader from '@/components/rider/profile/ProfileHeader';
-import VehicleInfo from '@/components/rider/profile/VehicleInfo';
 import VerificationCard from '@/components/verification/VerificationCard';
 import ProfileTabs from '@/components/rider/profile/ProfileTabs';
-import VehicleDialog from '@/components/rider/profile/dialogs/VehicleDialog';
 import { useRiderProfileData } from '@/hooks/rider/useRiderProfileData';
 import { toast } from 'sonner';
 
 const RiderProfilePage = () => {
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [showVehicleDialog, setShowVehicleDialog] = useState(false);
   
   const { 
     riderProfile, 
@@ -67,24 +64,6 @@ const RiderProfilePage = () => {
       setEditing(false);
       // Clears the "add your phone number" notice
       queryClient.invalidateQueries({ queryKey: ['has-phone'] });
-    }
-  };
-
-  const handleUpdateVehicle = async (vehicleData: any) => {
-    console.log('[Profile] Updating vehicle with data:', vehicleData);
-    
-    if (!riderProfile) {
-      toast.error('No profile data available');
-      return;
-    }
-    
-    const success = await updateProfile({
-      vehicle: vehicleData
-    });
-    
-    if (success) {
-      setShowVehicleDialog(false);
-      toast.success('Vehicle information updated');
     }
   };
 
@@ -145,11 +124,6 @@ const RiderProfilePage = () => {
               </CardContent>
             </Card>
 
-            <VehicleInfo 
-              vehicle={riderProfile.vehicle} 
-              onUpdateVehicle={() => setShowVehicleDialog(true)} 
-            />
-
             <VerificationCard role="rider" />
           </div>
 
@@ -166,14 +140,6 @@ const RiderProfilePage = () => {
             />
           </div>
         </div>
-        
-        {/* Vehicle Dialog */}
-        <VehicleDialog 
-          open={showVehicleDialog}
-          onOpenChange={setShowVehicleDialog}
-          vehicle={riderProfile.vehicle}
-          onUpdate={handleUpdateVehicle}
-        />
 
       </div>
     </DashboardLayout>

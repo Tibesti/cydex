@@ -31,7 +31,7 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
 }) => {
   // Priced for the default address; the customer can pick another at checkout
   const { defaultAddress } = useAddresses();
-  const { quote, isLoading: quoteLoading } = useOrderQuote(cartItems[0]?.vendor_id, defaultAddress?.id, toCartLines(cartItems));
+  const { quote, isLoading: quoteLoading } = useOrderQuote(isOpen ? cartItems[0]?.vendor_id : null, defaultAddress?.id, toCartLines(cartItems));
   const deliverable = quote?.status === 'ok';
   const problem = defaultAddress ? quoteProblem(quote?.status) : quoteProblem('no_address');
 
@@ -113,10 +113,20 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
                   subtotal={quote?.subtotal ?? cartTotal}
                   serviceCharge={quote?.service_charge ?? null}
                   deliveryFee={deliverable ? quote.delivery_fee : null}
+                  discount={deliverable ? quote.discount_amount : null}
+                  discountLabel={quote?.promotion_name}
                   total={deliverable ? quote.total_amount : null}
                   loading={quoteLoading}
                 />
                 {problem && <p className="text-xs text-destructive">{problem}</p>}
+                {deliverable && quote.discount_amount > 0 && (
+                  <p className="text-xs text-green-700 dark:text-green-400">
+                    Discount applied automatically: {quote.promotion_name || 'Discount'}. You can enter a coupon code at checkout instead.
+                  </p>
+                )}
+                {deliverable && !quote.vendor_open && (
+                  <p className="text-xs text-destructive">This vendor is closed right now. You can order when they open.</p>
+                )}
                 {defaultAddress && (
                   <p className="text-xs text-muted-foreground">
                     Delivering to {addressHeadline(defaultAddress)}. You can change it at checkout.
@@ -127,6 +137,7 @@ export const ShoppingCartSidebar: React.FC<ShoppingCartSidebarProps> = ({
               <Button 
                 className="w-full bg-primary hover:bg-primary/80 text-black"
                 onClick={proceedToCheckout}
+                disabled={deliverable && !quote.vendor_open}
               >
                 Proceed to Checkout
               </Button>

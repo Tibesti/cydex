@@ -7,13 +7,15 @@ import LoadingDisplay from '@/components/ui/LoadingDisplay';
 import { addressHeadline } from '@/lib/address';
 import { AddressPickerDialog } from '@/components/address/AddressPickerDialog';
 import { useVendorCards } from '@/hooks/useVendorCards';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import VendorCard from './vendors/VendorCard';
 
 interface VendorSelectionPageProps {
   onVendorSelect: (vendorId: string, vendorName: string) => void;
 }
 
-// All vendors within 5 km of the customer's delivery address (the "Deliver to" bar)
+// All vendors within delivery range of the customer's delivery address (the
+// "Deliver to" bar). The range is as far as the furthest delivery mode goes.
 export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
   onVendorSelect
 }) => {
@@ -22,6 +24,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const { vendors, defaultAddress, loading } = useVendorCards();
+  const { maxTripText } = useVehicleTypes();
   const allCategories = useMemo(
     () => Array.from(new Set(vendors.flatMap((v) => v.categories))).sort(),
     [vendors]
@@ -48,7 +51,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
       <div className="text-center py-12 space-y-4">
         <MapPin className="h-12 w-12 text-muted-foreground mx-auto" />
         <h3 className="text-lg font-semibold">Add your delivery address</h3>
-        <p className="text-muted-foreground">We'll show vendors within 5 km of where you want your order delivered.</p>
+        <p className="text-muted-foreground">We'll show vendors within {maxTripText} of where you want your order delivered.</p>
         <Button onClick={() => setPickerOpen(true)}>
           <MapPin className="mr-1 h-4 w-4" />
           Add delivery address
@@ -64,7 +67,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
       <div className="text-center">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">Choose Your Vendor</h1>
         <p className="text-muted-foreground">
-          Vendors within 5 km of {addressHeadline(defaultAddress)}. Change your address from the "Deliver to" bar.
+          Vendors within {maxTripText} of {addressHeadline(defaultAddress)}. Change your address from the "Deliver to" bar.
         </p>
       </div>
 
@@ -159,7 +162,7 @@ export const VendorSelectionPage: React.FC<VendorSelectionPageProps> = ({
           <p className="text-gray-600 mb-4">
             {searchQuery || selectedCategory
               ? "Try adjusting your search or filter criteria"
-              : "No vendors within 5 km of your delivery address. Try another address from the \"Deliver to\" bar."
+              : `No vendors within ${maxTripText} of your delivery address. Try another address from the "Deliver to" bar.`
             }
           </p>
           {(searchQuery || selectedCategory) && (

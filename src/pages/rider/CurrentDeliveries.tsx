@@ -121,7 +121,8 @@ const CurrentDeliveriesPage = () => {
         ) : (
           <div className="space-y-4">
             {currentDeliveries.map((delivery) => {
-              const orderStatus = orderStatusForDelivery(delivery.status);
+              // The order's own status (it knows "arrived"; the delivery row doesn't)
+              const orderStatus = delivery.order?.status ?? orderStatusForDelivery(delivery.status);
 
               return (
                 <Card key={delivery.id} className="border-2 border-primary">
@@ -133,6 +134,7 @@ const CurrentDeliveriesPage = () => {
                         </CardTitle>
                         <CardDescription className="text-sm">
                           Order #{delivery.order?.order_number ?? delivery.order_id?.slice(0, 8)}
+                          {(delivery.batch_stops ?? 0) > 1 && ` · Drop-off ${delivery.batch_seq} of ${delivery.batch_stops}`}
                         </CardDescription>
                       </div>
                       <OrderStatusBadge status={orderStatus} />

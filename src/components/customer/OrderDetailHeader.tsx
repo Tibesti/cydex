@@ -2,7 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { CardTitle, CardDescription } from '@/components/ui/card';
-import { getOrderStatusBadge, getPaymentStatusBadge } from '@/utils/StatusUtils';
+import { getPaymentStatusBadge } from '@/utils/StatusUtils';
+import OrderStatusBadge from '@/components/orders/OrderStatusBadge';
 import { useNavigate } from 'react-router-dom';
 
 interface OrderDetailHeaderProps {
@@ -39,7 +40,7 @@ const OrderDetailHeader = ({ id, vendor, status, paymentStatus }: OrderDetailHea
         </div>
         
         <div className="flex flex-wrap gap-1 sm:gap-2 w-full sm:w-auto">
-            {getOrderStatusBadge(status)}
+            <OrderStatusBadge status={status} className="text-xs sm:text-sm px-2 py-1" />
             {getPaymentStatusBadge(paymentStatus)}
         </div>
       </div>

@@ -1,6 +1,6 @@
 # Cydex App To-Do
 
-Open work for the Cydex app, grouped by who it's for, as of September 2026. Within each group, items are in priority order.
+Open work for the Cydex app, grouped by who it's for, as of October 2026. Within each group, items are in priority order.
 
 Tick an item (`[x]`) when it ships, or remove it and note it in the relevant doc.
 
@@ -8,6 +8,11 @@ Everything needed to go live (accounts, environment variables, Supabase settings
 
 ## General
 
+- [ ] **Push the second October 2026 update live.** Built and tested on a local copy of the database; not on the live project yet. It covers everything under [Built, waiting to go live](#built-waiting-to-go-live). (The first October update, the six `20261013…` migrations, is live.)
+  1. `npx -y supabase@2.118.0 db push --linked` (`20261015100000_promotion_show_in_offers.sql`; the earlier `20261014…` and `20261015000000` migrations are already live)
+  2. `npx -y supabase@2.118.0 functions deploy send-emails` (the announcement email), if not done yet
+  3. Deploy the web app.
+  4. Set how far each vehicle type goes on **Admin → Riders & vehicles**. They all start at 5 km, so nothing changes until you do.
 - [ ] **Use Cydex's own Google Maps API key.** The current key (`VITE_GOOGLE_MAPS_API_KEY`) belongs to the Faramove project, so Cydex's map usage is billed there.
   - Create a key in Cydex's Google Cloud project with Places API (New), Maps JavaScript API and Geocoding API enabled.
   - Restrict it to Cydex's web addresses.
@@ -27,9 +32,9 @@ Everything needed to go live (accounts, environment variables, Supabase settings
   Until this is done, checkout and withdrawals don't work.
 - [ ] **Set the Squad webhook URL.** In the Squad dashboard, set the webhook to `https://hsnguuozyigpzstwqkrk.supabase.co/functions/v1/squad-webhook`. Without it, a payment is only confirmed if the customer returns to the confirmation page after paying.
 - [ ] **Set up sending emails.** Welcome, payment-confirmed and refund emails are queued in `email_outbox` but nothing sends them yet.
-  - Create a [Resend](https://resend.com) account (or choose another provider, which means changing `supabase/functions/send-emails`), and verify Cydex's sending domain.
-  - `npx supabase secrets set RESEND_API_KEY=... EMAIL_FROM="Cydex <hello@your-domain>" EMAIL_CRON_SECRET=<long random string>`
-  - Schedule `send-emails` every minute with pg_cron + pg_net, sending the `x-cron-secret` header.
+  - The provider is [Brevo](https://www.brevo.com). `supabase/functions/send-emails` uses Brevo when `BREVO_API_KEY` is set (and Resend otherwise), with one Cydex email template.
+  - Create the Brevo account, verify Cydex's sending domain, set `BREVO_API_KEY`, `EMAIL_FROM` and `EMAIL_CRON_SECRET`, and schedule `send-emails`.
+  - Step by step: [DEPLOYMENT_CHECKLIST.md → Emails (Brevo)](DEPLOYMENT_CHECKLIST.md#4-emails-brevo).
 - [ ] **Move virtual account creation server-side.** Payments and withdrawals now use the Squad secret key only on the server, but creating virtual accounts (`walletSetupService`, `squadVirtualAccountService`) still uses it in the browser. Move that to an Edge Function, then remove `VITE_SQUAD_SECRET_KEY` / `VITE_SQUAD_PROD_SECRET_KEY` and rotate the live key that is written in `src/config/squad.ts`.
 
 ## Customers
@@ -51,17 +56,6 @@ Everything needed to go live (accounts, environment variables, Supabase settings
 - [ ] **Automatic reassignment:** a rejected or timed-out order goes straight to the next nearby rider.
 - [ ] **Repayment visibility:** show the weekly hire-purchase deduction and the weeks left until the rider owns their bicycle, in Earnings.
 - [ ] **Scheduled pickups:** see and accept scheduled pickups in advance, with a reminder before the pickup time. Goes with the customer **Schedule pickup** above.
-- [ ] **Order distance limits by vehicle:** how far an order a rider can take depends on their vehicle.
-
-  | Vehicle | Limit |
-  |---|---|
-  | Walking | 1.5 km |
-  | Bicycle | 7 km |
-  | Any other vehicle (for example an electric bike or motorcycle) | 20 km, the maximum |
-
-  - **For now, every rider uses 5 km**, set in `rider_order_radius_m()` (see [PRICING_MODEL_IMPLEMENTATION_PLAN.md → Rider radius](PRICING_MODEL_IMPLEMENTATION_PLAN.md#rider-radius-5-km)).
-  - The limit should come from the vehicle verified at onboarding, not the one the rider picks in their profile.
-  - **To decide:** measure the limit from the rider to the pickup (as the 5 km rule does today), over the delivery itself (pickup to drop-off), or both.
 
 ## Admin
 
@@ -92,9 +86,20 @@ Riders who deliver on eco-friendly vehicles (for example a bicycle, on foot, or 
   - Only confirmed deliveries count.
   - Unused columns already exist for the results: `deliveries.carbon_saved`, `orders.carbon_credits_earned`, `rider_earnings.carbon_credits_earned` and `profiles.carbon_credits`.
 
+## Built, waiting to go live
+
+The second October 2026 update. See [ORDER_FLOW.md](ORDER_FLOW.md) and [ADMIN.md](ADMIN.md).
+
+- **Promotions:** for customers, vendors, riders or everyone; limited to the first N people and N uses each; "Offers for you" on home pages, coupon codes included; offers shown and one-tap codes at checkout; clear messages when a coupon can't be used.
+- **Distance per delivery mode:** each vehicle type has its own longest trip, used for which vendors customers see, which modes they can pick and which deliveries riders see.
+- **Broadcasts:** admins send announcements as notifications and/or emails, to chosen groups, everywhere or near a place, now or later.
+- **Minimum withdrawal:** ₦3,000 for vendors and riders.
+- **Landing page:** a "Get the Cydex app" section and a **Download App** link in the footer, with install steps for Android, iPhone and computers.
+
 ## Already done
 
 These were on the original list and are now live, so they've been left out above:
+- **The first October 2026 update:** "Go to cart" button, "Rider is around", Cydex Express, the "riders busy" check, coupons, preferred delivery mode, opening hours and estimated delivery time, wallet-first payment, batch rider requests, product categories, vehicle types with a price per km each, promotions, rider vehicle details, idle riders, the app icon badge, the email template and verification emails.
 - **Pin-drop addresses** for customers, and store locations for vendors (see [ADDRESS_HANDLING.md](ADDRESS_HANDLING.md)).
 - **Rider availability** worked out from their live location, with no manual online/offline toggle.
 - **Distance-linked rider pay:** riders get 85% of the delivery fee, which is the higher of ₦600 or ₦200 per km.

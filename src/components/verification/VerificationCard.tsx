@@ -8,11 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useConfirm } from '@/contexts/ConfirmContext';
 import { useMyVerification } from '@/hooks/useMyVerification';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import { supabase } from '@/integrations/supabase/client';
 import { errorMessage } from '@/lib/address';
 import { cn } from '@/lib/utils';
 import {
-  ID_TYPES, MOTOR_VEHICLES, STATUS_LABELS, VEHICLE_TYPES, verificationDocUrl, type VerificationStatus,
+  ID_TYPES, STATUS_LABELS, verificationDocUrl, type VerificationStatus,
 } from '@/lib/verification';
 
 const STATUS_CLASS: Record<VerificationStatus, string> = {
@@ -36,6 +37,7 @@ const VerificationCard = ({ role }: { role: 'vendor' | 'rider' }) => {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const { verification: v, loading } = useMyVerification();
+  const { nameOf } = useVehicleTypes(true);
 
   const { data: categoryName } = useQuery({
     queryKey: ['business-category-name', v?.business_category_id],
@@ -77,7 +79,7 @@ const VerificationCard = ({ role }: { role: 'vendor' | 'rider' }) => {
   if (loading) return <Card><CardContent className="p-6"><div className="h-32 animate-pulse rounded bg-muted" /></CardContent></Card>;
 
   const docPath = role === 'vendor' ? v?.business_license_path : v?.id_document_path;
-  const vehicle = VEHICLE_TYPES.find((t) => t.value === v?.vehicle_type)?.label ?? v?.vehicle_type;
+  const vehicle = v?.vehicle_type ? nameOf(v.vehicle_type) : null;
 
   return (
     <Card>
@@ -124,12 +126,22 @@ const VerificationCard = ({ role }: { role: 'vendor' | 'rider' }) => {
               ) : (
                 <>
                   <Row label="How you deliver">{vehicle ?? '–'}</Row>
-                  {v.vehicle_type && MOTOR_VEHICLES.includes(v.vehicle_type) && (
-                    <Row label="Vehicle">
-                      {[v.vehicle_model, v.vehicle_year, v.vehicle_color].filter(Boolean).join(' · ') || '–'}
+                  {v.vehicle_color && <Row label="Colour">{v.vehicle_color}</Row>}
+                  {v.vehicle_photo_path && (
+                    <Row label="Vehicle photo">
+                      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDoc(v.vehicle_photo_path!)}>
+                        <FileText className="mr-1 h-3.5 w-3.5" /> View <ExternalLink className="ml-1 h-3 w-3" />
+                      </Button>
                     </Row>
                   )}
-                  {v.vehicle_registration && <Row label="Registration">{v.vehicle_registration}</Row>}
+                  {v.vehicle_registration && <Row label="Registration number">{v.vehicle_registration}</Row>}
+                  {v.vehicle_registration_doc_path && (
+                    <Row label="Registration document">
+                      <Button variant="link" size="sm" className="h-auto p-0" onClick={() => openDoc(v.vehicle_registration_doc_path!)}>
+                        <FileText className="mr-1 h-3.5 w-3.5" /> View <ExternalLink className="ml-1 h-3 w-3" />
+                      </Button>
+                    </Row>
+                  )}
                   <Row label="ID type">{ID_TYPES.find((t) => t.value === v.id_document_type)?.label ?? '–'}</Row>
                 </>
               )}

@@ -1,4 +1,5 @@
 
+import OffersStrip from '@/components/promotions/OffersStrip';
 import React from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -65,6 +66,8 @@ const RiderDashboard = () => {
             <span className="text-xs text-muted-foreground">Based on your live location</span>
           </div>
         </div>
+
+        <OffersStrip role="rider" />
 
         <EarningsOverview 
           todaysEarnings={todaysEarnings}

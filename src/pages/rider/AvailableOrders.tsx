@@ -130,7 +130,7 @@ const AvailableOrdersPage = () => {
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Available Orders</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Deliveries with pickups within 5 km of you
+              Deliveries your vehicle can cover, with pickups within 5 km of you
             </p>
           </div>
           <div className="flex items-center gap-2">

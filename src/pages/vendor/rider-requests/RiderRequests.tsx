@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { Bike, ChevronRight, MapPin, Plus } from 'lucide-react';
@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { formatNaira } from '@/lib/pricing';
 import { PAGE_SIZE } from '@/lib/pagination';
+import BatchPanel from '@/components/vendor/rider-requests/BatchPanel';
 
 
 // The vendor's requests for a rider to deliver their own customers' orders
@@ -19,6 +20,9 @@ const RiderRequests = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  // ?batch=<id> opens a batch (also where Squad returns after a batch payment)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const batchId = searchParams.get('batch');
 
   const { data, isLoading } = useQuery({
     queryKey: ['rider-requests', user?.id, page],
@@ -28,7 +32,7 @@ const RiderRequests = () => {
       const from = (page - 1) * PAGE_SIZE;
       const { data, count, error } = await supabase
         .from('orders')
-        .select('id, order_number, status, payment_status, total_amount, created_at, delivery_address', { count: 'exact' })
+        .select('id, order_number, status, payment_status, total_amount, created_at, delivery_address, batch_id, batch_seq', { count: 'exact' })
         .eq('vendor_id', user!.id)
         .eq('order_type', 'rider_request')
         .order('created_at', { ascending: false })
@@ -57,6 +61,10 @@ const RiderRequests = () => {
           </Button>
         </div>
 
+        {batchId && (
+          <BatchPanel batchId={batchId} transactionRef={searchParams.get('transaction_ref')} onClose={() => setSearchParams({}, { replace: true })} />
+        )}
+
         <Card>
           <CardContent className="p-0">
             {isLoading ? (
@@ -77,12 +85,15 @@ const RiderRequests = () => {
                     <li key={r.id}>
                       <button
                         type="button"
-                        onClick={() => navigate(`/vendor/rider-requests/${r.id}`)}
+                        onClick={() => (r.batch_id ? setSearchParams({ batch: r.batch_id }) : navigate(`/vendor/rider-requests/${r.id}`))}
                         className="flex w-full items-center gap-3 p-3 text-left transition-colors hover:bg-muted/60"
                       >
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm font-medium">#{r.order_number}</span>
+                            {r.batch_id && (
+                              <span className="rounded bg-primary/15 px-1.5 py-0.5 text-xs font-medium">Batch · drop-off {r.batch_seq}</span>
+                            )}
                             {awaitingPayment ? (
                               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-200">
                                 Awaiting payment

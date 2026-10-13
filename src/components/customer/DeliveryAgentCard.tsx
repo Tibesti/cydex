@@ -13,16 +13,26 @@ interface DeliveryAgentCardProps {
   rider: Rider;
   /** The order's status, for the "what your rider is doing" line */
   status: string;
+  /** Cydex Express: the rider collects from the customer and delivers to someone else */
+  express?: boolean;
 }
 
 const RIDER_STATUS: Record<string, string> = {
   rider_assigned: 'Accepted your order and will head to the vendor shortly',
   picking_up: 'On the way to the vendor to collect your order',
   out_for_delivery: 'On the way to you with your order',
+  arrived: 'Is around with your order. Give them your delivery code.',
+};
+const EXPRESS_RIDER_STATUS: Record<string, string> = {
+  rider_assigned: 'Accepted your delivery and will head to the pickup point shortly',
+  picking_up: 'On the way to collect your item',
+  out_for_delivery: 'On the way to the drop-off with your item',
+  arrived: 'Is at the drop-off, waiting for the delivery code',
 };
 
 // The customer's rider: who they are, what they're doing, and how to call them
-const DeliveryAgentCard = ({ rider, status }: DeliveryAgentCardProps) => {
+const DeliveryAgentCard = ({ rider, status, express }: DeliveryAgentCardProps) => {
+  const doing = (express ? EXPRESS_RIDER_STATUS : RIDER_STATUS)[status];
   const phone = isValidPhone(rider.phone) ? rider.phone.trim() : null;
   return (
     <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4 dark:border-green-500/30 dark:bg-green-500/10">
@@ -37,9 +47,7 @@ const DeliveryAgentCard = ({ rider, status }: DeliveryAgentCardProps) => {
         </div>
         <div className="min-w-0 flex-1">
           <p className="break-words text-sm font-semibold sm:text-base">{rider.name}</p>
-          {RIDER_STATUS[status] && (
-            <p className="text-xs text-green-700 dark:text-green-300 sm:text-sm">{RIDER_STATUS[status]}</p>
-          )}
+          {doing && <p className="text-xs text-green-700 dark:text-green-300 sm:text-sm">{doing}</p>}
           {phone ? (
             <a href={`tel:${phone}`} className="text-sm font-medium hover:underline">{phone}</a>
           ) : (

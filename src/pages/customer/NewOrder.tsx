@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, ArrowLeft } from 'lucide-react';
+import { Search, ShoppingCart } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,10 @@ import { DeliveryScheduler } from '@/components/customer/DeliveryScheduler';
 import { useProducts } from '@/hooks/useProducts';
 import { isAvailable } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
-import { ConfirmDeliveryAddressDialog } from '@/components/customer/address/ConfirmDeliveryAddressDialog';
+import { ConfirmDeliveryAddressDialog, type CheckoutChoices } from '@/components/customer/address/ConfirmDeliveryAddressDialog';
+import { formatNaira } from '@/lib/pricing';
+import { useQueryClient } from '@tanstack/react-query';
+import { MY_PROMOTIONS_KEY } from '@/hooks/useMyPromotions';
 import type { Address } from '@/hooks/useAddresses';
 import { errorMessage } from '@/lib/address';
 import { toCartLines } from '@/hooks/useOrderQuote';
@@ -35,6 +38,7 @@ const NewOrder = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { products, loading } = useProducts();
+  const queryClient = useQueryClient();
   const { 
     cartItems, 
     isCartOpen, 
@@ -57,7 +61,11 @@ const NewOrder = () => {
     id: string; 
     order_number: string; 
     total_amount: number;
-    payment_reference?: string;
+    // What their wallet already covered; the card pays the rest
+    wallet_amount?: number | null;
+    // Promotion or coupon taken off
+    discount_amount?: number | null;
+    payment_reference?: string | null;
     // Snapshot of the chosen address, including the customer's phone (place_order)
     delivery_address?: Json | null;
   } | null>(null);
@@ -73,43 +81,30 @@ const NewOrder = () => {
   const [isAddressConfirmOpen, setIsAddressConfirmOpen] = useState(false);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
-  // Auto-select vendor from URL params or cart items
+  // Opening a vendor from a link (product details → checkout) selects that
+  // vendor once, and opens the cart only when the customer asked to check out.
+  // Otherwise the page starts on the vendor list and the cart stays closed:
+  // the "Go to cart" bar at the bottom is how they get to it.
+  const openedFromLink = useRef(false);
   useEffect(() => {
-    // First check URL params (from product details checkout)
+    // A cart left "open" from another page (the cart button in the top bar)
+    // mustn't pop up on arrival
+    setIsCartOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (openedFromLink.current) return;
     const vendorIdFromUrl = searchParams.get('vendor');
     const vendorNameFromUrl = searchParams.get('vendorName');
-    const fromCheckout = searchParams.get('checkout') === 'true';
-    
-    if (vendorIdFromUrl && vendorNameFromUrl && !selectedVendor) {
-      setSelectedVendor(vendorIdFromUrl);
-      setSelectedVendorName(decodeURIComponent(vendorNameFromUrl));
-      // Auto-open cart if coming from checkout and cart has items
-      if (fromCheckout && cartItems.length > 0 && !isCartOpen) {
-        setIsCartOpen(true);
-      }
-      // Don't clear cart when auto-selecting from URL params
-      return;
+    if (!vendorIdFromUrl || !vendorNameFromUrl) return;
+    openedFromLink.current = true;
+    setSelectedVendor(vendorIdFromUrl);
+    setSelectedVendorName(decodeURIComponent(vendorNameFromUrl));
+    if (searchParams.get('checkout') === 'true' && cartItems.length > 0) {
+      setIsCartOpen(true);
     }
-    
-    // If no vendor selected and cart has items, auto-select vendor from cart
-    if (!selectedVendor && cartItems.length > 0) {
-      const vendorIds = Array.from(new Set(cartItems.map(item => item.vendor_id).filter(Boolean)));
-      if (vendorIds.length === 1) {
-        // All items are from the same vendor
-        const vendorItem = cartItems.find(item => item.vendor_id);
-        if (vendorItem) {
-          setSelectedVendor(vendorItem.vendor_id);
-          setSelectedVendorName(vendorItem.vendor_name);
-          // Auto-open cart if it has items
-          if (cartItems.length > 0 && !isCartOpen) {
-            setIsCartOpen(true);
-          }
-          // Don't clear cart when auto-selecting from cart items
-        }
-      }
-    }
-  }, [searchParams, cartItems, selectedVendor, isCartOpen, setIsCartOpen]);
-  
+  }, [searchParams, cartItems.length, setIsCartOpen]);
+
   // The order goes to the vendor whose items are in the cart
   const cartVendorId = cartItems[0]?.vendor_id ?? null;
 
@@ -217,26 +212,41 @@ const NewOrder = () => {
     }
   };
 
-  const createOrderWithAddress = async (address: Address) => {
+  const createOrderWithAddress = async (address: Address, choices: CheckoutChoices) => {
     if (!user?.id || !cartVendorId) return;
 
     setIsCreatingOrder(true);
     try {
       // The database creates and prices the order: items at current product
-      // prices (place_order), then the delivery fee and Service Charge
-      // (price_new_order). It rejects vendors more than 5 km away.
+      // prices (place_order), then the delivery fee for the preferred delivery
+      // mode, the Service Charge and any promotion (price_new_order). It
+      // rejects vendors too far for any delivery mode, closed vendors, and orders placed
+      // while no rider is free. The customer's wallet pays first.
       const { data: order, error: orderError } = await typedSupabase.rpc('place_order', {
         p_vendor_id: cartVendorId,
         p_address_id: address.id,
         p_items: toCartLines(cartItems),
+        p_vehicle_type: choices.vehicleType ?? undefined,
+        p_coupon_code: choices.couponCode ?? undefined,
       });
 
       if (orderError) throw orderError;
+      // A use of a limited offer may just have been taken
+      queryClient.invalidateQueries({ queryKey: [MY_PROMOTIONS_KEY] });
+
+      setIsAddressConfirmOpen(false);
+      setIsCartOpen(false);
+
+      // The wallet covered all of it: nothing to pay by card
+      if (order.payment_status === 'paid') {
+        toast.success('Order placed and paid from your wallet');
+        clearCart();
+        navigate(`/customer/orders/${order.id}`);
+        return;
+      }
 
       setCurrentOrder(order);
-      setIsAddressConfirmOpen(false);
       setIsPaymentModalOpen(true);
-      setIsCartOpen(false);
     } catch (error) {
       console.error('Error creating order:', error);
       toast.error(errorMessage(error, 'Failed to create order. Please try again.'));
@@ -286,6 +296,111 @@ const NewOrder = () => {
     navigate('/customer/orders');
   };
 
+  // Cart, checkout and payment, shown over the vendor list and a vendor's products alike
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const overlays = (
+    <>
+      {/* Very visible way into the cart, with the items total */}
+      {cartItems.length > 0 && !isCartOpen && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-3 sm:p-4">
+          <Button
+            size="lg"
+            onClick={() => setIsCartOpen(true)}
+            className="pointer-events-auto h-14 w-full max-w-md gap-2 rounded-full bg-primary text-base font-semibold text-black shadow-lg hover:bg-primary/90"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Go to cart ({formatNaira(calculateTotal())})
+            <span className="ml-1 rounded-full bg-black/15 px-2 py-0.5 text-xs">
+              {cartCount} {cartCount === 1 ? 'item' : 'items'}
+            </span>
+          </Button>
+        </div>
+      )}
+
+      {/* Shopping Cart Sidebar */}
+      <ShoppingCartSidebar 
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cartItems={cartItems}
+        updateQuantity={updateQuantity}
+        removeFromCart={removeFromCart}
+        cartTotal={calculateTotal()}
+        proceedToCheckout={handleCheckout}
+      />
+      
+      {/* Payment Modal */}
+      {currentOrder && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={() => {
+            setIsPaymentModalOpen(false);
+            // Only clear cart if payment was not successful
+            if (!currentOrder?.payment_reference) {
+              clearCart();
+            }
+          }}
+          amount={Math.max((currentOrder?.total_amount || 0) - Number(currentOrder?.wallet_amount ?? 0), 0)}
+          walletAmount={Number(currentOrder?.wallet_amount ?? 0)}
+          discountAmount={Number(currentOrder?.discount_amount ?? 0)}
+          onSuccess={handlePaymentSuccess}
+          onError={handlePaymentError}
+          orderNumber={currentOrder?.order_number || ''}
+          customerEmail={user?.email || ''}
+          customerId={user?.id}
+          customerDetails={(() => {
+            const address = (currentOrder.delivery_address ?? {}) as Record<string, string | undefined>;
+            return {
+              name: user?.name,
+              phone: address.phone || undefined,
+              address: address.formatted_address || address.address || undefined,
+            };
+          })()}
+          metadata={{
+            order_id: currentOrder?.id,
+            user_id: user?.id,
+            items: cartItems.map(item => ({
+              id: item.id,
+              name: item.name,
+              quantity: item.quantity,
+              price: item.price
+            }))
+          }}
+        />
+      )}
+      
+      {/* Vendor Rating Modal */}
+      {ratingOrderData && (
+        <VendorRatingModal 
+          isOpen={isRatingModalOpen}
+          onClose={handleRatingModalClose}
+          vendorId={ratingOrderData.vendorId}
+          vendorName={ratingOrderData.vendorName}
+          orderId={ratingOrderData.orderId}
+          orderNumber={ratingOrderData.orderNumber}
+        />
+      )}
+      
+      {/* Delivery address confirmation (default preselected) */}
+      <ConfirmDeliveryAddressDialog
+        open={isAddressConfirmOpen}
+        onOpenChange={setIsAddressConfirmOpen}
+        onConfirm={createOrderWithAddress}
+        confirming={isCreatingOrder}
+        vendorId={cartVendorId}
+        items={toCartLines(cartItems)}
+        cartSubtotal={calculateTotal()}
+      />
+      
+      {/* Delivery Scheduler Dialog */}
+      <DeliveryScheduler 
+        isOpen={isSchedulerOpen}
+        onClose={() => setIsSchedulerOpen(false)}
+        cartTotal={calculateTotal()}
+        onScheduleDelivery={handleCheckout}
+      />
+    </>
+  );
+
   if (loading) {
     return (
       <DashboardLayout userRole="CUSTOMER">
@@ -308,16 +423,17 @@ const NewOrder = () => {
   if (!selectedVendor) {
     return (
       <DashboardLayout userRole="CUSTOMER">
-        <div className="px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto">
+        <div className={`px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto ${cartItems.length > 0 ? 'pb-24 sm:pb-24 md:pb-24' : ''}`}>
           <VendorSelectionPage onVendorSelect={handleVendorSelect} />
         </div>
+        {overlays}
       </DashboardLayout>
     );
   }
 
   return (
     <DashboardLayout userRole="CUSTOMER">
-      <div className="px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto space-y-2 sm:space-y-4">
+      <div className={`px-2 py-1 sm:p-3 md:p-6 max-w-7xl mx-auto space-y-2 sm:space-y-4 ${cartItems.length > 0 ? 'pb-24 sm:pb-24 md:pb-24' : ''}`}>
         
         {/* Vendor details: banner, logo, name, verified, rating, address */}
         <VendorStorefrontHeader
@@ -376,85 +492,7 @@ const NewOrder = () => {
         />
       </div>
       
-      {/* Shopping Cart Sidebar */}
-      <ShoppingCartSidebar 
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cartItems}
-        updateQuantity={updateQuantity}
-        removeFromCart={removeFromCart}
-        cartTotal={calculateTotal()}
-        proceedToCheckout={handleCheckout}
-      />
-      
-      {/* Payment Modal */}
-      {currentOrder && (
-        <PaymentModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => {
-            setIsPaymentModalOpen(false);
-            // Only clear cart if payment was not successful
-            if (!currentOrder?.payment_reference) {
-              clearCart();
-            }
-          }}
-          amount={currentOrder?.total_amount || 0}
-          onSuccess={handlePaymentSuccess}
-          onError={handlePaymentError}
-          orderNumber={currentOrder?.order_number || ''}
-          customerEmail={user?.email || ''}
-          customerId={user?.id}
-          customerDetails={(() => {
-            const address = (currentOrder.delivery_address ?? {}) as Record<string, string | undefined>;
-            return {
-              name: user?.name,
-              phone: address.phone || undefined,
-              address: address.formatted_address || address.address || undefined,
-            };
-          })()}
-          metadata={{
-            order_id: currentOrder?.id,
-            user_id: user?.id,
-            items: cartItems.map(item => ({
-              id: item.id,
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price
-            }))
-          }}
-        />
-      )}
-      
-      {/* Vendor Rating Modal */}
-      {ratingOrderData && (
-        <VendorRatingModal 
-          isOpen={isRatingModalOpen}
-          onClose={handleRatingModalClose}
-          vendorId={ratingOrderData.vendorId}
-          vendorName={ratingOrderData.vendorName}
-          orderId={ratingOrderData.orderId}
-          orderNumber={ratingOrderData.orderNumber}
-        />
-      )}
-      
-      {/* Delivery address confirmation (default preselected) */}
-      <ConfirmDeliveryAddressDialog
-        open={isAddressConfirmOpen}
-        onOpenChange={setIsAddressConfirmOpen}
-        onConfirm={createOrderWithAddress}
-        confirming={isCreatingOrder}
-        vendorId={cartVendorId}
-        items={toCartLines(cartItems)}
-        cartSubtotal={calculateTotal()}
-      />
-      
-      {/* Delivery Scheduler Dialog */}
-      <DeliveryScheduler 
-        isOpen={isSchedulerOpen}
-        onClose={() => setIsSchedulerOpen(false)}
-        cartTotal={calculateTotal()}
-        onScheduleDelivery={handleCheckout}
-      />
+      {overlays}
     </DashboardLayout>
   );
 };

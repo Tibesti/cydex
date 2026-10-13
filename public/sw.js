@@ -60,7 +60,15 @@ self.addEventListener('fetch', (event) => {
 
 // Need attention straight away: stay on screen until tapped, longer buzz
 // (keep in step with src/lib/notificationSound.ts)
-const URGENT = ['new_order', 'order_nearby', 'assigned_by_admin', 'payout_request', 'verification_request'];
+const URGENT = ['new_order', 'order_nearby', 'assigned_by_admin', 'payout_request', 'verification_request', 'rider_arrived'];
+
+// Unread notifications on the installed app's icon. Phones only take a number
+// (no "9+"), so it's capped at 9; some show just a dot.
+const setBadge = (count) => {
+  if (!('setAppBadge' in self.navigator)) return Promise.resolve();
+  const n = Math.min(Number(count) || 0, 9);
+  return (n > 0 ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge()).catch(() => {});
+};
 
 self.addEventListener('push', (event) => {
   let data = {};
@@ -71,7 +79,7 @@ self.addEventListener('push', (event) => {
   }
   const urgent = URGENT.includes(data.type);
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    setBadge(data.unread).then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true })).then((windows) => {
       // The app is on screen: it plays its own chime, so the notification stays quiet.
       // Otherwise the phone plays its normal notification sound.
       const appOpen = windows.some((w) => w.visibilityState === 'visible');

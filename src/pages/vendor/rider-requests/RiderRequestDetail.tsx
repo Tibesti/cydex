@@ -219,6 +219,7 @@ const RiderRequestDetail = () => {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p className="flex items-center gap-2"><UserRound className="h-4 w-4 text-muted-foreground" /> {to.name}</p>
+            {to.email && <p className="break-all pl-6 text-xs text-muted-foreground">{to.email} (emailed the delivery code)</p>}
             {to.phone && (
               <a href={`tel:${to.phone}`} className="flex items-center gap-2 hover:underline">
                 <Phone className="h-4 w-4 text-muted-foreground" /> {to.phone}

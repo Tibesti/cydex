@@ -1,9 +1,11 @@
 
-import React from "react";
+import React, { useState } from "react";
+import DownloadAppDialog from "@/components/pwa/DownloadAppDialog";
 import { Instagram, Linkedin, Twitter, Facebook, ArrowRight } from "lucide-react";
 
 const FooterSection = () => {
   const currentYear = new Date().getFullYear();
+  const [downloadOpen, setDownloadOpen] = useState(false);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +63,11 @@ const FooterSection = () => {
                 <a href="/contact" className="text-gray-400 hover:text-primary transition-colors">
                   Contact Us
                 </a>
+              </li>
+              <li>
+                <button type="button" onClick={() => setDownloadOpen(true)} className="text-gray-400 hover:text-primary transition-colors">
+                  Download App
+                </button>
               </li>
             </ul>
           </div>
@@ -131,6 +138,7 @@ const FooterSection = () => {
       </div>
 
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary/5 rounded-full -mb-32 -mr-32 blur-3xl"></div>
+      <DownloadAppDialog open={downloadOpen} onOpenChange={setDownloadOpen} />
     </footer>
   );
 };

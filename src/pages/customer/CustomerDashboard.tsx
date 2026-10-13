@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { useCustomerOrders } from '@/hooks/useCustomerOrders';
 import { useVendorCards, type VendorCardData } from '@/hooks/useVendorCards';
 import VendorCard from '@/components/customer/vendors/VendorCard';
+import OffersStrip from '@/components/promotions/OffersStrip';
+import { useVehicleTypes } from '@/hooks/useVehicleTypes';
 import { AddressPickerDialog } from '@/components/address/AddressPickerDialog';
 import { addressHeadline } from '@/lib/address';
 
@@ -44,6 +46,7 @@ const CustomerDashboard = () => {
   const { orders, loading: ordersLoading } = useCustomerOrders();
   const { vendors, defaultAddress, loading: vendorsLoading } = useVendorCards();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const { maxTripText } = useVehicleTypes();
 
   const activeOrders = orders.filter((o) => !['delivered', 'cancelled', 'rejected'].includes(o.status));
   const totalCarbonSaved = orders.reduce((total, o) => total + (o.carbon_credits_earned || 0), 0);
@@ -79,6 +82,8 @@ const CustomerDashboard = () => {
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
+
+        <OffersStrip role="customer" />
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 md:gap-6">
           <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigate('/customer/orders')}>
@@ -118,7 +123,7 @@ const CustomerDashboard = () => {
           <Card className="flex flex-col items-center gap-3 p-8 text-center">
             <MapPin className="h-10 w-10 text-muted-foreground" />
             <h2 className="text-lg font-semibold">Add your delivery address</h2>
-            <p className="text-sm text-muted-foreground">We'll show vendors within 5 km of where you want your orders delivered.</p>
+            <p className="text-sm text-muted-foreground">We'll show vendors within {maxTripText} of where you want your orders delivered.</p>
             <Button onClick={() => setPickerOpen(true)}>Add delivery address</Button>
             <AddressPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} />
           </Card>
@@ -144,7 +149,7 @@ const CustomerDashboard = () => {
             />
             <VendorSection
               title="Other vendors"
-              description="More vendors within 5 km"
+              description={`More vendors within ${maxTripText}`}
               vendors={others}
               onSelect={openVendor}
             />

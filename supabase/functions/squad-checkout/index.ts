@@ -1,7 +1,9 @@
 // Customer payments through Squad, called from the app (signed-in customer).
 //   { action: 'initiate', order_number }  -> { checkout_url }
-//     Starts a Squad checkout for the order's total as stored in the database
-//     (for a vendor's rider request: the part their wallet didn't cover).
+//     Starts a Squad checkout for what the payer's wallet didn't cover.
+//     order_number is an order's number (customer order, Cydex Express, or a
+//     vendor's rider request) or a batch number (BAT-...: every unpaid stop
+//     of a vendor's batch, in one payment).
 //   { action: 'verify', transaction_ref }  -> { status }
 //     Called when Squad redirects back; marks the order paid if Squad confirms it.
 // The squad-webhook function does the same confirmation if the customer never returns.
@@ -27,15 +29,20 @@ Deno.serve(async (req) => {
       : String(body.order_number ?? '') || null;
     if (!orderNumber) return json({ error: 'Order not found' }, 404);
 
-    const { data: order } = await adminClient()
+    const db = adminClient();
+    const { data: order } = await db
       .from('orders')
       .select('id, order_number, order_type, customer_id, vendor_id, status, payment_status, total_amount, wallet_amount')
       .eq('order_number', orderNumber)
       .maybeSingle();
-    // The customer pays for their order; the vendor pays for their own rider request
-    const isRiderRequest = order?.order_type === 'rider_request';
-    const payer = isRiderRequest ? order?.vendor_id : order?.customer_id;
-    if (!order || payer !== user.id) return json({ error: 'Order not found' }, 404);
+    // A batch of rider requests is paid for together, against the batch number
+    const { data: batch } = order ? { data: null } : await db
+      .from('rider_request_batches').select('id, batch_number, vendor_id').eq('batch_number', orderNumber).maybeSingle();
+
+    // The customer pays for their order or Cydex Express; the vendor for their rider requests
+    const isRiderRequest = !!batch || order?.order_type === 'rider_request';
+    const payer = batch ? batch.vendor_id : isRiderRequest ? order?.vendor_id : order?.customer_id;
+    if ((!order && !batch) || payer !== user.id) return json({ error: 'Order not found' }, 404);
 
     if (body.action === 'verify') {
       const status = await confirmPayment(String(body.transaction_ref));
@@ -43,10 +50,20 @@ Deno.serve(async (req) => {
     }
 
     if (body.action !== 'initiate') return json({ error: 'Unknown action' }, 400);
-    if (order.payment_status !== 'pending' && order.payment_status !== 'failed') {
-      return json({ error: 'This order has already been paid' }, 409);
+
+    let amount: number;
+    if (batch) {
+      const { data: due } = await db.rpc('batch_amount_due', { p_batch_id: batch.id });
+      amount = Number(due ?? 0);
+      if (amount <= 0) return json({ error: 'This batch has already been paid' }, 409);
+    } else {
+      if (order!.payment_status !== 'pending' && order!.payment_status !== 'failed') {
+        return json({ error: 'This order has already been paid' }, 409);
+      }
+      if (order!.status !== 'pending') return json({ error: 'This order can no longer be paid for' }, 409);
+      amount = Number(order!.total_amount) - Number(order!.wallet_amount ?? 0);
     }
-    if (order.status !== 'pending') return json({ error: 'This order can no longer be paid for' }, 409);
+    const number = batch ? batch.batch_number : order!.order_number;
 
     // Squad sends the customer back here after paying
     const origin = req.headers.get('Origin') || Deno.env.get('APP_URL') || 'http://localhost:8080';
@@ -54,18 +71,19 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${squadSecret()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        // Rider requests: the card pays what the wallet didn't cover
-        amount: Math.round((Number(order.total_amount) - Number(order.wallet_amount ?? 0)) * 100),
+        // The card pays what the wallet didn't cover
+        amount: Math.round(amount * 100),
         email: user.email,
         currency: 'NGN',
         initiate_type: 'inline',
-        transaction_ref: newReference(order.order_number),
-        callback_url: isRiderRequest
-          ? `${origin}/vendor/rider-requests/${order.id}`
-          : `${origin}/customer/order-confirmation?order=${encodeURIComponent(order.order_number)}`,
+        transaction_ref: newReference(number),
+        callback_url: batch ? `${origin}/vendor/rider-requests?batch=${batch.id}`
+          : isRiderRequest ? `${origin}/vendor/rider-requests/${order!.id}`
+            : order!.order_type === 'express' ? `${origin}/customer/orders/${order!.id}`
+              : `${origin}/customer/order-confirmation?order=${encodeURIComponent(order!.order_number)}`,
         customer_name: user.user_metadata?.name,
         payment_channels: ['card', 'bank', 'ussd', 'transfer'],
-        metadata: { order_number: order.order_number, customer_id: user.id },
+        metadata: { order_number: number, customer_id: user.id },
       }),
     });
     const squad = await res.json().catch(() => ({}));

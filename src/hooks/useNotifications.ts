@@ -38,6 +38,15 @@ export const useNotifications = () => {
     },
   });
 
+  // Unread count on the installed app's icon. Phones only take a number (no
+  // "9+"), so it's capped at 9; the service worker sets it too when a push
+  // arrives while the app is closed (public/sw.js).
+  useEffect(() => {
+    const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (!user?.id || !nav.setAppBadge || !nav.clearAppBadge) return;
+    (unreadCount > 0 ? nav.setAppBadge(Math.min(unreadCount, 9)) : nav.clearAppBadge()).catch(() => {});
+  }, [unreadCount, user?.id]);
+
   const markAllRead = useMutation({
     mutationFn: async () => {
       const { error } = await supabase

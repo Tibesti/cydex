@@ -58,7 +58,10 @@ Deno.serve(async (req) => {
   const orderId = (n.metadata as { order_id?: string } | null)?.order_id;
   const url = orderId && ORDER_LINKS[role] ? ORDER_LINKS[role](orderId, n.type)
     : (role === 'admin' && ADMIN_LINKS[n.type]) || `/${role || 'customer'}/notifications`;
-  const payload = JSON.stringify({ title: n.title, body: n.message, url, tag: n.id, type: n.type });
+  // Unread count for the badge on the installed app's icon
+  const { count: unread } = await db.from('notifications')
+    .select('id', { count: 'exact', head: true }).eq('user_id', n.user_id).eq('is_read', false);
+  const payload = JSON.stringify({ title: n.title, body: n.message, url, tag: n.id, type: n.type, unread: unread ?? 1 });
 
   let sent = 0;
   await Promise.all(subs.map(async (s) => {
